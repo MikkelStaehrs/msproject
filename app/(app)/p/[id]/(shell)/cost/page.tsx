@@ -551,6 +551,22 @@ export default async function CostPage({
                 name="file"
                 className="field text-[11px] file:mr-3 file:border-0 file:bg-transparent file:p-0 file:text-[10px] file:uppercase file:tracking-[0.16em] file:text-green"
               />
+              {/*
+                This one field still travels with the form, so it is bound by
+                the 4.5 MB a server action can receive. A quotation is almost
+                always well under that; a scanned drawing is not, and the
+                Documents panel uploads straight to storage without the limit.
+              */}
+              <span className="mt-1 block text-[10px] leading-snug text-rule-strong">
+                Up to 4.5 MB here. Anything larger goes on{' '}
+                <Link
+                  href={`${base}/dokumenter`}
+                  className="text-ink underline decoration-rule-strong underline-offset-2"
+                >
+                  Documents
+                </Link>
+                , then pick it below.
+              </span>
             </label>
 
             {docs.length > 0 && (

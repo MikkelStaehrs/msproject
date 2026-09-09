@@ -1,4 +1,5 @@
-import { deleteDocument, moveDocument, uploadDocument } from '@/lib/document-actions'
+import { deleteDocument, moveDocument } from '@/lib/document-actions'
+import { DocumentUpload } from '@/components/document-upload'
 import { DEFAULT_FOLDERS, folderLabel, folderNumber } from '@/lib/template'
 import { formatDate } from '@/components/ui'
 import type { Document } from '@/lib/types'
@@ -46,34 +47,17 @@ export function DocumentPanel({
     <section>
       <h2 className="font-display text-[26px] font-medium">Documents</h2>
 
-      <form
-        action={uploadDocument}
-        className="mt-4 max-w-3xl border-y border-rule py-3.5"
-      >
-        <input type="hidden" name="node_id" value={nodeId} />
-        <input type="hidden" name="redirectTo" value={redirectTo} />
-
-        <input
-          type="file"
-          name="file"
-          required
-          className="w-full text-[11px] text-muted file:mr-3 file:border file:border-rule-strong file:bg-transparent file:px-3 file:py-1.5 file:text-[10px] file:font-medium file:uppercase file:tracking-[0.14em] file:text-ink"
-        />
-
-        <div className="mt-3 flex items-center gap-3">
-          <select name="folder" defaultValue={skeleton[0] ?? ''} className="field flex-1">
-            <option value="">No folder</option>
-            {all.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="lbl shrink-0 text-green hover:text-oxblood">
-            Upload
-          </button>
-        </div>
-      </form>
+      {/*
+        The file goes straight from the browser to storage, never through a
+        server action. See DocumentUpload: a server action's request body is
+        capped at 4.5 MB on Vercel, so the 25 MB this panel promises was only
+        ever true on the machine it was built on.
+      */}
+      <DocumentUpload
+        nodeId={nodeId}
+        folders={all}
+        defaultFolder={skeleton[0] ?? ''}
+      />
 
       <div className="mt-6 flex max-w-3xl flex-col gap-6">
         {all.map((folder) => {

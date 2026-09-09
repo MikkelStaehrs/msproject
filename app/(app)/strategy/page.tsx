@@ -1,12 +1,11 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
-import { readIdentity } from '@/lib/identity'
 import { formatMoney } from '@/lib/cost'
 import { notStartedShare, strategyPicture, type Marking } from '@/lib/strategy'
 import { createStrategy, deleteStrategy, updateStrategy } from '@/lib/strategy-actions'
 import { Hint, Rule, formatDate } from '@/components/ui'
-import type { ActiveBlocker, Node, NodeCost, Strategy, StrategyNode } from '@/lib/types'
+import type { Node, NodeCost, Strategy, StrategyNode } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Strategy' }
@@ -27,25 +26,20 @@ export default async function StrategyPage({
   const { edit: editId, new: creating } = await searchParams
   const supabase = await createClient()
 
-  const [strategyRes, markRes, nodeRes, costRes, blockerRes] = await Promise.all([
+  const [strategyRes, markRes, nodeRes, costRes] = await Promise.all([
     supabase.from('strategy').select('*').order('sort_order').order('name'),
     supabase.from('v_strategy_node').select('*'),
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('v_node_cost').select('*'),
-    supabase.from('v_active_blocker').select('node_id'),
   ])
 
-  const failure = firstError([strategyRes, markRes, nodeRes, costRes, blockerRes])
+  const failure = firstError([strategyRes, markRes, nodeRes, costRes])
   if (failure) return <QueryFailure message={failure} />
 
   const strategies = (strategyRes.data ?? []) as Strategy[]
   const marks = (markRes.data ?? []) as StrategyNode[]
   const nodes = (nodeRes.data ?? []) as Node[]
   const rolls = new Map(((costRes.data ?? []) as NodeCost[]).map((r) => [r.node_id, r]))
-  const blockedNodes = new Set(
-    ((blockerRes.data ?? []) as Pick<ActiveBlocker, 'node_id'>[]).map((b) => b.node_id),
-  )
-
   const byId = new Map(nodes.map((n) => [n.id, n]))
 
   /**
@@ -60,9 +54,9 @@ export default async function StrategyPage({
       nodeId: m.node_id,
       isTop: m.is_top,
       annualEur: m.annual_eur === null ? null : Number(m.annual_eur),
-      ownBenefit: node ? readIdentity(node.reporting).economics.benefit : null,
-      status: node?.status ?? 'idea',
-      blocked: blockedNodes.has(m.node_id),
+      ownBenefit: m.benefit_eur === null ? null : Number(m.benefit_eur),
+      status: m.node_status,
+      blocked: m.node_blocked,
       investedEur: Number(roll?.once_committed ?? 0),
     }
   }
@@ -252,10 +246,17 @@ export default async function StrategyPage({
                           : 'nothing finished yet'
                       }
                     />
+                    {/*
+                      The one figure here that is still what YOU can see.
+                      Promised and delivered are computed over the whole tree so
+                      the strategy reports the same number to everyone; spend is
+                      left per-viewer, and says so, rather than repeating the
+                      currency conversion in a third place to make it whole.
+                    */}
                     <Figure
                       label="Invested so far"
                       value={formatMoney(Math.round(p.invested), 'EUR')}
-                      note="ordered or invoiced, one off"
+                      note="ordered or invoiced, in projects you can open"
                     />
                     <Figure
                       label={p.target === null ? 'No target' : 'Still to find'}

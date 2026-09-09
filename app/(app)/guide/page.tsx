@@ -37,6 +37,7 @@ export const metadata = { title: 'Guide' }
 const SECTIONS = [
   ['Getting around', [
     ['start', 'Where to start'],
+    ['access', 'Who sees what'],
     ['sparks', 'Sparks'],
     ['quick', 'Quick entry'],
     ['tree', 'The tree'],
@@ -161,6 +162,59 @@ export default function GuidePage() {
             with New node and the <Code>+</Code> on each row. You do not have to plan the
             whole tree up front. Add parts as they become real.
           </P>
+
+          <H id="access">Who sees what</H>
+          <P>
+            <strong className="font-medium">
+              You see the projects you are a member of, and nothing else.
+            </strong>{' '}
+            Not a filter in the interface: it is enforced in the database, so a
+            page that forgot to filter still could not show you someone
+            else&rsquo;s work.
+          </P>
+          <P>
+            Membership sits on the <span className="text-ink">project</span> and
+            is inherited by everything under it. There is no joining a single
+            subproject: a half-visible tree is worse than no access, because
+            every roll-up above it would be quietly wrong.
+          </P>
+          <P>
+            Add people under <span className="text-ink">Access</span> on a
+            project&rsquo;s Identity page, by email. They need an account here
+            first. Removing the last member is refused, because a project with
+            nobody on it is invisible to everyone, this account included, and
+            nothing in the interface would explain where it went.
+          </P>
+          <P>
+            <strong className="font-medium">
+              Roles and access are different lists.
+            </strong>{' '}
+            The names under <span className="text-ink">Roles</span> are text on
+            a report, and most of them should be: the product owner and the
+            process owner are often people who will never sign in here.
+            <span className="text-ink"> Access</span> is what decides who can
+            open anything.
+          </P>
+          <div className="mt-4">
+            <Row left="Getting an account">
+              Created in Supabase, then invited. The invitation link lets them
+              choose their own password and give the name that appears on
+              projects.
+            </Row>
+            <Row left="Forgotten password">
+              On the sign-in page. The reply is the same whether the address is
+              known or not, because that form sits on the open side of the login.
+            </Row>
+            <Row left="Sparks">
+              Private to whoever had the thought. A half-formed idea at eleven
+              at night is not project work and no colleague sees it.
+            </Row>
+            <Row left="Strategy figures">
+              Computed over everything, so a strategy reports the same number to
+              everyone. Only the parts behind it are filtered to what you can
+              open. Spend is the exception and says so on the page.
+            </Row>
+          </div>
 
           <H id="sparks">Sparks</H>
           <P>
@@ -502,6 +556,16 @@ export default function GuidePage() {
           </P>
 
           <H id="roles">Who does what</H>
+          <P>
+            The single-person fields offer everyone this portfolio already knows
+            about: anyone with an account, plus every name already written into
+            a role anywhere. It suggests rather than constrains, because half
+            the people holding roles have no login. Where the same person has
+            been typed two ways, the spelling used most is the one offered, so
+            the typo cannot be picked again. The comma separated fields show the
+            known spellings underneath instead, where a suggestion would replace
+            the list rather than extend it.
+          </P>
           <P>
             Roles live on Identity, and they can be set on any node: a hardware subproject
             may have a different project manager than the programme around it. A part with

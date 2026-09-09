@@ -192,6 +192,15 @@ export interface StrategyNode {
   annual_eur: number | null
   note: string | null
   is_top: boolean
+  /**
+   * What the node itself expects to be worth a year, in euro. Null where nobody
+   * has said. Carried on the view rather than read off the node, because the
+   * view runs as owner and a strategy total has to be the same number for
+   * everyone.
+   */
+  benefit_eur: number | null
+  node_status: NodeStatus
+  node_blocked: boolean
 }
 
 /**

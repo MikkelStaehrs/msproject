@@ -1046,6 +1046,35 @@ entry writes without asking and a default of `method` would file hardware
 choices under method in silence. A wrong heading is worse than an empty one:
 `other` reads as "not filed", the page counts them, and filing one is a click.
 
+## Two limits that only exist in production
+
+**A server action's request body is capped at 4.5 MB on Vercel.** Documents
+promised 25 MB and delivered it locally, which is the worst shape a limit can
+have: a scanned drawing worked on the machine it was built on and would have
+failed the first time a colleague tried it. The Documents panel now asks for a
+signed URL, the browser PUTs straight to Supabase Storage, and only the path
+and the name come back to be written as a row. Size and MIME type are read back
+from storage rather than believed: a row claiming 2 KB over a 60 MB object would
+make the page lie about what the project holds.
+
+The one file field on the cost form still travels with the form, and says so.
+A quotation is almost always well under the cap; the panel is there for what is
+not.
+
+**A strategy total must not depend on who is looking.** Membership made every
+read viewer-scoped, which is right for work and wrong for a figure reported
+upwards: "COGS saving promises 340 000 a year" has to be the same sentence
+whoever opens the page, and a number that quietly shrinks for the colleague who
+is not on one of the contributing projects is worse than no number, because both
+people will believe theirs.
+
+So `v_strategy_node` runs as owner and carries what each marking is worth. Two
+things about it are deliberate: it is the one place in this schema where SQL
+reads the `reporting` jsonb, because the page reading the node itself is exactly
+what cannot work here; and it exposes no converted money, so the euro rule stays
+in the two places it lives rather than gaining a third. `invested` is left
+viewer-scoped for that reason and is labelled as such on the page.
+
 ## Backed by an audit, not by belief
 
 `npm run audit` holds the running database up against the code that talks to

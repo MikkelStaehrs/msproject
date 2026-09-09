@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { subtreeSet } from '@/lib/subtree'
-import { readIdentity } from '@/lib/identity'
 import { formatMoney } from '@/lib/cost'
 import { contributionOf, strategyPicture, type Marking } from '@/lib/strategy'
 import { setContribution, toggleNodeStrategy } from '@/lib/strategy-actions'
@@ -11,7 +10,6 @@ import { pathTo } from '@/lib/wbs'
 import { Hint, Rule, StatusMark } from '@/components/ui'
 import {
   TYPE_LABEL,
-  type ActiveBlocker,
   type Node,
   type NodeCost,
   type Strategy,
@@ -37,15 +35,14 @@ export default async function StrategyDetailPage({
   const { add, edit: editId } = await searchParams
   const supabase = await createClient()
 
-  const [strategyRes, markRes, nodeRes, costRes, blockerRes] = await Promise.all([
+  const [strategyRes, markRes, nodeRes, costRes] = await Promise.all([
     supabase.from('strategy').select('*').eq('id', id).single(),
     supabase.from('v_strategy_node').select('*').eq('strategy_id', id),
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('v_node_cost').select('*'),
-    supabase.from('v_active_blocker').select('node_id'),
   ])
 
-  const failure = firstError([markRes, nodeRes, costRes, blockerRes])
+  const failure = firstError([markRes, nodeRes, costRes])
   if (failure) return <QueryFailure message={failure} />
 
   const strategy = strategyRes.data as Strategy | null
@@ -54,10 +51,6 @@ export default async function StrategyDetailPage({
   const marks = (markRes.data ?? []) as StrategyNode[]
   const nodes = (nodeRes.data ?? []) as Node[]
   const rolls = new Map(((costRes.data ?? []) as NodeCost[]).map((r) => [r.node_id, r]))
-  const blockedNodes = new Set(
-    ((blockerRes.data ?? []) as Pick<ActiveBlocker, 'node_id'>[]).map((b) => b.node_id),
-  )
-
   const byId = new Map(nodes.map((n) => [n.id, n]))
   const roots = nodes.filter((n) => n.parent_id === null)
   const projectOf = (nodeId: string) =>
@@ -78,9 +71,9 @@ export default async function StrategyDetailPage({
       nodeId: m.node_id,
       isTop: m.is_top,
       annualEur: m.annual_eur === null ? null : Number(m.annual_eur),
-      ownBenefit: node ? readIdentity(node.reporting).economics.benefit : null,
-      status: node?.status ?? 'idea',
-      blocked: blockedNodes.has(m.node_id),
+      ownBenefit: m.benefit_eur === null ? null : Number(m.benefit_eur),
+      status: m.node_status,
+      blocked: m.node_blocked,
       investedEur: Number(rolls.get(m.node_id)?.once_committed ?? 0),
     }
   }
