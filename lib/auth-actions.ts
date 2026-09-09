@@ -49,6 +49,8 @@ export async function setPassword(_prev: string | null, fd: FormData) {
    * on a report as if it were a person.
    */
   const name = String(fd.get('full_name') ?? '').trim().replace(/\s+/g, ' ')
+  // Blank leaves whatever is there. Someone changing only their password must
+  // not lose the name colleagues already see them by.
   if (name !== '') {
     await supabase.from('profile').update({ full_name: name }).eq('id', data.user.id)
   }

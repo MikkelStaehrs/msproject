@@ -1,82 +1,34 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { PasswordForm } from './form'
 
-import Link from 'next/link'
-import { useActionState } from 'react'
-import { setPassword } from '@/lib/auth-actions'
+export const dynamic = 'force-dynamic'
+export const metadata = { title: 'Your account' }
 
 /**
- * Where an invitation lands, and where you change your own.
+ * Where an invitation lands, and the only place you can change your own
+ * password or the name colleagues see.
  *
- * Reached with a session already created by the link in the email, which is why
- * it asks for no old password: the link was the proof. Signed in and wanting a
- * different password, you land here the same way, from the account menu.
+ * It began as the landing page for an invitation link and nothing else, which
+ * left a gap worth naming: the first account here set its password before there
+ * was anywhere to give a name, and there was no route back. So the header links
+ * here, and the page reads whatever is already set rather than starting from
+ * blank and quietly wiping it.
  */
-export default function PasswordPage() {
-  const [message, formAction, pending] = useActionState(setPassword, null)
+export default async function PasswordPage() {
+  const supabase = await createClient()
+
+  const { data: auth } = await supabase.auth.getUser()
+
+  const { data: profile } = auth.user
+    ? await supabase.from('profile').select('full_name').eq('id', auth.user.id).maybeSingle()
+    : { data: null }
 
   return (
     <main className="mx-auto max-w-[460px] px-5 py-24">
-      <h1 className="font-display text-3xl font-medium">Choose a password</h1>
-      <p className="mt-3 text-[13px] leading-relaxed text-muted">
-        This is the only thing standing between the open internet and real
-        project work, so make it long. A sentence you would remember beats
-        something with symbols in it.
-      </p>
-
-      <form action={formAction} className="mt-8 flex flex-col gap-6">
-        <label className="block">
-          <span className="lbl text-muted">Your name</span>
-          <input
-            name="full_name"
-            required
-            autoComplete="name"
-            placeholder="Mikkel Stæhr"
-            className="field"
-          />
-          <span className="mt-1 block text-[10.5px] leading-snug text-rule-strong">
-            What colleagues see when you are named as an owner or a project
-            manager. Not your email.
-          </span>
-        </label>
-
-        <label className="block">
-          <span className="lbl text-muted">New password</span>
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={10}
-            autoComplete="new-password"
-            className="field"
-          />
-        </label>
-
-        <label className="block">
-          <span className="lbl text-muted">Again</span>
-          <input
-            name="again"
-            type="password"
-            required
-            minLength={10}
-            autoComplete="new-password"
-            className="field"
-          />
-        </label>
-
-        <button type="submit" disabled={pending} className="btn mt-1.5 w-full">
-          {pending ? 'Saving...' : 'Save it'}
-        </button>
-
-        {message && <p className="text-[13px] leading-relaxed text-oxblood">{message}</p>}
-      </form>
-
-      <p className="mt-10 border-t border-rule pt-4 text-[11px] leading-relaxed text-muted">
-        Landed here without a working link?{' '}
-        <Link href="/login" className="text-ink underline decoration-rule-strong underline-offset-2">
-          Ask for a new one
-        </Link>
-        . They are single use and they expire.
-      </p>
+      {auth.user && (
+        <div className="lbl mb-8 text-muted">{auth.user.email}</div>
+      )}
+      <PasswordForm name={profile?.full_name ?? ''} />
     </main>
   )
 }

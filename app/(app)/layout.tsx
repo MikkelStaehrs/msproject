@@ -97,6 +97,17 @@ export default async function AppLayout({
           <div className="min-w-0 flex-1 overflow-x-auto lg:flex-none lg:overflow-visible">
             <Nav />
           </div>
+          {/*
+            The only route to your own password and to the name colleagues see.
+            It was reachable solely through an invitation link, which left the
+            first account here unable to give itself a name at all.
+          */}
+          <Link
+            href="/auth/password"
+            className="shrink-0 text-[10px] uppercase tracking-[0.16em] text-rule-strong hover:text-muted"
+          >
+            Account
+          </Link>
           <form action={logout} className="shrink-0">
             <button className="text-[10px] uppercase tracking-[0.16em] text-rule-strong hover:text-muted">
               Sign out
