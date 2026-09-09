@@ -204,8 +204,17 @@ export default async function ProjectsPage({
                             </Link>
                             <div className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-muted">
                               {p.category ? CATEGORY_LABEL[p.category] : 'No category'}
-                              {typeof p.reporting?.project_no === 'string' && (
+                              {/*
+                                An absent number is the signal, not a blank.
+                                It means the work exists here and has not been
+                                registered in the company system, which is a
+                                thing a project manager is asked about.
+                              */}
+                              {typeof p.reporting?.project_no === 'string' &&
+                              p.reporting.project_no !== '' ? (
                                 <> · {p.reporting.project_no}</>
+                              ) : (
+                                <span className="text-oxblood"> · not registered</span>
                               )}
                             </div>
                           </div>

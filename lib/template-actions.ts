@@ -12,7 +12,6 @@ import {
   type TemplateBody,
   type TemplateRisk,
 } from '@/lib/template'
-import { assignProjectNo } from '@/lib/assign-project-no'
 import type { NodeCategory, NodeType, WaitingOnType } from '@/lib/types'
 import { required, text } from '@/lib/form'
 
@@ -164,17 +163,16 @@ export async function deployTemplate(fd: FormData) {
   if (body.folders.length > 0) reporting.folders = body.folders
 
   /*
-   * Two targets. Without a parent this makes a new project, numbered and with
-   * its own reporting. With one, the tree simply hangs underneath and none of
-   * the project furniture applies: no number, no account string, no folders.
+   * Two targets. Without a parent this makes a new project with its own
+   * reporting. With one, the tree simply hangs underneath and none of the
+   * project furniture applies: no account string, no folders.
+   *
+   * No number is assigned either way. It comes from UBS Projects, and a
+   * project applied from a template has not been registered there yet.
    */
   const parentId = text(fd, 'parent_id')
 
   const category = (text(fd, 'category') ?? template.category) as NodeCategory | null
-  const withNumber =
-    parentId === null
-      ? await assignProjectNo(supabase, reporting, category, true, today())
-      : reporting
 
   let rootId: string
   let sortBase: number
@@ -197,7 +195,7 @@ export async function deployTemplate(fd: FormData) {
         category,
         status: 'planned',
         start_date: start,
-        reporting: withNumber,
+        reporting,
         sort_order: (lastRoot?.[0]?.sort_order ?? 0) + 10,
       })
       .select('id')

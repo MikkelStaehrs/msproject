@@ -802,10 +802,11 @@ Each field is shown **separately with its own copy button**, in the same order a
 the fields in the company Power App. Progress percentage and next date are shown as
 **context** beside them, so the text can be checked. They are not typed anywhere.
 
-Nothing is submitted anywhere from here: no integration, no API, no
-credentials held against another system. The text is copied out and pasted in
-by hand, deliberately. The point was never to automate the submission, it was
-to stop having to phrase the thing from scratch every Friday.
+Nothing is submitted anywhere from here yet: the text is copied out and pasted
+in by hand. The point was never to automate the submission, it was to stop
+having to phrase the thing from scratch every Friday, and that half is done.
+Pushing it into UBS Projects is a decided direction rather than a refusal now;
+see "One project identity, and it is not ours".
 
 **One sentence per recipient, worst wait first.** The first real report read
 «Waiting on Project Board: ..., 1 days. Waiting on Project Board: ..., 0 days.»
@@ -1045,6 +1046,31 @@ carries a quantity of one, so nothing that had ever been reported was restated.
 entry writes without asking and a default of `method` would file hardware
 choices under method in silence. A wrong heading is worse than an empty one:
 `other` reads as "not filed", the page counts them, and filing one is a click.
+
+## One project identity, and it is not ours
+
+`project_no` used to be invented here: a category prefix, a year and a counter,
+producing PR-26-0001. It looked official and was not. UBS Projects, the company
+Power Apps system, is where a project is actually registered and numbered, so
+this was a second series for the same projects, and the day somebody compared
+the two systems it would have been this one explaining itself. "One definition,
+one place" at the level above the code.
+
+So the number is typed in from there, `assign-project-no.ts` and `project-no.ts`
+are gone, and nothing in this application invents an identity any more.
+
+**An absent number is the signal, not a blank.** It means the work exists here
+and has not been registered in the company system, which is a thing a project
+manager gets asked about. `/projects` says "not registered" in oxblood rather
+than showing nothing, and a project applied from a template starts that way
+because it has not been registered yet.
+
+**Integration, when it comes, goes through Power Automate.** Not the Dataverse
+Web API: that needs an app registration in Entra ID and a service principal,
+which is a project with IT before it is a feature. A flow with an HTTP trigger
+gives a URL to post the weekly status to, and the flow writes into the Power
+App. The signature in that URL would be the first real secret this deployment
+holds; until now it has carried only the anon key, which is public by design.
 
 ## The Claude app, and why it holds no keys
 

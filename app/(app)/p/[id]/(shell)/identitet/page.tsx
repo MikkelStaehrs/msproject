@@ -265,9 +265,7 @@ export default async function IdentityPage({
               </span>
               <div className="border-b border-rule py-[7px] text-[13px] tabular-nums">
                 {identity.admin.project_no ?? (
-                  <span className="text-rule-strong">
-                    assigned once a category is chosen
-                  </span>
+                  <span className="text-oxblood">not registered in UBS Projects</span>
                 )}
               </div>
             </div>

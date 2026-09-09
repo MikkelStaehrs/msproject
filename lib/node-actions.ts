@@ -7,7 +7,6 @@ import { today } from '@/lib/date'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { purgeDocumentsForSubtree } from '@/lib/document-actions'
-import { assignProjectNo } from '@/lib/assign-project-no'
 import { PEOPLE_FIELDS } from '@/lib/identity'
 import { reorder, type Sortable } from '@/lib/reorder'
 import type { NodeCategory, NodeStatus, NodeType } from '@/lib/types'
@@ -102,13 +101,7 @@ export async function createNode(fd: FormData) {
     .order('sort_order', { ascending: false })
     .limit(1)
 
-  const reporting = await assignProjectNo(
-    supabase,
-    mergeReporting(fd, {}),
-    fields.category,
-    parent_id === null,
-    today(),
-  )
+  const reporting = mergeReporting(fd, {})
 
   /*
    * The id is decided here rather than read back.
@@ -191,15 +184,9 @@ export async function updateNode(fd: FormData) {
     .eq('id', id)
     .single()
 
-  // If the node gets a category for the first time as a top level project,
-  // the number is assigned here. Otherwise a project created without a
-  // category would never get one.
-  const reporting = await assignProjectNo(
-    supabase,
-    mergeReporting(fd, (existing?.reporting ?? {}) as Record<string, unknown>),
-    fields.category,
-    parent_id === null,
-    today(),
+  const reporting = mergeReporting(
+    fd,
+    (existing?.reporting ?? {}) as Record<string, unknown>,
   )
 
   const { error } = await supabase

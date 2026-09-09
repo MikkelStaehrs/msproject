@@ -22,11 +22,24 @@ export type FieldDef = {
 }
 
 /**
- * Administrative fields shown in the context band. project_no comes first but
- * is assigned by the system; see EDITABLE_ADMIN_FIELDS for the writable ones.
+ * Administrative fields shown in the context band.
+ *
+ * `project_no` used to be invented here, from a category prefix and a year:
+ * PR-26-0001. It looked official and was not. UBS Projects is where a project
+ * is actually registered and numbered, so a second series for the same projects
+ * was one identity too many, and the day somebody compared the two systems it
+ * would have been this one that had to explain itself.
+ *
+ * So it is typed in from there now. A project with no number is not a gap in
+ * the form: it means the work exists here and has not been registered in the
+ * company system, and saying that out loud is more useful than filling it in.
  */
 export const ADMIN_FIELDS: FieldDef[] = [
-  { key: 'project_no', label: 'Project no.' },
+  {
+    key: 'project_no',
+    label: 'Project no.',
+    hint: 'The official number from UBS Projects. Empty means this project is not registered there yet, which is a real thing to know rather than a field to fill.',
+  },
   {
     key: 'account',
     label: 'Account string',
@@ -40,9 +53,8 @@ export const ADMIN_FIELDS: FieldDef[] = [
 ]
 
 /** The ones the user may write. The project number is not among them. */
-export const EDITABLE_ADMIN_FIELDS: FieldDef[] = ADMIN_FIELDS.filter(
-  (f) => f.key !== 'project_no',
-)
+/** All of them now: nothing here is assigned by this application. */
+export const EDITABLE_ADMIN_FIELDS: FieldDef[] = ADMIN_FIELDS
 
 export const PRIORITIES = ['Low', 'Medium', 'High'] as const
 export type Priority = (typeof PRIORITIES)[number]
