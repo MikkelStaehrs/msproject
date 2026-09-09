@@ -39,6 +39,7 @@ const SECTIONS = [
     ['start', 'Where to start'],
     ['access', 'Who sees what'],
     ['sparks', 'Sparks'],
+    ['claude', 'The Claude app'],
     ['quick', 'Quick entry'],
     ['tree', 'The tree'],
     ['writing', 'Writing it down'],
@@ -268,6 +269,44 @@ export default function GuidePage() {
           <P>
             Each spark records where it came from, so you can see which way of
             capturing you actually use.
+          </P>
+
+          <H id="claude">The Claude app</H>
+          <P>
+            Say an idea to Claude on your phone and it lands in your Sparks
+            inbox. That is the whole feature, and it exists because the good
+            ideas arrive at eleven at night, in a car park, or on the way to a
+            line, and none of those are moments for opening a browser.
+          </P>
+          <P>
+            Set it up under <span className="text-ink">Account</span>: make a
+            token, then add Task Studio in Claude as a custom connector with
+            that token as its <Code>Authorization</Code> header. The page has
+            the exact URL and the steps.
+          </P>
+          <P>
+            <strong className="font-medium">
+              The token can add one sentence to your own inbox, and nothing
+              else.
+            </strong>{' '}
+            It cannot read your projects, your prices or your documents, and it
+            cannot change or delete anything. That is enforced in the database,
+            not promised in an interface: the connector holds no database
+            privileges at all and calls a single function that can only create a
+            spark. A token going astray is an annoyance rather than an incident,
+            and that asymmetry is the reason it was built this way.
+          </P>
+          <P>
+            It is shown once, when you make it, because only a hash of it is
+            kept. Lost it, or suspect it? Make another and revoke the old one.
+            The list shows when each was last used, which is how you notice one
+            being used that should not be.
+          </P>
+          <P>
+            What arrives is captured, not planned. Claude is told to pass the
+            thought on in the words you said it, without tidying it into a task
+            or asking which project it belongs to, because that is the job
+            triage does later with the tree in front of you.
           </P>
 
           <H id="quick">Quick entry</H>

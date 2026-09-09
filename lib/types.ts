@@ -217,6 +217,18 @@ export interface ProjectMember {
   added_at: string
 }
 
+/**
+ * A long lived credential that may create a spark and nothing else. Stored
+ * hashed, so no code here can read one back; shown to its owner once.
+ */
+export interface SparkToken {
+  id: string
+  user_id: string
+  name: string
+  created_at: string
+  last_used_at: string | null
+}
+
 export const SPARK_SOURCES = ['app', 'quick', 'claude'] as const
 export type SparkSource = (typeof SPARK_SOURCES)[number]
 

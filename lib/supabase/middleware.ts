@@ -109,9 +109,17 @@ export async function updateSession(request: NextRequest) {
    * to /login instead, an invited colleague would arrive at a password prompt
    * for a password they have never been given.
    */
+  /*
+   * /api/mcp carries its own credential in a header, because the Claude app has
+   * no cookie here and never will. Sending it to /login would answer a
+   * JSON-RPC call with a redirect to an HTML form. It is open at this layer and
+   * closed at the next: without a valid capture token it can do nothing, and
+   * with one it can do exactly one thing.
+   */
   const open =
     request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/auth/')
+    request.nextUrl.pathname.startsWith('/auth/') ||
+    request.nextUrl.pathname === '/api/mcp'
 
   if (!user && !open) {
     const login = request.nextUrl.clone()

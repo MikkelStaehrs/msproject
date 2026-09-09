@@ -1046,6 +1046,35 @@ entry writes without asking and a default of `method` would file hardware
 choices under method in silence. A wrong heading is worse than an empty one:
 `other` reads as "not filed", the page counts them, and filing one is a click.
 
+## The Claude app, and why it holds no keys
+
+An idea said to Claude on a phone becomes a spark. `/api/mcp` is a Streamable
+HTTP MCP server with **one tool, and it only writes**.
+
+The obvious way to build it would have been to put the service role key on the
+deployment. That key bypasses every policy in the schema, so an endpoint whose
+whole job is "add one sentence to an inbox" would have been able to read every
+project, every price and every document, and delete them. The blast radius
+would have had nothing to do with the job.
+
+So the endpoint holds no privileges. It calls `capture_spark` with the **anon**
+key, which is public and opens nothing on its own, and that function is the
+only elevated path into this database reachable without a session. It can
+create a spark. No argument changes that.
+
+The credential is a capture token, stored as a SHA-256 hash in `spark_token`
+and shown to its owner once. Nothing here can read one back, which is the point:
+a table that can be turned into a working credential eventually leaks one. The
+token is also the only wall in front of the function, since there is no rate
+limiting, which is why it is 32 bytes from the system generator rather than
+something memorable.
+
+What a stolen token buys: text in one person's private inbox. That asymmetry is
+the design.
+
+`/api/mcp` is open in middleware and closed one layer down. Sending a JSON-RPC
+call to a login redirect would be the wrong answer to the wrong question.
+
 ## Two limits that only exist in production
 
 **A server action's request body is capped at 4.5 MB on Vercel.** Documents
