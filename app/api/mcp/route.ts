@@ -29,24 +29,56 @@ import { createClient } from '@supabase/supabase-js'
 
 const PROTOCOL = '2025-06-18'
 
+/**
+ * Said on every field that takes substance, rather than on one of them.
+ *
+ * It was on `context` alone to begin with, and the first real attempt put
+ * everything in `idea` and so never read it. Advice a model does not see is
+ * not advice.
+ */
+const TABLES =
+  'Where the substance is a list of things with values against them, such as ' +
+  'equipment with prices or options with lead times, write that part as a ' +
+  'markdown pipe table (| Item | Price |) and it will be shown as a table. ' +
+  'Never as a run of semicolons. Prose and a table may sit together, ' +
+  'separated by a blank line.'
+
 const CAPTURE = {
   name: 'capture_idea',
   title: 'Capture an idea in Task Studio',
   description:
-    'Save a thought to the Sparks inbox in Task Studio, to be triaged later. ' +
-    'Use it for a half-formed idea, something to look into, or something worth ' +
-    'doing that has no project yet. ' +
+    'Save a NEW thought to the Sparks inbox in Task Studio, to be triaged ' +
+    'later. Use it for a half-formed idea, something to look into, or ' +
+    'something worth doing that has no project yet. ' +
+    'Before calling this, call list_ideas: if a thought about the same subject ' +
+    'is already waiting, use add_to_idea instead. Several sparks about one ' +
+    'subject have to be married up by hand afterwards, which is work this tool ' +
+    'exists to avoid. ' +
     'This is a capture step, not a planning step: do not turn it into a task, ' +
     'do not propose a breakdown, and do not ask which project it belongs to. ' +
-    'Those are decided later with the whole tree in view.',
+    'Those are decided later with the whole tree in view. ' +
+    TABLES,
   inputSchema: {
     type: 'object',
     properties: {
       idea: {
         type: 'string',
+        /*
+         * A hard limit, not advice.
+         *
+         * The first real use put 577 characters of equipment and prices in
+         * here and left `context` empty, and the inbox became a wall of
+         * semicolons. The description had asked for a sentence; a schema that
+         * permits the wrong shape gets the wrong shape, so this one does not
+         * permit it.
+         */
+        maxLength: 300,
         description:
-          'The thought itself, in the words the user said it in. Do not ' +
-          'rephrase, expand or tidy this.',
+          'ONE SENTENCE: the thought itself, in the words the user said it ' +
+          'in. Do not rephrase, expand or tidy it. A list of items, prices, ' +
+          'suppliers or phases is NOT the thought and must not go here; it ' +
+          'goes in context. If what you are about to write is longer than a ' +
+          'sentence, the sentence is the thought and the rest is context.',
       },
       context: {
         type: 'string',
@@ -57,11 +89,7 @@ const CAPTURE = {
           'machine, a line, a supplier or a number. Facts from the ' +
           'conversation only. Not a plan, not next steps, not a guess at what ' +
           'it should become. Leave it out if the thought stands on its own. ' +
-          'Where the substance really is a list of things with values against ' +
-          'them, such as equipment with prices or options with lead times, ' +
-          'write that part as a markdown pipe table and it will be shown as a ' +
-          'table. Prose and a table may sit in the same context, separated by ' +
-          'a blank line.',
+          TABLES,
       },
     },
     required: ['idea'],
@@ -91,9 +119,8 @@ const APPEND = {
     'if no existing thought is clearly the right one, capture a new one ' +
     'instead of guessing. ' +
     'This only ever adds: it cannot replace or remove what is there, so text ' +
-    'the user wrote themselves is safe. Where the substance is a list of ' +
-    'things with values against them, write it as a markdown pipe table and it ' +
-    'will be shown as a table.',
+    'the user wrote themselves is safe. ' +
+    TABLES,
   inputSchema: {
     type: 'object',
     properties: {
@@ -241,6 +268,24 @@ export async function POST(request: NextRequest) {
 
     if (idea === '') {
       return toolError(id, 'Nothing to save. Say the thought and I will keep it.')
+    }
+
+    /*
+     * The shape is refused rather than stored badly.
+     *
+     * A tool error is the one message a model reliably acts on, so this is
+     * where the correction belongs: it says what went wrong and what to do
+     * instead, and the retry comes back in the right shape. Splitting the text
+     * here instead would mean guessing where somebody's sentence ends.
+     */
+    if (idea.length > 300) {
+      return toolError(
+        id,
+        `The thought is ${idea.length} characters, and the idea field takes a ` +
+          'sentence. Put the sentence in idea and everything else in context: ' +
+          'the detail, the equipment, the prices. If it is a list of things ' +
+          'with values against them, write that as a markdown pipe table.',
+      )
     }
 
     const { data, error } = await supabase.rpc('capture_spark', {
