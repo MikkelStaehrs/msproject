@@ -48,7 +48,12 @@ const TOOL = {
           'discussed, and any specifics mentioned in passing such as a ' +
           'machine, a line, a supplier or a number. Facts from the ' +
           'conversation only. Not a plan, not next steps, not a guess at what ' +
-          'it should become. Leave it out if the thought stands on its own.',
+          'it should become. Leave it out if the thought stands on its own. ' +
+          'Where the substance really is a list of things with values against ' +
+          'them, such as equipment with prices or options with lead times, ' +
+          'write that part as a markdown pipe table and it will be shown as a ' +
+          'table. Prose and a table may sit in the same context, separated by ' +
+          'a blank line.',
       },
     },
     required: ['idea'],

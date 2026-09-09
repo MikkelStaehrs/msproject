@@ -43,3 +43,61 @@ export function opening(text: string | null | undefined): {
   const all = paragraphs(text)
   return { first: all[0] ?? null, rest: all.slice(1) }
 }
+
+/* -------------------------------------------------------------------------
+ * Tables
+ *
+ * Some thoughts are a list of things with numbers against them: three cabinet
+ * quotes, the parts for a mini rack, four options with lead times. Written as
+ * running prose that is unreadable, and asking for a real table would mean the
+ * note stops being text.
+ *
+ * So it stays text, and a table is recognised rather than stored. Pipe rows are
+ * what a model writes unprompted and what a person can still type by hand, and
+ * the raw note remains editable, greppable and printable. Nothing is parsed
+ * into a structure the database has to know about.
+ * ---------------------------------------------------------------------- */
+
+export type Block =
+  | { kind: 'text'; text: string }
+  | { kind: 'table'; head: string[] | null; rows: string[][] }
+
+/** `| a | b |` to ['a','b']. Leading and trailing pipes are optional. */
+function cells(line: string): string[] {
+  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '')
+  return trimmed.split('|').map((c) => c.trim())
+}
+
+/** `|---|:--:|` and friends: the line that makes the one above it a header. */
+const isRule = (line: string) =>
+  /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line)
+
+/**
+ * A paragraph is a table when it has at least two lines and every line carries
+ * a pipe. Requiring all of them, rather than most, keeps a sentence that merely
+ * mentions a pipe out of it.
+ */
+function asTable(paragraph: string): Block | null {
+  const lines = paragraph.split(/\r?\n/).filter((l) => l.trim() !== '')
+  if (lines.length < 2) return null
+  if (!lines.every((l) => l.includes('|'))) return null
+
+  const body = lines.filter((l) => !isRule(l))
+  if (body.length === 0) return null
+
+  const hasHeader = lines.length > 1 && isRule(lines[1])
+  const head = hasHeader ? cells(body[0]) : null
+  const rows = (hasHeader ? body.slice(1) : body).map(cells)
+  if (rows.length === 0 && head === null) return null
+
+  // A single column is a list, not a table, and reads better as one.
+  const width = Math.max(head?.length ?? 0, ...rows.map((r) => r.length))
+  if (width < 2) return null
+
+  return { kind: 'table', head, rows }
+}
+
+/** The paragraphs of a text, with the ones that are tables marked as such. */
+export function blocks(text: string | null | undefined): Block[] {
+  return paragraphs(text).map((p) => asTable(p) ?? { kind: 'text', text: p })
+}

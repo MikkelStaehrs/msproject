@@ -1107,6 +1107,15 @@ what would have been lost. The note holds context, never a plan: the tool
 description says so, and capture stops being capture the moment it starts
 proposing.
 
+**A table is recognised, never stored.** Some substance really is a list of
+things with values against them: equipment with prices, options with lead
+times. Written as pipe rows, `lib/prose.ts` draws it as a table everywhere
+written text appears. Nothing becomes a structure the database has to know
+about, so the raw lines stay editable, greppable and printable, and a person
+can type one by hand. A single line or a single column stays text, because that
+is a list; and every line must carry a pipe before a paragraph counts, so a
+sentence mentioning an A|B splitter is not turned into a table.
+
 `/api/mcp` is open in middleware and closed one layer down. Sending a JSON-RPC
 call to a login redirect would be the wrong answer to the wrong question.
 

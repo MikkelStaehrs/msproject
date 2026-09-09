@@ -1,4 +1,4 @@
-import { opening, paragraphs } from './prose.ts'
+import { blocks, opening, paragraphs } from './prose.ts'
 
 let failed = 0
 function check(name: string, got: unknown, expected: unknown) {
@@ -79,6 +79,95 @@ check(
   opening(`One.${NL} ${NL}Two.${NL} ${NL}Three.`),
   { first: 'One.', rest: ['Two.', 'Three.'] },
 )
+
+// --- Tables ----------------------------------------------------------------
+const T = (lines: string[]) => lines.join(NL)
+
+check('plain prose is not a table', blocks('Just a sentence.'), [
+  { kind: 'text', text: 'Just a sentence.' },
+])
+
+check(
+  'a pipe table with a header',
+  blocks(T(['| Item | Price |', '|---|---|', '| Switch | 4200 |', '| PSU | 900 |'])),
+  [
+    {
+      kind: 'table',
+      head: ['Item', 'Price'],
+      rows: [
+        ['Switch', '4200'],
+        ['PSU', '900'],
+      ],
+    },
+  ],
+)
+
+check(
+  'a table without a header rule is still a table',
+  blocks(T(['| Switch | 4200 |', '| PSU | 900 |'])),
+  [
+    {
+      kind: 'table',
+      head: null,
+      rows: [
+        ['Switch', '4200'],
+        ['PSU', '900'],
+      ],
+    },
+  ],
+)
+
+check(
+  'outer pipes are optional',
+  blocks(T(['Item | Price', '--- | ---', 'Switch | 4200'])),
+  [{ kind: 'table', head: ['Item', 'Price'], rows: [['Switch', '4200']] }],
+)
+
+check(
+  'alignment colons in the rule are allowed',
+  blocks(T(['| a | b |', '|:--|--:|', '| 1 | 2 |'])),
+  [{ kind: 'table', head: ['a', 'b'], rows: [['1', '2']] }],
+)
+
+/*
+ * A sentence that merely mentions a pipe must not become a table, which is why
+ * EVERY line has to carry one rather than most of them.
+ */
+check(
+  'one line with a pipe among prose stays prose',
+  blocks(T(['We could use the A|B splitter', 'and see what happens'])),
+  [{ kind: 'text', text: T(['We could use the A|B splitter', 'and see what happens']) }],
+)
+
+check(
+  'a single line with pipes is not a table',
+  blocks('| just one row |'),
+  [{ kind: 'text', text: '| just one row |' }],
+)
+
+// One column is a list, and reads better as one.
+check(
+  'a single column is left as text',
+  blocks(T(['| Switch |', '| PSU |'])),
+  [{ kind: 'text', text: T(['| Switch |', '| PSU |']) }],
+)
+
+check(
+  'prose and a table in the same note',
+  blocks(T(['Three quotes came in.', ' ', '| Who | Price |', '|---|---|', '| Rittal | 38000 |'])),
+  [
+    { kind: 'text', text: 'Three quotes came in.' },
+    { kind: 'table', head: ['Who', 'Price'], rows: [['Rittal', '38000']] },
+  ],
+)
+
+check(
+  'ragged rows keep whatever cells they have',
+  blocks(T(['| a | b | c |', '| 1 | 2 |'])),
+  [{ kind: 'table', head: null, rows: [['a', 'b', 'c'], ['1', '2']] }],
+)
+
+check('nothing at all', blocks(null), [])
 
 console.log(failed === 0 ? '\nAll tests passed.' : `\n${failed} test(s) failed.`)
 process.exitCode = failed === 0 ? 0 : 1

@@ -1,4 +1,4 @@
-import { opening, paragraphs } from '@/lib/prose'
+import { blocks, opening, type Block } from '@/lib/prose'
 import type { EffectiveStatus, NodeStatus } from '@/lib/types'
 
 /* -------------------------------------------------------------------------
@@ -174,16 +174,68 @@ export function Prose({
   text: string | null | undefined
   className?: string
 }) {
-  const parts = paragraphs(text)
+  const parts = blocks(text)
   if (parts.length === 0) return null
 
   return (
     <div className={`flex flex-col gap-2.5 ${className}`}>
-      {parts.map((p, i) => (
-        <p key={i} className="whitespace-pre-line leading-relaxed">
-          {p}
-        </p>
+      {parts.map((b, i) => (
+        <ProseBlock key={i} block={b} />
       ))}
+    </div>
+  )
+}
+
+/**
+ * A paragraph, or a table where the paragraph was written as one.
+ *
+ * The note stays plain text: nothing is stored as a structure, and the raw
+ * lines remain editable, greppable and printable. A model writes pipe rows
+ * unprompted when the thing is a list of items with numbers against them, and
+ * three cabinet quotes read as three cabinet quotes rather than as a sentence
+ * with commas in it.
+ */
+function ProseBlock({ block }: { block: Block }) {
+  if (block.kind === 'text') {
+    return <p className="whitespace-pre-line leading-relaxed">{block.text}</p>
+  }
+
+  return (
+    /* Its own scroller: a wide table must never make the page scroll. */
+    <div className="-mx-1 overflow-x-auto px-1">
+      <table className="w-full min-w-[18rem] border-collapse text-left">
+        {block.head && (
+          <thead>
+            <tr className="border-b border-rule-strong">
+              {block.head.map((cell, i) => (
+                <th
+                  key={i}
+                  className="lbl-tight py-1.5 pr-5 align-baseline font-medium text-muted last:pr-0"
+                >
+                  {cell}
+                </th>
+              ))}
+            </tr>
+          </thead>
+        )}
+        <tbody>
+          {block.rows.map((row, r) => (
+            <tr key={r} className="border-b border-rule last:border-0">
+              {row.map((cell, c) => (
+                <td
+                  key={c}
+                  /* Numbers line up under each other; words do not need to. */
+                  className={`py-1.5 pr-5 align-baseline last:pr-0 ${
+                    /^[\d\s.,+-]+$/.test(cell) ? 'num tabular-nums' : ''
+                  }`}
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

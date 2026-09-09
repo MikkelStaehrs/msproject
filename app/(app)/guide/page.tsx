@@ -325,6 +325,29 @@ export default function GuidePage() {
             description when the spark becomes work, and you can edit or empty
             either of them.
           </P>
+          <P>
+            <strong className="font-medium">
+              Where the substance really is a table, it is shown as one.
+            </strong>{' '}
+            Equipment with prices, options with lead times, three quotes side by
+            side: written as pipe rows, that is drawn as a table wherever
+            written text appears in this application. Nothing is stored as a
+            structure, though. It stays plain text, so the raw lines remain
+            editable and printable, and you can type one by hand:
+          </P>
+          <div className="mt-3 max-w-prose">
+            <Code>{'| Item | Price |'}</Code>
+            <br />
+            <Code>{'|---|---|'}</Code>
+            <br />
+            <Code>{'| Switch | 4 200 |'}</Code>
+          </div>
+          <P>
+            A single line, or a single column, is left as text: that is a list
+            and reads better as one. A sentence that merely happens to contain a
+            pipe is left alone too, because every line has to carry one before
+            it counts.
+          </P>
 
           <H id="quick">Quick entry</H>
           <P>
