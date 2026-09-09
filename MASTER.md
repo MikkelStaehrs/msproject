@@ -1098,6 +1098,15 @@ something memorable.
 What a stolen token buys: text in one person's private inbox. That asymmetry is
 the design.
 
+**A spark has two halves and they stay apart.** The first one captured this way
+read "OT Test Center med mini rack": correct, in his own words, and close to
+useless in three weeks, because a bare fragment loses what made it worth
+saying. So `body` is what was said, untouched, and `note` is what was around
+it. Keeping them in one field would have blurred the two and the sentence is
+what would have been lost. The note holds context, never a plan: the tool
+description says so, and capture stops being capture the moment it starts
+proposing.
+
 `/api/mcp` is open in middleware and closed one layer down. Sending a JSON-RPC
 call to a login redirect would be the wrong answer to the wrong question.
 

@@ -263,6 +263,11 @@ export interface Spark {
   state: SparkState
   /** What it became, where it became anything. */
   became_node_id: string | null
+  /**
+   * What made the thought make sense at the time. Context, never a plan: the
+   * body is what was said, this is what was around it.
+   */
+  note: string | null
   /** Why it was dropped. The reason dropped sparks are kept, not deleted. */
   verdict: string | null
   captured_at: string

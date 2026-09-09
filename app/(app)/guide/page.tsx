@@ -303,10 +303,27 @@ export default function GuidePage() {
             being used that should not be.
           </P>
           <P>
-            What arrives is captured, not planned. Claude is told to pass the
-            thought on in the words you said it, without tidying it into a task
-            or asking which project it belongs to, because that is the job
-            triage does later with the tree in front of you.
+            What arrives is captured, not planned. Claude passes the thought on
+            in the words you said it, without tidying it into a task or asking
+            which project it belongs to, because that is the job triage does
+            later with the tree in front of you.
+          </P>
+          <P>
+            <strong className="font-medium">
+              It also keeps what was around it.
+            </strong>{' '}
+            The first spark captured this way read &ldquo;OT Test Center med
+            mini rack&rdquo;: correct, in the right words, and close to useless
+            in three weeks. So a spark has two halves, and they stay apart. The
+            thought is what you said, untouched. The note underneath is what
+            made it make sense: what prompted it, what was being discussed, the
+            machine or the supplier or the number mentioned in passing.
+          </P>
+          <P>
+            Facts from the conversation only. Not a plan, not next steps, not a
+            guess at what it should become. Both halves travel into the
+            description when the spark becomes work, and you can edit or empty
+            either of them.
           </P>
 
           <H id="quick">Quick entry</H>

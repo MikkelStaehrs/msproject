@@ -27,15 +27,28 @@ const TOOL = {
   description:
     'Save a thought to the Sparks inbox in Task Studio, to be triaged later. ' +
     'Use it for a half-formed idea, something to look into, or something worth ' +
-    'doing that has no project yet. Pass the thought as the user said it: this ' +
-    'is a capture step, not a planning step, so do not tidy it into a task, do ' +
-    'not add structure, and do not ask which project it belongs to.',
+    'doing that has no project yet. ' +
+    'This is a capture step, not a planning step: do not turn it into a task, ' +
+    'do not propose a breakdown, and do not ask which project it belongs to. ' +
+    'Those are decided later with the whole tree in view.',
   inputSchema: {
     type: 'object',
     properties: {
       idea: {
         type: 'string',
-        description: 'The thought, in the words it was said in.',
+        description:
+          'The thought itself, in the words the user said it in. Do not ' +
+          'rephrase, expand or tidy this.',
+      },
+      context: {
+        type: 'string',
+        description:
+          'What made the thought make sense at the time, so it is still ' +
+          'intelligible in three weeks: what prompted it, what was being ' +
+          'discussed, and any specifics mentioned in passing such as a ' +
+          'machine, a line, a supplier or a number. Facts from the ' +
+          'conversation only. Not a plan, not next steps, not a guess at what ' +
+          'it should become. Leave it out if the thought stands on its own.',
       },
     },
     required: ['idea'],
@@ -122,7 +135,9 @@ export async function POST(request: NextRequest) {
     return fail(id, -32602, `Unknown tool: ${String(params.name)}`)
   }
 
-  const idea = String((params.arguments as Record<string, unknown>)?.idea ?? '').trim()
+  const args = (params.arguments ?? {}) as Record<string, unknown>
+  const idea = String(args.idea ?? '').trim()
+  const context = String(args.context ?? '').trim()
   if (idea === '') {
     return toolError(id, 'Nothing to save. Say the thought and I will keep it.')
   }
@@ -170,7 +185,11 @@ export async function POST(request: NextRequest) {
    */
   const supabase = createClient(url, key, { auth: { persistSession: false } })
 
-  const { data, error } = await supabase.rpc('capture_spark', { token, body: idea })
+  const { data, error } = await supabase.rpc('capture_spark', {
+    token,
+    body: idea,
+    note: context === '' ? null : context,
+  })
 
   if (error) {
     return toolError(id, error.message)
@@ -180,7 +199,9 @@ export async function POST(request: NextRequest) {
     content: [
       {
         type: 'text',
-        text: `Kept it. It is in the Sparks inbox in Task Studio, waiting to be sorted.`,
+        text:
+          'Kept it. It is in the Sparks inbox in Task Studio, waiting to be ' +
+          (context === '' ? 'sorted.' : 'sorted, with the context around it.'),
       },
     ],
     structuredContent: { spark_id: data },

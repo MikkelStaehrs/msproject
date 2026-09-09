@@ -121,6 +121,19 @@ export default async function SparkPage({
               className="field resize-y text-base"
             />
           </label>
+          <label className="mt-3 block">
+            <span className="lbl text-muted">
+              <Hint text="Optional, and skip it at eleven at night. It is what makes the thought still readable in three weeks.">
+                What was around it
+              </Hint>
+            </span>
+            <textarea
+              name="note"
+              rows={2}
+              placeholder="Came up while looking at the stop log on line 3"
+              className="field resize-y text-[12.5px]"
+            />
+          </label>
           <button className="btn mt-3">Capture</button>
         </form>
 
@@ -164,7 +177,7 @@ export default async function SparkPage({
 
                   <div className="min-w-0 flex-1">
                     {editing?.id === s.id ? (
-                      <form action={editSpark} className="flex items-end gap-3">
+                      <form action={editSpark} className="flex flex-col gap-3">
                         <input type="hidden" name="id" value={s.id} />
                         <input type="hidden" name="redirectTo" value={here} />
                         <textarea
@@ -173,15 +186,43 @@ export default async function SparkPage({
                           autoFocus
                           rows={2}
                           defaultValue={s.body}
-                          className="field flex-1 resize-y"
+                          className="field resize-y"
                         />
-                        <button className="btn">Save</button>
-                        <Link href={here} className="btn btn-ghost">
-                          Cancel
-                        </Link>
+                        <label className="block">
+                          <span className="lbl text-muted">
+                            <Hint text="What made the thought make sense at the time. Claude fills this in when it captures one; you can change it or empty it.">
+                              What was around it
+                            </Hint>
+                          </span>
+                          <textarea
+                            name="note"
+                            rows={2}
+                            defaultValue={s.note ?? ''}
+                            className="field resize-y text-[12.5px]"
+                          />
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <button className="btn">Save</button>
+                          <Link href={here} className="btn btn-ghost">
+                            Cancel
+                          </Link>
+                        </div>
                       </form>
                     ) : (
-                      <Prose text={s.body} className="text-[14px]" />
+                      <>
+                        <Prose text={s.body} className="text-[14px]" />
+                        {/*
+                          Subordinate on purpose. The sentence is the thought;
+                          this is what was around it, and it must not compete
+                          with it for attention.
+                        */}
+                        {s.note && (
+                          <Prose
+                            text={s.note}
+                            className="mt-1.5 border-l-2 border-rule pl-3 text-[12.5px] text-muted"
+                          />
+                        )}
+                      </>
                     )}
 
                     <div className="lbl-tight mt-1.5 flex flex-wrap items-baseline gap-x-4 text-rule-strong">

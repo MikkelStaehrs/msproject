@@ -1,5 +1,6 @@
 'use server'
 
+import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { back, required, text } from '@/lib/form'
@@ -17,6 +18,7 @@ export async function createSpark(fd: FormData) {
 
   const { error } = await supabase.from('spark').insert({
     body: required(fd, 'body'),
+    note: text(fd, 'note'),
     source: (text(fd, 'source') ?? 'app') as SparkSource,
   })
 
@@ -30,7 +32,7 @@ export async function editSpark(fd: FormData) {
 
   const { error } = await supabase
     .from('spark')
-    .update({ body: required(fd, 'body') })
+    .update({ body: required(fd, 'body'), note: text(fd, 'note') })
     .eq('id', required(fd, 'id'))
 
   if (error) throw new Error(`Could not save it: ${error.message}`)
@@ -86,8 +88,8 @@ export async function deleteSpark(fd: FormData) {
 /**
  * It becomes work.
  *
- * The node is created where you say, with the spark's own text as the title,
- * and the spark is marked as having become it. Two rows written in one step,
+ * The node is created where you say, with the spark's own words as its
+ * description, and the spark is marked as having become it. Two rows written in one step,
  * because the alternative is creating the node on one page and remembering to
  * come back and tick the spark off on another, which nobody does.
  *
@@ -108,7 +110,7 @@ export async function promoteSpark(fd: FormData) {
 
   const { data: spark, error: readError } = await supabase
     .from('spark')
-    .select('body')
+    .select('body, note')
     .eq('id', id)
     .single()
 
@@ -122,23 +124,50 @@ export async function promoteSpark(fd: FormData) {
    * are kept underneath, because how you first put it is often clearer than the
    * name you settle on.
    */
-  const { data: node, error: nodeError } = await supabase
+  /*
+   * The id is chosen here rather than read back. Promoting a spark to a
+   * PROJECT creates a root, and a root is invisible until its creator is a
+   * member of it, so `.select()` would return nothing on the one path that
+   * matters most. Same reason as in createNode.
+   */
+  const nodeId = randomUUID()
+
+  const { error: nodeError } = await supabase
     .from('node')
     .insert({
+      id: nodeId,
       title,
       type,
       parent_id: type === 'project' ? null : parentId,
       status: 'idea',
-      description: spark.body,
+      /*
+       * Both halves travel. The sentence is what you said; the note is what
+       * made it make sense, and the node is exactly where that is worth
+       * keeping. Two paragraphs, because the description renders them as such.
+       */
+      description: spark.note ? `${spark.body}
+
+${spark.note}` : spark.body,
     })
-    .select('id')
-    .single()
 
   if (nodeError) throw new Error(`Could not create the node: ${nodeError.message}`)
 
+  // A new project needs you on it, or it vanishes the moment it is made.
+  if (type === 'project') {
+    const { error: memberError } = await supabase
+      .from('project_member')
+      .insert({ project_id: nodeId })
+
+    if (memberError && memberError.code !== '23505') {
+      throw new Error(
+        `The project was created but you were not added to it: ${memberError.message}`,
+      )
+    }
+  }
+
   const { error } = await supabase
     .from('spark')
-    .update({ state: 'kept', became_node_id: node.id })
+    .update({ state: 'kept', became_node_id: nodeId })
     .eq('id', id)
 
   if (error) throw new Error(`The node was created but the spark did not close: ${error.message}`)
