@@ -8,6 +8,7 @@ import {
 import { ProjectFrame } from '@/components/project-frame'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { addMember, removeMember } from '@/lib/member-actions'
 import { subtreeSet } from '@/lib/subtree'
 import { saveIdentity } from '@/lib/identity-actions'
 import { addDependency, removeDependency } from '@/lib/dependency-actions'
@@ -29,6 +30,7 @@ import {
   CATEGORY_LABEL,
   type Blocker,
   type Decision,
+  type ProjectMember,
   type Node,
   type NodeCategory,
   type NodeDependency,
@@ -110,6 +112,8 @@ export default async function IdentityPage({
     dependedRes,
     costRollRes,
     treeRes,
+    memberRes,
+    profileRes,
   ] = await Promise.all([
     supabase.from('node').select('*').eq('id', id).single(),
     supabase
@@ -129,10 +133,17 @@ export default async function IdentityPage({
     supabase.from('node_dependency').select('*').eq('depends_on_id', id),
     supabase.from('v_node_cost').select('*').eq('node_id', id).maybeSingle(),
     supabase.from('node').select('id, parent_id'),
+    supabase.from('project_member').select('*').eq('project_id', id),
+    supabase.from('profile').select('id, email'),
   ])
 
   const project = projectRes.data as Node | null
   if (!project) notFound()
+
+  const members = (memberRes.data ?? []) as ProjectMember[]
+  const emailOf = new Map(
+    ((profileRes.data ?? []) as { id: string; email: string }[]).map((p) => [p.id, p.email]),
+  )
 
   const identity = readIdentity(project.reporting)
   const stage = readStage(project.reporting)
@@ -534,6 +545,78 @@ export default async function IdentityPage({
         <span className="text-[11px] text-muted">
           All fields are saved at once.
         </span>
+      </div>
+
+
+      {/* Who may see any of this. Membership is the whole access model. */}
+      <div className="mt-12 border-t border-rule-strong pt-6">
+        <div className="flex items-baseline gap-4">
+          <h3 className="font-display text-[22px] font-medium">Access</h3>
+          <span className="text-[11px] text-muted">
+            Being here means seeing everything under this project, and being able
+            to change it
+          </span>
+        </div>
+
+        <div className="mt-4 max-w-2xl">
+          {members.length === 0 ? (
+            <p className="border-t border-rule pt-2.5 text-[12.5px] text-oxblood">
+              Nobody. A project with no members is invisible to everyone, this
+              account included.
+            </p>
+          ) : (
+            <div className="divide-y divide-rule border-y border-rule">
+              {members.map((m) => (
+                <div key={m.id} className="flex items-baseline gap-4 py-2.5">
+                  <span className="min-w-0 flex-1 text-[13px]">
+                    {emailOf.get(m.user_id) ?? (
+                      <span className="text-muted">
+                        an account with no profile row
+                      </span>
+                    )}
+                  </span>
+                  <span className="num text-[10px] text-rule-strong">
+                    {formatDate(m.added_at.slice(0, 10))}
+                  </span>
+                  <form action={removeMember}>
+                    <input type="hidden" name="id" value={m.id} />
+                    <input type="hidden" name="project_id" value={id} />
+                    <input type="hidden" name="redirectTo" value={`/p/${id}/identitet`} />
+                    <button className="lbl-tight text-rule-strong hover:text-oxblood">
+                      Remove
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form action={addMember} className="mt-4 flex items-end gap-3">
+            <input type="hidden" name="project_id" value={id} />
+            <input type="hidden" name="redirectTo" value={`/p/${id}/identitet`} />
+            <label className="block flex-1">
+              <span className="lbl text-muted">
+                <Hint text="They need an account here already. Create the user in Supabase first: a pending invitation would be a door left open on a guess about who ends up with that address.">
+                  Add somebody by email
+                </Hint>
+              </span>
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="colleague@unitedbeetseeds.com"
+                className="field"
+              />
+            </label>
+            <button className="btn">Add</button>
+          </form>
+
+          <p className="mt-3 text-[11px] leading-relaxed text-rule-strong">
+            Names under <span className="text-ink">Roles</span> above are text on
+            a report. This is the list that decides what anyone can actually
+            open.
+          </p>
+        </div>
       </div>
 
       {/* Dependencies between projects. Own form, own action. */}

@@ -1,5 +1,7 @@
 'use server'
 
+import { randomUUID } from 'node:crypto'
+
 import { revalidatePath } from 'next/cache'
 import { today } from '@/lib/date'
 import { redirect } from 'next/navigation'
@@ -108,27 +110,55 @@ export async function createNode(fd: FormData) {
     today(),
   )
 
-  const { data: created, error } = await supabase
-    .from('node')
-    .insert({
-      parent_id,
-      ...fields,
-      reporting,
-      completed_at: completedAt(fields.status, null),
-      sort_order: (last?.[0]?.sort_order ?? 0) + 10,
-    })
-    .select('id')
-    .single()
+  /*
+   * The id is decided here rather than read back.
+   *
+   * `.insert().select()` returns the new row through the SELECT policy, and a
+   * project is only visible once its creator is a member of it. That membership
+   * is added by a trigger, and whether the trigger has fired by the time
+   * RETURNING is evaluated is not something worth betting a broken "New
+   * project" button on. Choosing the id up front removes the question.
+   */
+  const id = randomUUID()
 
-  if (error || !created) {
-    throw new Error(`Could not create node: ${error?.message}`)
+  const { error } = await supabase.from('node').insert({
+    id,
+    parent_id,
+    ...fields,
+    reporting,
+    completed_at: completedAt(fields.status, null),
+    sort_order: (last?.[0]?.sort_order ?? 0) + 10,
+  })
+
+  if (error) {
+    throw new Error(`Could not create node: ${error.message}`)
+  }
+
+  /*
+   * Join the project you just made. The database does this too, in a trigger,
+   * so a project created in the SQL editor is not orphaned either. Doing it
+   * here as well is deliberate: this is the path that matters, and it fails
+   * loudly if it fails at all.
+   */
+  if (parent_id === null) {
+    const { error: memberError } = await supabase
+      .from('project_member')
+      .insert({ project_id: id })
+      .select('id')
+      .maybeSingle()
+
+    if (memberError && memberError.code !== '23505') {
+      throw new Error(
+        `The project was created but you were not added to it: ${memberError.message}`,
+      )
+    }
   }
 
   revalidatePath('/', 'layout')
 
   // A new project has none of its master data yet. Landing on the front page
   // would leave the user without knowing where the rest is written.
-  if (parent_id === null) redirect(`/p/${created.id}/identitet`)
+  if (parent_id === null) redirect(`/p/${id}/identitet`)
   redirect(String(fd.get('redirectTo') ?? '/'))
 }
 

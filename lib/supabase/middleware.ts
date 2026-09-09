@@ -103,7 +103,17 @@ export async function updateSession(request: NextRequest) {
     )
   }
 
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+  /*
+   * /auth/callback has to run without a session, because creating one is its
+   * whole job: it trades the code in an invitation or reset link for it. Sent
+   * to /login instead, an invited colleague would arrive at a password prompt
+   * for a password they have never been given.
+   */
+  const open =
+    request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname.startsWith('/auth/')
+
+  if (!user && !open) {
     const login = request.nextUrl.clone()
     login.pathname = '/login'
     return NextResponse.redirect(login)

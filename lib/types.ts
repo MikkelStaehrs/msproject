@@ -194,6 +194,20 @@ export interface StrategyNode {
   is_top: boolean
 }
 
+/**
+ * Who is on a project.
+ *
+ * Membership sits on the root and is inherited by everything under it, which is
+ * the same cut every roll-up in this application already uses. A subproject
+ * cannot be joined on its own: a half-visible tree is worse than no access.
+ */
+export interface ProjectMember {
+  id: string
+  project_id: string
+  user_id: string
+  added_at: string
+}
+
 export const SPARK_SOURCES = ['app', 'quick', 'claude'] as const
 export type SparkSource = (typeof SPARK_SOURCES)[number]
 
@@ -221,6 +235,8 @@ export const SPARK_STATE_LABEL: Record<SparkState, string> = {
  */
 export interface Spark {
   id: string
+  /** Whose thought it was. Sparks are private to their author. */
+  user_id: string
   body: string
   source: SparkSource
   state: SparkState
