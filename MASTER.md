@@ -1,27 +1,34 @@
-# MASTER.md, portfolio manager
+# MASTER.md, Task Studio
 
-A personal portfolio tool for Mikkel. Keeps track of his own projects and generates
-the weekly status that has to be typed into the company project system
-(SharePoint and Power Apps).
+A shared workspace for the projects a small team is running, and for the weekly
+status each of them has to type into the company project system (SharePoint and
+Power Apps).
+
+It started as one person's tool and is no longer one. That changed what has to
+be true rather than what it is for: you see the projects you are on and nothing
+else, roles name people who may never sign in, and a captured thought stays
+private to whoever had it.
 
 ## Design thesis
 
-> The user never fills in a status report. He works, and the report writes itself.
+> Nobody fills in a status report. You work, and the report writes itself.
 
 Anything that can be **derived** must be derived. Progress is computed from the
 nodes underneath. The next date is the next unfinished node with a date. The
-week's status text is assembled from the work log. If the user has to write the
-same thing in two places, the design is wrong.
+week's status text is assembled from the work log. If the same thing has to be
+written in two places, the design is wrong.
 
 The consequence for all UI: **fast entry beats a pretty overview**. If logging a
-line takes more than five seconds, the tool is not used past week three.
+line takes more than five seconds, the tool is not used past week three. That
+holds harder with several people than with one: a habit only you have is one you
+can be argued into, and a habit a team has to share has to cost nothing.
 
 ## Stack
 
 - Next.js 15, App Router, TypeScript, Server Components by default
 - Supabase (Postgres), `@supabase/supabase-js` and `@supabase/ssr`, no ORM on top
 - Tailwind CSS v4. No component library, no state library
-- Single user. Supabase Auth with one account, RLS on with a simple `auth.uid()` policy
+- Supabase Auth. Visibility is by project membership, inherited down the tree, enforced in RLS
 
 **Migrations are applied by hand** through the Supabase SQL editor, because the
 project has only an anon key and a personal access token, not a database
@@ -662,7 +669,7 @@ itself, so the overlay can never promise one thing and write another.
 
 | Route | Purpose |
 |---|---|
-| `/login` | Sign in. Single user, everything else sits behind it |
+| `/login` | Sign in, and ask for a reset. Everything else sits behind it |
 | `/` | Overview: loose ends, running projects, open blockers with day counts, next steps |
 | `/projects` | The whole portfolio, closed ones included, grouped by the state each project is actually in. Carries a **Committed** column: ordered and invoiced money, with the yearly running cost beneath it, because that is what a portfolio is actually on the hook for. Blocked first, then active, on hold, planned, idea, completed, cancelled. Empty groups do not appear, and the status is in the group heading rather than repeated on every row |
 | `/p/[id]` | Project page, the tree. Sub pages share a frame |

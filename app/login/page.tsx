@@ -35,7 +35,7 @@ function Login() {
 
         <div>
           <h1 className="font-display text-[128px] font-medium leading-[0.94] tracking-[-0.03em]">
-            MSProjects
+            Task Studio
           </h1>
           <div className="my-6 h-px bg-rule-strong" />
           <p className="max-w-[470px] text-sm leading-relaxed text-pretty">

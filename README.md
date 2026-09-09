@@ -1,13 +1,18 @@
-# MSProjects
+# Task Studio
 
-A portfolio manager built around one idea: **you never fill in a status report.
-You work, and the report writes itself.**
+A shared workspace for the projects a small team is running, built around one
+idea: **nobody fills in a status report. You work, and the report writes
+itself.**
 
 It exists because the weekly status that has to be typed into a company system
 is, in practice, a re-description of things already known — what moved, who you
 are waiting on, what it will cost, where it stands. Anything derivable is
 derived. If the same thing has to be written twice, that is treated as a design
 fault rather than a chore.
+
+You see the projects you are a member of and nothing else; that is enforced in
+the database rather than in the interface, so a page that forgets to filter
+still cannot leak.
 
 [MASTER.md](MASTER.md) is the living spec: the data model, every decision and
 the reason behind it. Read that before changing anything.

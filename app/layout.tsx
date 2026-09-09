@@ -17,7 +17,7 @@ const bodoni = Bodoni_Moda({
 })
 
 export const metadata: Metadata = {
-  title: 'MSProjects',
+  title: 'Task Studio',
   description: 'Portfolio-manager',
 }
 

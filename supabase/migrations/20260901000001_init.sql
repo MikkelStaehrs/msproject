@@ -1,4 +1,4 @@
--- MSProjects — fundament
+-- Task Studio — fundament
 -- Fem entiteter: node, blocker, decision, entry, report.
 -- Alt beregnet (fremdrift, dagtal, næste milepæl) ligger i views, aldrig i kolonner.
 

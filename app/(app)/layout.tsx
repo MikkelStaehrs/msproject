@@ -82,7 +82,7 @@ export default async function AppLayout({
           href="/"
           className="font-display text-[32px] font-medium leading-none tracking-[-0.02em] lg:text-[40px]"
         >
-          MSProjects
+          Task Studio
         </Link>
         {/*
           A line of its own on a phone, because the title and seven links do not

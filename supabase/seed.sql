@@ -1,4 +1,4 @@
--- MSProjects — seed med tre opdigtede projekter.
+-- Task Studio — seed med tre opdigtede projekter.
 --
 -- ############################################################
 -- #  ADVARSEL: FØRSTE LINJE ER «delete from node».           #
