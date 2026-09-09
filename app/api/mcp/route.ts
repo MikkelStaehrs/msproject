@@ -129,11 +129,31 @@ export async function POST(request: NextRequest) {
 
   const token = credential(request)
   if (token === null) {
+    /*
+     * Which headers arrived, by NAME only.
+     *
+     * Two attempts were spent guessing whether the credential was wrong or
+     * simply absent, and the two need opposite fixes. Claude stores a header
+     * value and never shows it again, so there is no way to check from that
+     * side either. Naming what turned up settles it in one try: no
+     * `authorization` in the list means the connector is sending none.
+     *
+     * Names, never values. This text goes back to a model and into a
+     * transcript, and a credential does not belong in either.
+     */
+    const seen = [...request.headers.keys()]
+      .filter((h) => !h.startsWith('x-vercel-') && !h.startsWith('x-forwarded-'))
+      .sort()
+      .join(', ')
+
     return toolError(
       id,
-      'No credential arrived. In the connector settings in Claude, the ' +
-        'authorization header needs a value: the token from the Account page ' +
-        'in Task Studio. Either "Bearer <token>" or the token on its own.',
+      'No credential arrived, so this connector is not sending one. In its ' +
+        'settings in Claude, add a request header named authorization whose ' +
+        'value is the token from the Account page in Task Studio. The value ' +
+        'has to be filled in before saving: Claude never shows it again, so an ' +
+        'empty-looking field cannot be told apart from a stored one. ' +
+        `Headers that did arrive: ${seen}.`,
     )
   }
 
