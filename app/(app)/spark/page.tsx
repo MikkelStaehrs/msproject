@@ -10,7 +10,7 @@ import {
   promoteSpark,
   reopenSpark,
 } from '@/lib/spark-actions'
-import { Hint, Prose, Rule, formatDate } from '@/components/ui'
+import { Hint, Prose, ProseFolded, Rule, formatDate } from '@/components/ui'
 import {
   SPARK_SOURCE_LABEL,
   TYPE_HINT,
@@ -216,12 +216,17 @@ export default async function SparkPage({
                           this is what was around it, and it must not compete
                           with it for attention.
                         */}
-                        {s.note && (
-                          <Prose
-                            text={s.note}
-                            className="mt-1.5 border-l-2 border-rule pl-3 text-[12.5px] text-muted"
-                          />
-                        )}
+                        {/*
+                          Folded, because two price tables would push the
+                          thought they belong to off the screen. The summary
+                          counts tables and rows, so a folded note still shows
+                          that it is a bill of materials rather than a
+                          sentence.
+                        */}
+                        <ProseFolded
+                          text={s.note}
+                          className="mt-1.5 border-l-2 border-rule pl-3 text-[12.5px] text-muted"
+                        />
                       </>
                     )}
 

@@ -366,6 +366,21 @@ export default function GuidePage() {
             pipe is left alone too, because every line has to carry one before
             it counts.
           </P>
+          <P>
+            <Code>{'**Like this**'}</Code> comes out bold, and that is the only
+            mark that renders. Not italics, not links, not headings: every one
+            added after it is another thing the raw text stops being. Bold is
+            there because a model writes it unprompted to mark a section
+            heading or a total, and it earns its place doing that.
+          </P>
+          <P>
+            <strong className="font-medium">A long note folds itself away</strong>{' '}
+            and says what it is hiding: <span className="text-ink">2 tables, 24
+            rows</span>. Two price tables would otherwise push the thought they
+            belong to off the screen, and folded to nothing they would look like
+            nothing at all. Units go in the column heading rather than in every
+            cell, so the numbers stay numbers and still say what they are.
+          </P>
 
           <H id="quick">Quick entry</H>
           <P>

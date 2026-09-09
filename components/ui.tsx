@@ -1,4 +1,4 @@
-import { blocks, opening, type Block } from '@/lib/prose'
+import { blocks, describe, opening, spans, type Block } from '@/lib/prose'
 import type { EffectiveStatus, NodeStatus } from '@/lib/types'
 
 /* -------------------------------------------------------------------------
@@ -197,7 +197,11 @@ export function Prose({
  */
 function ProseBlock({ block }: { block: Block }) {
   if (block.kind === 'text') {
-    return <p className="whitespace-pre-line leading-relaxed">{block.text}</p>
+    return (
+      <p className="whitespace-pre-line leading-relaxed">
+        <Marked text={block.text} />
+      </p>
+    )
   }
 
   return (
@@ -212,7 +216,7 @@ function ProseBlock({ block }: { block: Block }) {
                   key={i}
                   className="lbl-tight py-1.5 pr-5 align-baseline font-medium text-muted last:pr-0"
                 >
-                  {cell}
+                  <Marked text={cell} />
                 </th>
               ))}
             </tr>
@@ -229,7 +233,7 @@ function ProseBlock({ block }: { block: Block }) {
                     /^[\d\s.,+-]+$/.test(cell) ? 'num tabular-nums' : ''
                   }`}
                 >
-                  {cell}
+                  <Marked text={cell} />
                 </td>
               ))}
             </tr>
@@ -286,5 +290,69 @@ export function ProseOpening({
         </details>
       )}
     </div>
+  )
+}
+
+/**
+ * `**like this**`, and nothing else.
+ *
+ * A model writes it unprompted, and inside a note carrying two price tables it
+ * is doing real work: marking the section headings and the totals. Shown raw it
+ * was literal asterisks on the page, which is worse than either rendering it or
+ * not having it at all. Everything beyond bold is another thing the raw text
+ * would stop being.
+ */
+function Marked({ text }: { text: string }) {
+  const parts = spans(text)
+  if (parts.length === 1 && !parts[0].bold) return <>{text}</>
+
+  return (
+    <>
+      {parts.map((s, i) =>
+        s.bold ? (
+          <strong key={i} className="font-medium text-ink">
+            {s.text}
+          </strong>
+        ) : (
+          <span key={i}>{s.text}</span>
+        ),
+      )}
+    </>
+  )
+}
+
+/**
+ * Written text, folded away, saying what it is hiding.
+ *
+ * Two price tables should not push the thought they belong to off the screen.
+ * But folded to nothing they look like nothing, so the summary counts what is
+ * in there: tables and rows, which is what tells you at a glance whether this
+ * is a sentence or a bill of materials.
+ *
+ * `details` rather than state, so it stays a server component and opens itself
+ * when the page is printed.
+ */
+export function ProseFolded({
+  text,
+  label = 'note',
+  className = '',
+}: {
+  text: string | null | undefined
+  label?: string
+  className?: string
+}) {
+  const what = describe(text)
+  if (what === null) return null
+
+  return (
+    <details className={`group ${className}`}>
+      <summary className="lbl-tight inline-block cursor-pointer list-none text-rule-strong hover:text-ink [&::-webkit-details-marker]:hidden">
+        <span className="group-open:hidden">
+          {label} <span className="ml-1 tabular-nums">{what}</span>
+        </span>
+        <span className="hidden group-open:inline">Hide the {label}</span>
+      </summary>
+      <Prose text={text} className="mt-2.5" />
+    </details>
   )
 }

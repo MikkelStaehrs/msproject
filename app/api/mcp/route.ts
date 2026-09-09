@@ -39,9 +39,12 @@ const PROTOCOL = '2025-06-18'
 const TABLES =
   'Where the substance is a list of things with values against them, such as ' +
   'equipment with prices or options with lead times, write that part as a ' +
-  'markdown pipe table (| Item | Price |) and it will be shown as a table. ' +
-  'Never as a run of semicolons. Prose and a table may sit together, ' +
-  'separated by a blank line.'
+  'markdown pipe table and it will be shown as a table. Never as a run of ' +
+  'semicolons. Prose and a table may sit together, separated by a blank line. ' +
+  'Put the unit in the column heading rather than in every cell, so the ' +
+  'numbers stay numbers and still say what they are: ' +
+  '"| Item | Qty | Unit price, kr. | Sum, kr. |". A total row goes at the ' +
+  'bottom of the same table rather than as a paragraph after it.'
 
 const CAPTURE = {
   name: 'capture_idea',

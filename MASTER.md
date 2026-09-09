@@ -1120,6 +1120,18 @@ what would have been lost. The note holds context, never a plan: the tool
 description says so, and capture stops being capture the moment it starts
 proposing.
 
+**Bold renders, and nothing else does.** A model writes `**Fase 1**` unprompted,
+and inside a note carrying two price tables it is marking the headings and the
+totals: real work. Shown raw it was literal asterisks on the page, which is
+worse than either rendering it or not having it. Not italics, not links, not
+headings, not lists: every mark added after bold is another thing the raw text
+stops being. An unclosed pair survives as typed.
+
+**A long note folds, and says what it is hiding.** Two price tables would push
+the thought they belong to off the screen; folded to nothing they look like
+nothing. So the summary counts tables and rows, which is what tells you at a
+glance whether this is a sentence or a bill of materials.
+
 **A table is recognised, never stored.** Some substance really is a list of
 things with values against them: equipment with prices, options with lead
 times. Written as pipe rows, `lib/prose.ts` draws it as a table everywhere

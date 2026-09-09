@@ -1,4 +1,4 @@
-import { blocks, opening, paragraphs } from './prose.ts'
+import { blocks, describe, opening, paragraphs, spans } from './prose.ts'
 
 let failed = 0
 function check(name: string, got: unknown, expected: unknown) {
@@ -168,6 +168,71 @@ check(
 )
 
 check('nothing at all', blocks(null), [])
+
+// --- Bold, and only bold ---------------------------------------------------
+check('no marks, one plain span', spans('Just text.'), [{ text: 'Just text.', bold: false }])
+
+check('a mark in the middle', spans('a **b** c'), [
+  { text: 'a ', bold: false },
+  { text: 'b', bold: true },
+  { text: ' c', bold: false },
+])
+
+check('the whole thing marked', spans('**Fase 1**'), [{ text: 'Fase 1', bold: true }])
+
+check('two marks', spans('**a** and **b**'), [
+  { text: 'a', bold: true },
+  { text: ' and ', bold: false },
+  { text: 'b', bold: true },
+])
+
+// A lone pair of asterisks is not a mark, and must survive as typed.
+check('unclosed stays as typed', spans('2 ** 3 is odd'), [
+  { text: '2 ** 3 is odd', bold: false },
+])
+
+check('empty marks are not marks', spans('a ****b'), [
+  { text: 'a ****', bold: false },
+  { text: 'b', bold: false },
+])
+
+check('nothing at all', spans(''), [{ text: '', bold: false }])
+
+// --- What a folded note is hiding ------------------------------------------
+check('nothing to describe', describe(null), null)
+
+check('one paragraph', describe('A sentence.'), '1 paragraph')
+
+check(
+  'two paragraphs',
+  describe(T(['One.', ' ', 'Two.'])),
+  '2 paragraphs',
+)
+
+check(
+  'a table is counted by its rows',
+  describe(T(['| a | b |', '|---|---|', '| 1 | 2 |', '| 3 | 4 |'])),
+  '1 table, 2 rows',
+)
+
+check(
+  'the mixed case, which is the real one',
+  describe(
+    T([
+      'Alle priser DKK.',
+      ' ',
+      '| a | b |',
+      '|---|---|',
+      '| 1 | 2 |',
+      ' ',
+      '| c | d |',
+      '|---|---|',
+      '| 3 | 4 |',
+      '| 5 | 6 |',
+    ]),
+  ),
+  '2 tables, 3 rows, 1 paragraph',
+)
 
 console.log(failed === 0 ? '\nAll tests passed.' : `\n${failed} test(s) failed.`)
 process.exitCode = failed === 0 ? 0 : 1
