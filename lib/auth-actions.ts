@@ -41,6 +41,18 @@ export async function setPassword(_prev: string | null, fd: FormData) {
   const { error } = await supabase.auth.updateUser({ password })
   if (error) return error.message
 
+  /*
+   * The name is what a role field on a project shows, so it is asked for here
+   * and nowhere else: this is the one moment a new colleague is already filling
+   * in a form about themselves. Left blank they simply do not appear in the
+   * picker, which is a smaller problem than putting a chopped up email address
+   * on a report as if it were a person.
+   */
+  const name = String(fd.get('full_name') ?? '').trim().replace(/\s+/g, ' ')
+  if (name !== '') {
+    await supabase.from('profile').update({ full_name: name }).eq('id', data.user.id)
+  }
+
   revalidatePath('/', 'layout')
   redirect('/')
 }

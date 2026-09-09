@@ -25,12 +25,26 @@ export default function PasswordPage() {
 
       <form action={formAction} className="mt-8 flex flex-col gap-6">
         <label className="block">
+          <span className="lbl text-muted">Your name</span>
+          <input
+            name="full_name"
+            required
+            autoComplete="name"
+            placeholder="Mikkel Stæhr"
+            className="field"
+          />
+          <span className="mt-1 block text-[10.5px] leading-snug text-rule-strong">
+            What colleagues see when you are named as an owner or a project
+            manager. Not your email.
+          </span>
+        </label>
+
+        <label className="block">
           <span className="lbl text-muted">New password</span>
           <input
             name="password"
             type="password"
             required
-            autoFocus
             minLength={10}
             autoComplete="new-password"
             className="field"

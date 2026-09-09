@@ -16,6 +16,9 @@ import {
 
 export type ParentOption = { id: string; title: string; depth: number }
 
+/** One list, shared by every single-person field on the form. */
+const PEOPLE_LIST = 'known-people'
+
 function Field({
   label,
   children,
@@ -258,6 +261,7 @@ export function NodeForm({
                   <input
                     name={`people_${f.key}`}
                     defaultValue={people[f.key] ?? ''}
+                    list={f.one ? PEOPLE_LIST : undefined}
                     className="field"
                   />
                 </label>

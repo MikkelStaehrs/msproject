@@ -3,6 +3,8 @@ import { Nav } from '@/components/nav'
 import { QuickAdd, type QuickTarget } from '@/components/quick-add'
 import { createClient } from '@/lib/supabase/server'
 import { readRecipients } from '@/lib/recipient-data'
+import { knownPeople } from '@/lib/people'
+import { PeopleList } from '@/components/people-list'
 import { logout } from '../login/actions'
 
 type Flat = { id: string; parent_id: string | null; title: string; sort_order: number }
@@ -41,12 +43,33 @@ export default async function AppLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('node')
-    .select('id, parent_id, title, sort_order')
-    .order('sort_order')
 
-  const targets = buildTargets((data ?? []) as Flat[])
+  const [treeRes, peopleRes, profileRes] = await Promise.all([
+    supabase.from('node').select('id, parent_id, title, sort_order').order('sort_order'),
+    supabase.from('node').select('reporting'),
+    supabase.from('profile').select('full_name'),
+  ])
+
+  const targets = buildTargets((treeRes.data ?? []) as Flat[])
+
+  /*
+   * Everyone this portfolio already knows about, rendered once here as a
+   * datalist the role fields on every page point at. It sits in the layout
+   * rather than being handed down through five components, and it is cheap:
+   * these are rows already being read to build the quick entry targets.
+   *
+   * RLS does the right thing without being asked. The names offered come from
+   * projects you are on, so a colleague never sees who is named on work they
+   * have no access to.
+   */
+  const people = knownPeople({
+    accounts: ((profileRes.data ?? []) as { full_name: string | null }[]).map(
+      (p) => p.full_name,
+    ),
+    roles: ((peopleRes.data ?? []) as { reporting: Record<string, unknown> }[]).map(
+      (n) => (n.reporting?.people ?? {}) as Record<string, unknown>,
+    ),
+  })
 
   // Travels with the header for the same reason the targets do: the overlay
   // needs it the instant it opens, and the list is tiny.
@@ -84,6 +107,7 @@ export default async function AppLayout({
       <div className="no-print h-0.5 bg-ink" />
       {children}
       <QuickAdd targets={targets} recipients={recipients} />
+      <PeopleList names={people} />
     </>
   )
 }

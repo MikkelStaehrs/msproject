@@ -10,7 +10,16 @@
  * already have a column: title, description, dates, category, status, owner.
  */
 
-export type FieldDef = { key: string; label: string; hint?: string }
+export type FieldDef = {
+  key: string
+  label: string
+  hint?: string
+  /**
+   * Holds one person, so the picker can offer a whole name. The rest are comma
+   * separated lists, where suggesting a single value would be wrong.
+   */
+  one?: boolean
+}
 
 /**
  * Administrative fields shown in the context band. project_no comes first but
@@ -43,19 +52,21 @@ export type Priority = (typeof PRIORITIES)[number]
  * roles are master data, and worth having at hand when the report is written.
  */
 export const PEOPLE_FIELDS: FieldDef[] = [
-  { key: 'project_manager', label: 'Project manager' },
-  { key: 'project_owner', label: 'Project owner' },
+  { key: 'project_manager', label: 'Project manager', one: true },
+  { key: 'project_owner', label: 'Project owner', one: true },
   {
     key: 'product_owner',
     label: 'Product owner',
+    one: true,
     hint: 'Who takes over the product when the project closes and carries the responsibility from then on. The handover has an address.',
   },
   {
     key: 'process_owner',
     label: 'Process owner',
+    one: true,
     hint: 'Who owns the business process the project changes, while the project runs.',
   },
-  { key: 'creator', label: 'Created by' },
+  { key: 'creator', label: 'Created by', one: true },
   {
     key: 'steering',
     label: 'Steering committee',

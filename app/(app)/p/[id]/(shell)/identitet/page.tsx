@@ -9,6 +9,8 @@ import { ProjectFrame } from '@/components/project-frame'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { addMember, removeMember } from '@/lib/member-actions'
+import { knownPeople } from '@/lib/people'
+import { PeopleHint } from '@/components/people-list'
 import { subtreeSet } from '@/lib/subtree'
 import { saveIdentity } from '@/lib/identity-actions'
 import { addDependency, removeDependency } from '@/lib/dependency-actions'
@@ -114,6 +116,7 @@ export default async function IdentityPage({
     treeRes,
     memberRes,
     profileRes,
+    reportingRes,
   ] = await Promise.all([
     supabase.from('node').select('*').eq('id', id).single(),
     supabase
@@ -135,6 +138,7 @@ export default async function IdentityPage({
     supabase.from('node').select('id, parent_id'),
     supabase.from('project_member').select('*').eq('project_id', id),
     supabase.from('profile').select('id, email'),
+    supabase.from('node').select('reporting'),
   ])
 
   const project = projectRes.data as Node | null
@@ -144,6 +148,16 @@ export default async function IdentityPage({
   const emailOf = new Map(
     ((profileRes.data ?? []) as { id: string; email: string }[]).map((p) => [p.id, p.email]),
   )
+
+  // The same names the picker offers, written out for the fields that hold
+  // several people, where a suggestion would replace the list rather than
+  // extend it.
+  const knownHere = knownPeople({
+    accounts: [],
+    roles: ((reportingRes.data ?? []) as { reporting: Record<string, unknown> }[]).map(
+      (n) => (n.reporting?.people ?? {}) as Record<string, unknown>,
+    ),
+  })
 
   const identity = readIdentity(project.reporting)
   const stage = readStage(project.reporting)
@@ -341,8 +355,10 @@ export default async function IdentityPage({
                 <input
                   name={`people_${f.key}`}
                   defaultValue={identity.people[f.key] ?? ''}
+                  list={f.one ? 'known-people' : undefined}
                   className="field"
                 />
+                {!f.one && <PeopleHint names={knownHere} />}
               </Field>
             ))}
           </div>
