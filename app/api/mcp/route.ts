@@ -55,10 +55,27 @@ const fail = (id: unknown, code: number, message: string) =>
 const toolError = (id: unknown, message: string) =>
   reply(id, { content: [{ type: 'text', text: message }], isError: true })
 
-function bearer(request: NextRequest): string | null {
-  const header = request.headers.get('authorization') ?? ''
-  const match = header.match(/^Bearer\s+(.+)$/i)
-  return match ? match[1].trim() : null
+/**
+ * The token out of whatever header it arrived in.
+ *
+ * Lenient on purpose. Claude sends the header value exactly as it was typed
+ * into the connector dialog, so `Bearer abc` and a bare `abc` are both things
+ * a person will reasonably enter, and insisting on the magic word buys no
+ * safety at all: the header IS the credential either way. The first attempt at
+ * this demanded the prefix and turned a correct token into "this connector
+ * needs its token", which is the least helpful thing it could have said.
+ *
+ * `x-api-key` is accepted too, because it is the other header name Claude
+ * offers in the same dropdown.
+ */
+function credential(request: NextRequest): string | null {
+  const raw =
+    request.headers.get('authorization') ??
+    request.headers.get('x-api-key') ??
+    ''
+
+  const value = raw.replace(/^(Bearer|Token)\s+/i, '').trim()
+  return value === '' ? null : value
 }
 
 export async function POST(request: NextRequest) {
@@ -110,12 +127,13 @@ export async function POST(request: NextRequest) {
     return toolError(id, 'Nothing to save. Say the thought and I will keep it.')
   }
 
-  const token = bearer(request)
+  const token = credential(request)
   if (token === null) {
     return toolError(
       id,
-      'This connector needs its token. Add it as an Authorization header when ' +
-        'setting up the connector in Claude.',
+      'No credential arrived. In the connector settings in Claude, the ' +
+        'authorization header needs a value: the token from the Account page ' +
+        'in Task Studio. Either "Bearer <token>" or the token on its own.',
     )
   }
 
