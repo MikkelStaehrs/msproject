@@ -12,16 +12,24 @@ import { createClient } from '@supabase/supabase-js'
  * being retired. Every message is JSON-RPC 2.0 over POST, and single replies may
  * come back as plain JSON rather than a stream, which is all this needs.
  *
- * ONE TOOL, AND IT ONLY WRITES. That is the security design, not a limitation
- * left for later. This endpoint holds no Supabase privileges: it calls
- * capture_spark with the public anon key, and that function can create a spark
- * and nothing else. A stolen token buys the ability to put text in one person's
- * private inbox. Not the tree, not the prices, not the documents.
+ * THE INBOX, AND ONLY THE INBOX. That is the security design, not a limitation
+ * left for later. This endpoint holds no Supabase privileges of its own: it
+ * calls three functions with the public anon key, and each of them takes the
+ * owner from the token rather than from an argument.
+ *
+ * What a stolen token buys: read one person's own inbox, add a thought to it,
+ * add a paragraph to a thought already in it. Nothing about the tree, the
+ * prices, the documents or anyone else. And nothing that is already written can
+ * be lost, because the note tool appends and cannot replace.
+ *
+ * Writing onto a PROJECT was asked for and deliberately not built. That would
+ * turn this from an inbox into a general write channel into project data, and
+ * it is the point at which a token going astray stops being an annoyance.
  */
 
 const PROTOCOL = '2025-06-18'
 
-const TOOL = {
+const CAPTURE = {
   name: 'capture_idea',
   title: 'Capture an idea in Task Studio',
   description:
@@ -57,6 +65,50 @@ const TOOL = {
       },
     },
     required: ['idea'],
+    additionalProperties: false,
+  },
+} as const
+
+const LIST = {
+  name: 'list_ideas',
+  title: 'List the ideas waiting in Task Studio',
+  description:
+    'The thoughts sitting unsorted in the Sparks inbox in Task Studio, newest ' +
+    'first, with the id of each. Use it to find the one an idea belongs with ' +
+    'before adding to it. Only the inbox: what has already become work or been ' +
+    'decided against is not here.',
+  inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+} as const
+
+const APPEND = {
+  name: 'add_to_idea',
+  title: 'Add to an idea already in Task Studio',
+  description:
+    'Add a paragraph to the note on a thought already in the Sparks inbox. ' +
+    'Use it when a conversation has produced substance that belongs with an ' +
+    'idea captured earlier, such as the actual equipment and prices behind a ' +
+    'thought about buying something. Call list_ideas first to get the id, and ' +
+    'if no existing thought is clearly the right one, capture a new one ' +
+    'instead of guessing. ' +
+    'This only ever adds: it cannot replace or remove what is there, so text ' +
+    'the user wrote themselves is safe. Where the substance is a list of ' +
+    'things with values against them, write it as a markdown pipe table and it ' +
+    'will be shown as a table.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      id: {
+        type: 'string',
+        description: 'The id of the thought, from list_ideas.',
+      },
+      note: {
+        type: 'string',
+        description:
+          'The paragraph to add. Facts from the conversation: equipment, ' +
+          'prices, suppliers, constraints. Not a plan and not next steps.',
+      },
+    },
+    required: ['id', 'note'],
     additionalProperties: false,
   },
 } as const
@@ -126,26 +178,17 @@ export async function POST(request: NextRequest) {
   }
 
   if (method === 'tools/list') {
-    return reply(id, { tools: [TOOL] })
+    return reply(id, { tools: [CAPTURE, LIST, APPEND] })
   }
 
   if (method !== 'tools/call') {
     return fail(id, -32601, `Unknown method: ${method}`)
   }
 
-  // --- The one tool ---------------------------------------------------------
+  // --- Dispatch -------------------------------------------------------------
 
   const params = message.params ?? {}
-  if (params.name !== TOOL.name) {
-    return fail(id, -32602, `Unknown tool: ${String(params.name)}`)
-  }
-
   const args = (params.arguments ?? {}) as Record<string, unknown>
-  const idea = String(args.idea ?? '').trim()
-  const context = String(args.context ?? '').trim()
-  if (idea === '') {
-    return toolError(id, 'Nothing to save. Say the thought and I will keep it.')
-  }
 
   const token = credential(request)
   if (token === null) {
@@ -184,33 +227,108 @@ export async function POST(request: NextRequest) {
   }
 
   /*
-   * The anon key, deliberately. It is public and it opens nothing on its own:
-   * every table refuses it. The token in the header is the credential, and
-   * capture_spark is the only thing it unlocks.
+   * The anon key, deliberately. It is public and opens nothing on its own:
+   * every table refuses it. The token in the header is the credential, and the
+   * three functions below are the only things it unlocks. Each of them takes
+   * the owner from the token rather than from an argument, so there is nothing
+   * here that can be pointed at somebody else's inbox.
    */
   const supabase = createClient(url, key, { auth: { persistSession: false } })
 
-  const { data, error } = await supabase.rpc('capture_spark', {
-    token,
-    body: idea,
-    note: context === '' ? null : context,
-  })
+  if (params.name === CAPTURE.name) {
+    const idea = String(args.idea ?? '').trim()
+    const context = String(args.context ?? '').trim()
 
-  if (error) {
-    return toolError(id, error.message)
+    if (idea === '') {
+      return toolError(id, 'Nothing to save. Say the thought and I will keep it.')
+    }
+
+    const { data, error } = await supabase.rpc('capture_spark', {
+      token,
+      body: idea,
+      note: context === '' ? null : context,
+    })
+
+    if (error) return toolError(id, error.message)
+
+    return reply(id, {
+      content: [
+        {
+          type: 'text',
+          text:
+            'Kept it. It is in the Sparks inbox in Task Studio, waiting to be ' +
+            (context === '' ? 'sorted.' : 'sorted, with the context around it.'),
+        },
+      ],
+      structuredContent: { spark_id: data },
+    })
   }
 
-  return reply(id, {
-    content: [
-      {
-        type: 'text',
-        text:
-          'Kept it. It is in the Sparks inbox in Task Studio, waiting to be ' +
-          (context === '' ? 'sorted.' : 'sorted, with the context around it.'),
-      },
-    ],
-    structuredContent: { spark_id: data },
-  })
+  if (params.name === LIST.name) {
+    const { data, error } = await supabase.rpc('list_sparks', { token })
+
+    if (error) return toolError(id, error.message)
+
+    const rows = (data ?? []) as {
+      id: string
+      body: string
+      note: string | null
+      captured_on: string
+    }[]
+
+    if (rows.length === 0) {
+      return toolError(id, 'The inbox is empty. Nothing has been captured yet.')
+    }
+
+    /*
+     * Written out as text rather than handed over as JSON. The model has to
+     * pick one and quote its id back, and a short readable list is easier to
+     * be right about than a nested object. The note is truncated: it is here
+     * to identify a thought, not to be read back in full.
+     */
+    const listed = rows
+      .map((r) => {
+        const note = r.note ? ` (${r.note.replace(/\s+/g, ' ').slice(0, 120)})` : ''
+        return `${r.id} — ${r.captured_on} — ${r.body}${note}`
+      })
+      .join('\n')
+
+    return reply(id, {
+      content: [{ type: 'text', text: `${rows.length} waiting:\n${listed}` }],
+      structuredContent: { sparks: rows },
+    })
+  }
+
+  if (params.name === APPEND.name) {
+    const sparkId = String(args.id ?? '').trim()
+    const note = String(args.note ?? '').trim()
+
+    if (sparkId === '') {
+      return toolError(id, 'Which thought? Call list_ideas first and use an id from it.')
+    }
+    if (note === '') {
+      return toolError(id, 'Nothing to add.')
+    }
+
+    const { error } = await supabase.rpc('append_spark_note', {
+      token,
+      spark_id: sparkId,
+      note,
+    })
+
+    if (error) return toolError(id, error.message)
+
+    return reply(id, {
+      content: [
+        {
+          type: 'text',
+          text: 'Added it to that thought. Nothing that was already there was changed.',
+        },
+      ],
+    })
+  }
+
+  return fail(id, -32602, `Unknown tool: ${String(params.name)}`)
 }
 
 /**

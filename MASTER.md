@@ -1095,8 +1095,21 @@ token is also the only wall in front of the function, since there is no rate
 limiting, which is why it is 32 bytes from the system generator rather than
 something memorable.
 
-What a stolen token buys: text in one person's private inbox. That asymmetry is
-the design.
+What a stolen token buys: read one person's own inbox, add a thought to it, add
+a paragraph to a thought already in it. Nothing about the tree, the prices, the
+documents or anyone else, and nothing already written can be lost, because the
+note tool appends and cannot replace. That asymmetry is the design.
+
+The reach grew once, deliberately, when a ten minute conversation about mini
+rack equipment had nowhere to go except a second unconnected spark. Three
+limits keep it that size and all three live in the functions rather than in the
+endpoint, because the endpoint is the part that could be rewritten: the owner
+comes from the token and never from an argument; only sparks still in the inbox
+are visible; and the note is appended, never replaced.
+
+**Writing onto a project was asked for and refused.** It would turn this from
+an inbox into a general write channel into project data, which is the point at
+which a token going astray stops being an annoyance.
 
 **A spark has two halves and they stay apart.** The first one captured this way
 read "OT Test Center med mini rack": correct, in his own words, and close to

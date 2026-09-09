@@ -285,16 +285,34 @@ export default function GuidePage() {
             the exact URL and the steps.
           </P>
           <P>
+            Three things are possible through it, and all three are the inbox:
+            capture a thought, list what is waiting, and add a paragraph to one
+            of them. The last is for the conversation that starts with
+            &ldquo;save this idea about a mini rack&rdquo; and goes on for ten
+            minutes about actual equipment and actual prices: that substance
+            belongs with the thought that started it, not as a second
+            unconnected spark.
+          </P>
+          <P>
             <strong className="font-medium">
-              The token can add one sentence to your own inbox, and nothing
-              else.
+              Adding to a note only ever adds.
             </strong>{' '}
-            It cannot read your projects, your prices or your documents, and it
-            cannot change or delete anything. That is enforced in the database,
-            not promised in an interface: the connector holds no database
-            privileges at all and calls a single function that can only create a
-            spark. A token going astray is an annoyance rather than an incident,
-            and that asymmetry is the reason it was built this way.
+            It cannot replace or remove, so a line you wrote yourself is safe
+            even if Claude picks the wrong thought. That is what makes a write
+            tool safe to hand over at all.
+          </P>
+          <P>
+            <strong className="font-medium">
+              And it reaches your own inbox, nothing more.
+            </strong>{' '}
+            Not your projects, not your prices, not your documents, not the
+            tree, and not anybody else&rsquo;s inbox. That is enforced in the
+            database rather than promised here: the connector holds no
+            privileges of its own, and each function it calls takes the owner
+            from the token instead of from an argument, so there is nothing to
+            point somewhere else. Writing onto a project was asked for and
+            deliberately not built, because that is the point at which a token
+            going astray stops being an annoyance.
           </P>
           <P>
             It is shown once, when you make it, because only a hash of it is
