@@ -143,7 +143,7 @@ export default async function StandupPage({
     supabase.from('standup').select('*').order('held_on', { ascending: false }).limit(8),
     supabase.from('spark').select('*').eq('state', 'new'),
     supabase.from('yardstick').select('*').maybeSingle(),
-    supabase.from('stage_volume').select('fiscal_year, stage, units'),
+    supabase.from('stage_volume').select('fiscal_year, stage, units, scope'),
   ])
 
   const failure = firstError([
@@ -1141,6 +1141,14 @@ export default async function StandupPage({
                 <span className="num text-[17px] text-ink">{kr(target.dkk)} kr</span>
                 <br />
                 a year. A percentage here is a percentage of that.
+              </p>
+            )}
+            {reference?.scope && (
+              <p className="mt-3 max-w-[26ch] text-[10.5px] leading-relaxed text-rule-strong">
+                Measured on <span className="text-muted">{reference.scope}</span>,
+                the slice the unit cost is computed over. The process volumes are
+                not filtered that way, so a saving through a stage is worth its
+                kroner and less than its percentage suggests.
               </p>
             )}
           </div>

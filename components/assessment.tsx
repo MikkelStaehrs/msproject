@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { assessSpark } from '@/lib/spark-actions'
 import { Hint } from '@/components/ui'
-import { impactOf, savingFrom, type Reference, type Saving } from '@/lib/cogs'
+import { impactOf, savingFrom, scopesAgree, type Reference, type Saving } from '@/lib/cogs'
 import { priorityScore, quadrant } from '@/lib/priority'
 import { SAVING_KINDS, SAVING_KIND_HINT, SAVING_KIND_LABEL, type Spark } from '@/lib/types'
 
@@ -33,16 +33,28 @@ export function Assessment({
   spark: Spark
   reference: Reference | null
   /** The stages that ran in the reference year, with their volumes. */
-  stages: { stage: string; units: number }[]
+  stages: { stage: string; units: number; scope: string | null }[]
   editing: boolean
   editHref: string
   cancelHref: string
   redirectTo: string
 }) {
-  const stageUnits =
+  const stage =
     spark.saving_stage === null
-      ? null
-      : (stages.find((s) => s.stage === spark.saving_stage)?.units ?? null)
+      ? undefined
+      : stages.find((s) => s.stage === spark.saving_stage)
+  const stageUnits = stage?.units ?? null
+
+  /*
+   * The stage volumes are unfiltered; the cost basis is one slice of them. A
+   * saving spread across every type, divided by a target set for a slice, comes
+   * out too large. Said rather than silently corrected: correcting it needs a
+   * filtered stage volume nobody has.
+   */
+  const mixedPopulations =
+    reference !== null &&
+    stage !== undefined &&
+    !scopesAgree(reference, stage.scope)
 
   const saving = savingOf(spark, stageUnits)
   const impact = saving && reference ? impactOf(saving, reference) : null
@@ -78,6 +90,12 @@ export function Assessment({
             >
               {(impact.shareOfTarget * 100).toFixed(1)}% of the year
             </span>
+            {mixedPopulations && (
+              <span className="text-oxblood">
+                share is overstated: {stage?.scope} against a target for{' '}
+                {reference?.scope}
+              </span>
+            )}
           </>
         )}
 

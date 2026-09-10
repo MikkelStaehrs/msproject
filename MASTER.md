@@ -1194,6 +1194,34 @@ was still an idea.
 An empty assessment is not zero. It is not worked out yet, and the two are
 different: the pages say "not worked out" rather than showing nothing.
 
+## The denominator was named wrong, and how
+
+`yardstick.sold_units` held 266 253 with a note reading «Sold units and unit
+cost from the FY26 COGS dashboard». **Nobody ever said that.** On the dashboard
+the figure is labelled simply «Units», sitting beside «Unit Cost + IPC», and it
+is the divisor the 577,70 kr is computed with: PROCESSED units, in a slice
+filtered to Brand Code = In-house and Type = Sugar.
+
+A column name asserting something nobody said is worse than no column, because
+every reader after that takes the name for a fact - and I did, twice, in prose
+that cited 267 626 as the same quantity while the arithmetic divided by 266 253.
+
+**The arithmetic was plausibly right anyway, and that is the trap.** For «take
+one euro of COGS out of every unit» to mean anything, the target must divide by
+the same denominator the unit cost divides by; otherwise the two are per
+different units and the subtraction is meaningless. So the number is probably
+the right one for the job. The NAME was a guess and the SCOPE was never recorded
+at all.
+
+**The live mismatch this exposed.** `stage_volume` is unfiltered: Rensning ran
+465 216 units of everything. The cost basis counts 266 253 units of in-house
+sugar. A saving per cleaned unit multiplied by the first and divided by the
+second mixes two populations and overstates the share of the target. Both
+numbers now carry a `scope`, `scopesAgree()` compares them, and the pages that
+show a share say in oxblood when they disagree. Reported rather than corrected:
+correcting it needs a filtered stage volume nobody has, and inventing a ratio to
+scale by is exactly the class of guess that put «sold units» in the schema.
+
 ## The one euro, and the frozen denominator
 
 The strategy is one sentence: take a euro of COGS out of every unit sold, every

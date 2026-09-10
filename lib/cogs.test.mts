@@ -1,4 +1,11 @@
-import { annualDkk, impactOf, targetAnnual, targetInHours, type Reference } from './cogs.ts'
+import {
+  annualDkk,
+  impactOf,
+  scopesAgree,
+  targetAnnual,
+  targetInHours,
+  type Reference,
+} from './cogs.ts'
 
 let failed = 0
 function check(name: string, got: unknown, expected: unknown) {
@@ -12,10 +19,17 @@ function check(name: string, got: unknown, expected: unknown) {
 }
 const round = (n: number, places = 4) => Math.round(n * 10 ** places) / 10 ** places
 
-/** The real FY26 figures, from the company's own COGS and volume dashboards. */
+/**
+ * The real FY26 figures, from the company's own COGS dashboard.
+ *
+ * 266 253 is PROCESSED units - the divisor the 577,70 kr unit cost is computed
+ * with - in the slice that dashboard was filtered to. It is not units sold, and
+ * it was labelled as such here for a day on nothing but an assumption.
+ */
 const FY26: Reference = {
   fiscalYear: 'FY26',
-  soldUnits: 266_253,
+  costBasisUnits: 266_253,
+  scope: 'In-house · Sugar',
   hourRateDkk: 240,
   eurRate: 7.46,
   targetEurPerUnit: 1,
@@ -121,7 +135,7 @@ check(
 
 check(
   'no volume, no answer',
-  impactOf({ kind: 'annual', dkkPerYear: 100_000 }, { ...FY26, soldUnits: 0 }),
+  impactOf({ kind: 'annual', dkkPerYear: 100_000 }, { ...FY26, costBasisUnits: 0 }),
   null,
 )
 
@@ -131,6 +145,18 @@ check(
   impactOf({ kind: 'annual', dkkPerYear: -500_000 }, FY26)!.shareOfTarget < 0,
   true,
 )
+
+// --- Two populations, which is the live hazard -------------------------------
+/*
+ * The stage volumes are unfiltered and the cost basis is not. Multiplying by one
+ * and dividing by the other overstates the share, and neither number can say so
+ * on its own, so the arithmetic reports the mismatch rather than correcting it:
+ * correcting it would need a filtered stage volume nobody has.
+ */
+check('the same population is comparable', scopesAgree(FY26, 'In-house · Sugar'), true)
+check('spacing and case do not make it a different one', scopesAgree(FY26, ' in-house · sugar '), true)
+check('a wider population is not', scopesAgree(FY26, 'Alle typer'), false)
+check('and an unstated one is not claimed either way', scopesAgree(FY26, null), true)
 
 console.log(failed === 0 ? '\nAll tests passed.' : `\n${failed} test(s) failed.`)
 process.exitCode = failed === 0 ? 0 : 1

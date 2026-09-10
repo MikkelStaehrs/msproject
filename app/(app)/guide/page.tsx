@@ -947,9 +947,30 @@ export default function GuidePage() {
           </P>
           <P>
             All of it lives in one row, called the yardstick: the year, the
-            units sold, the unit cost, the hourly rate, the exchange rate and
+            cost basis, the unit cost, the hourly rate, the exchange rate and
             the target. Changing one of those is a deliberate act with a date on
             it, not a number drifting in a spreadsheet.
+          </P>
+
+          <P>
+            <strong className="font-medium">The denominator is processed units,
+            and it is filtered.</strong> On the COGS dashboard the figure is
+            labelled simply <span className="text-ink">Units</span>, beside{' '}
+            <span className="text-ink">Unit Cost + IPC</span>: it is the divisor
+            the 577,70 kr is computed with, over one slice of production. It is
+            not units sold, and this guide said it was for a day on nothing but
+            an assumption.
+          </P>
+          <P>
+            That matters twice. Once because the target has to use the{' '}
+            <em>same</em> denominator the unit cost uses, or &laquo;one euro per
+            unit&raquo; and &laquo;577,70 kr per unit&raquo; are per different
+            units and cannot be subtracted. And once because the process volumes
+            are <em>not</em> filtered the same way: a saving per cleaned unit is
+            spread across every type while the target is set for a slice. The
+            kroner are right; the percentage comes out too large, and the page
+            says so in oxblood rather than correcting it, because correcting it
+            would need a filtered stage volume nobody has.
           </P>
 
           <H id="strategy">Strategy</H>
@@ -983,7 +1004,7 @@ export default function GuidePage() {
           <P>
             A target here is a year&rsquo;s worth of euro, and where it comes
             from is <Link href="#euro" className="text-green">The one euro</Link>:
-            one euro out of every unit sold, times the units sold, is what the
+            one euro out of every unit, times the cost basis, is what the
             strategy is worth in a year.
           </P>
           <P>

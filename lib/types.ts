@@ -258,7 +258,10 @@ export interface SparkToken {
 export interface Yardstick {
   id: boolean
   fiscal_year: string
-  sold_units: number
+  /** PROCESSED units: the divisor the unit cost is computed with. */
+  cost_basis_units: number
+  /** Which population that counts, e.g. «In-house · Sugar». */
+  cost_basis_scope: string | null
   unit_cost_dkk: number | null
   hour_rate_dkk: number
   eur_rate: number
@@ -273,6 +276,13 @@ export interface StageVolume {
   fiscal_year: string
   stage: string
   units: number
+  /**
+   * Which population these count. Unfiltered off the process dashboard, so
+   * wider than the cost basis, which is one slice of it. Multiplying by one and
+   * dividing by the other overstates the share of the target, and neither
+   * number can tell you that on its own.
+   */
+  scope: string | null
 }
 
 /**

@@ -1,7 +1,7 @@
 /**
  * What an idea is worth, in the one currency the strategy is written in.
  *
- * The target is to take 1 euro of COGS out of every unit sold, every year. So
+ * The target is to take 1 euro of COGS out of every unit, every year. So
  * every idea, however it is described, has to end up as a share of that number,
  * and this is the only place the arithmetic happens.
  *
@@ -15,16 +15,31 @@
  *
  * Then:
  *
- *   kroner a year / eur rate / units sold = euro per unit sold
+ *   kroner a year / eur rate / cost basis units = euro per unit
  *
- * THE DENOMINATOR IS FROZEN, and that is not a detail. Units sold fell 23% from
- * FY25 to FY26, and the indirect cost per unit rose about 33 kroner because of
- * it: roughly four and a half times the entire annual target, from volume
- * alone. Measured against whatever volume happens to be current, every project
- * would look better in a bad year and worse in a good one, having changed
- * nothing. So a saving is held in absolute kroner and converted at a stated
- * reference volume, exactly as a cost line holds the rate that applied when the
- * price landed.
+ * THE DENOMINATOR IS THE ONE THE UNIT COST USES, and getting this wrong is the
+ * easiest way to make every figure here quietly meaningless. «Take one euro of
+ * COGS out of every unit» can only be subtracted from «577,70 kr per unit» if
+ * both are per the SAME unit. On the FY26 COGS dashboard that divisor is
+ * labelled «Units» and counts PROCESSED units in one filtered slice - In-house,
+ * Sugar - which is why this field is called the cost basis and not units sold.
+ * It was called `soldUnits` for a day, on nothing but an assumption, and the
+ * name was the only evidence anybody had for it.
+ *
+ * IT IS ALSO FROZEN, which is a separate point and not a detail. Volume through
+ * shipping fell 23% from FY25 to FY26, and the indirect cost per unit rose about
+ * 33 kroner because of it: roughly four and a half times the entire annual
+ * target, from volume alone. Measured against whatever volume happens to be
+ * current, every project would look better in a bad year and worse in a good one
+ * having changed nothing. So a saving is held in absolute kroner and converted
+ * at a stated reference volume, exactly as a cost line holds the rate that
+ * applied when the price landed.
+ *
+ * AND THE TWO POPULATIONS MUST MATCH. A stage volume is unfiltered - Rensning
+ * ran 465 216 units of everything - while the cost basis counts one slice of
+ * that. Multiplying by the first and dividing by the second mixes populations
+ * and overstates the share. Neither number knows this, so both carry a scope
+ * and the pages that show a share say which.
  *
  * A stage volume is still needed for the middle case, because the stages do not
  * run the same quantities: cleaning handled 465 216 units in FY26 where coating
@@ -36,13 +51,18 @@
 export type Reference = {
   /** Which year the figures below are taken from, so the frozen number is named. */
   fiscalYear: string
-  /** Units sold in that year. The denominator, and it does not float. */
-  soldUnits: number
+  /**
+   * The divisor the unit cost is computed with: PROCESSED units, in `scope`.
+   * The denominator, and it does not float.
+   */
+  costBasisUnits: number
+  /** Which population that counts, e.g. «In-house · Sugar». Null where unsaid. */
+  scope: string | null
   /** Kroner per man-hour. */
   hourRateDkk: number
   /** Kroner per euro, as used for this reference. */
   eurRate: number
-  /** What the strategy asks for, per unit sold, per year. */
+  /** What the strategy asks for, per unit, per year. */
   targetEurPerUnit: number
 }
 
@@ -90,15 +110,15 @@ export function impactOf(saving: Saving, reference: Reference): Impact | null {
   if (
     !finite(reference.eurRate) ||
     reference.eurRate <= 0 ||
-    !finite(reference.soldUnits) ||
-    reference.soldUnits <= 0 ||
+    !finite(reference.costBasisUnits) ||
+    reference.costBasisUnits <= 0 ||
     !finite(reference.targetEurPerUnit) ||
     reference.targetEurPerUnit <= 0
   ) {
     return null
   }
 
-  const eurPerUnit = annual / reference.eurRate / reference.soldUnits
+  const eurPerUnit = annual / reference.eurRate / reference.costBasisUnits
 
   return {
     annualDkk: annual,
@@ -116,13 +136,13 @@ export function impactOf(saving: Saving, reference: Reference): Impact | null {
  */
 export function targetAnnual(reference: Reference): { eur: number; dkk: number } | null {
   if (
-    !finite(reference.soldUnits) ||
+    !finite(reference.costBasisUnits) ||
     !finite(reference.targetEurPerUnit) ||
     !finite(reference.eurRate)
   ) {
     return null
   }
-  const eur = reference.soldUnits * reference.targetEurPerUnit
+  const eur = reference.costBasisUnits * reference.targetEurPerUnit
   return { eur, dkk: eur * reference.eurRate }
 }
 
@@ -161,7 +181,8 @@ export function targetInHours(reference: Reference): number | null {
 export function referenceFrom(
   y: {
     fiscal_year: string
-    sold_units: number | string
+    cost_basis_units: number | string
+    cost_basis_scope?: string | null
     hour_rate_dkk: number | string
     eur_rate: number | string
     cogs_target_eur_per_unit: number | string
@@ -170,7 +191,8 @@ export function referenceFrom(
   if (y === null) return null
   return {
     fiscalYear: y.fiscal_year,
-    soldUnits: Number(y.sold_units),
+    costBasisUnits: Number(y.cost_basis_units),
+    scope: y.cost_basis_scope ?? null,
     hourRateDkk: Number(y.hour_rate_dkk),
     eurRate: Number(y.eur_rate),
     targetEurPerUnit: Number(y.cogs_target_eur_per_unit),
@@ -179,14 +201,40 @@ export function referenceFrom(
 
 /** The stages that ran in the reference year, busiest first. */
 export function stagesFrom(
-  rows: { fiscal_year: string; stage: string; units: number | string }[],
+  rows: {
+    fiscal_year: string
+    stage: string
+    units: number | string
+    scope?: string | null
+  }[],
   fiscalYear: string | null,
-): { stage: string; units: number }[] {
+): { stage: string; units: number; scope: string | null }[] {
   if (fiscalYear === null) return []
   return rows
     .filter((v) => v.fiscal_year === fiscalYear)
-    .map((v) => ({ stage: v.stage, units: Number(v.units) }))
+    .map((v) => ({ stage: v.stage, units: Number(v.units), scope: v.scope ?? null }))
     .sort((a, b) => b.units - a.units)
+}
+
+/**
+ * Whether a saving through a stage can honestly be read as a share of the
+ * target.
+ *
+ * It can when the stage counts the same population the cost basis does. Where
+ * they differ - the process dashboard is unfiltered, the COGS one is not - the
+ * kroner are still right and the PERCENTAGE is not: a saving spread across
+ * every type, divided by a target set for one slice of it, comes out too large.
+ *
+ * Returned rather than corrected. Correcting it would need a filtered stage
+ * volume nobody has, and inventing a ratio to scale by is exactly the kind of
+ * guess that put «sold units» in this file in the first place.
+ */
+export function scopesAgree(
+  reference: Reference,
+  stageScope: string | null,
+): boolean {
+  if (reference.scope === null || stageScope === null) return true
+  return reference.scope.trim().toLowerCase() === stageScope.trim().toLowerCase()
 }
 
 /**

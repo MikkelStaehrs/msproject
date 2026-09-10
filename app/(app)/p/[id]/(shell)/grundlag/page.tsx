@@ -67,7 +67,7 @@ export default async function BasisPage({
     // rebinds every destructured result after it.
     supabase.from('node_origin').select('*'),
     supabase.from('yardstick').select('*').maybeSingle(),
-    supabase.from('stage_volume').select('fiscal_year, stage, units'),
+    supabase.from('stage_volume').select('fiscal_year, stage, units, scope'),
   ])
 
   const failure = firstError([projectRes, nodesRes, decisionRes, costRes])

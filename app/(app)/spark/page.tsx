@@ -56,7 +56,7 @@ export default async function SparkPage({
     supabase.from('spark').select('*').order('captured_at', { ascending: false }),
     supabase.from('node').select('id, parent_id, title, type').order('sort_order'),
     supabase.from('yardstick').select('*').maybeSingle(),
-    supabase.from('stage_volume').select('fiscal_year, stage, units'),
+    supabase.from('stage_volume').select('fiscal_year, stage, units, scope'),
   ])
 
   const failure = firstError([sparkRes, nodeRes])
