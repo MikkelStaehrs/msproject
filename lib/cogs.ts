@@ -58,6 +58,13 @@ export type Reference = {
   costBasisUnits: number
   /** Which population that counts, e.g. «In-house · Sugar». Null where unsaid. */
   scope: string | null
+  /**
+   * What the strategy actually covers. Where this is wider than `scope`, the
+   * denominator is too small: the target comes out understated and every share
+   * of it overstated. Both errors flatter, which is why it is named rather than
+   * quietly carried.
+   */
+  targetScope: string | null
   /** Kroner per man-hour. */
   hourRateDkk: number
   /** Kroner per euro, as used for this reference. */
@@ -183,6 +190,7 @@ export function referenceFrom(
     fiscal_year: string
     cost_basis_units: number | string
     cost_basis_scope?: string | null
+    target_scope?: string | null
     hour_rate_dkk: number | string
     eur_rate: number | string
     cogs_target_eur_per_unit: number | string
@@ -193,6 +201,7 @@ export function referenceFrom(
     fiscalYear: y.fiscal_year,
     costBasisUnits: Number(y.cost_basis_units),
     scope: y.cost_basis_scope ?? null,
+    targetScope: y.target_scope ?? null,
     hourRateDkk: Number(y.hour_rate_dkk),
     eurRate: Number(y.eur_rate),
     targetEurPerUnit: Number(y.cogs_target_eur_per_unit),
@@ -229,6 +238,24 @@ export function stagesFrom(
  * volume nobody has, and inventing a ratio to scale by is exactly the kind of
  * guess that put «sold units» in this file in the first place.
  */
+/**
+ * Whether the figure everything divides by counts what the strategy covers.
+ *
+ * When it does not, the two errors point the same way and both flatter. The
+ * year's target is `costBasisUnits x 1 euro`, so a denominator that is too
+ * small UNDERSTATES the target; and every share divides by the same figure, so
+ * each idea is OVERSTATED against it. A smaller mountain with every step up it
+ * looking longer, and nothing on the screen out of place.
+ *
+ * True where either is unsaid: an unrecorded scope is not evidence of a
+ * mismatch, and treating it as one would put a warning on every page for want
+ * of a sentence nobody has written yet.
+ */
+export function basisCoversTarget(reference: Reference): boolean {
+  if (reference.scope === null || reference.targetScope === null) return true
+  return reference.scope.trim().toLowerCase() === reference.targetScope.trim().toLowerCase()
+}
+
 export function scopesAgree(
   reference: Reference,
   stageScope: string | null,

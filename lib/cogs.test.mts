@@ -1,5 +1,6 @@
 import {
   annualDkk,
+  basisCoversTarget,
   impactOf,
   scopesAgree,
   targetAnnual,
@@ -30,6 +31,9 @@ const FY26: Reference = {
   fiscalYear: 'FY26',
   costBasisUnits: 266_253,
   scope: 'In-house · Sugar',
+  // What the strategy covers is wider than what the figure counts, so this
+  // reference is knowingly flattering. Named, not corrected.
+  targetScope: 'Sukkerroefrø · hele virksomheden',
   hourRateDkk: 240,
   eurRate: 7.46,
   targetEurPerUnit: 1,
@@ -143,6 +147,25 @@ check(
 check(
   'a negative saving stays negative',
   impactOf({ kind: 'annual', dkkPerYear: -500_000 }, FY26)!.shareOfTarget < 0,
+  true,
+)
+
+// --- The denominator does not cover what the strategy covers -----------------
+/*
+ * Both errors point the same way and both flatter: the target is
+ * costBasisUnits x 1 euro, so too small a denominator UNDERSTATES it, and every
+ * share divides by the same figure, so each idea is OVERSTATED against it. A
+ * smaller mountain with every step up it looking longer.
+ */
+check('a filtered basis does not cover the whole strategy', basisCoversTarget(FY26), false)
+check(
+  'and it does once the two are the same population',
+  basisCoversTarget({ ...FY26, scope: 'Sukkerroefrø · hele virksomheden' }),
+  true,
+)
+check(
+  'an unrecorded scope is not evidence of a mismatch',
+  basisCoversTarget({ ...FY26, targetScope: null }),
   true,
 )
 

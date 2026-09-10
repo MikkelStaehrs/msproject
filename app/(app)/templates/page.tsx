@@ -120,8 +120,8 @@ export default async function TemplatesPage({
           {containers.length === 0 ? (
             <p className="text-[13px] text-muted">There is nothing to derive from yet.</p>
           ) : (
-            <form action={templateFromNode} className="grid grid-cols-4 gap-x-8 gap-y-4">
-              <label className="col-span-2 block">
+            <form action={templateFromNode} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+              <label className="col-span-1 sm:col-span-2 block">
                 <span className="lbl text-muted">Capture from</span>
                 <select name="node_id" required className="field">
                   {containers.map((n) => (
@@ -131,7 +131,7 @@ export default async function TemplatesPage({
                   ))}
                 </select>
               </label>
-              <label className="col-span-2 block">
+              <label className="col-span-1 sm:col-span-2 block">
                 <span className="lbl text-muted">Template name</span>
                 <input
                   name="name"
@@ -140,7 +140,7 @@ export default async function TemplatesPage({
                   autoFocus
                 />
               </label>
-              <div className="col-span-4 mt-2 flex items-center gap-3">
+              <div className="col-span-1 sm:col-span-2 lg:col-span-4 mt-2 flex items-center gap-3">
                 <button type="submit" className="btn">
                   Derive template
                 </button>
@@ -160,9 +160,9 @@ export default async function TemplatesPage({
       {editing && (
         <div className="border-y border-rule-strong bg-sheet px-6 py-5">
           <div className="lbl mb-4 text-muted">Edit template</div>
-          <form id="tpl-edit" action={updateTemplate} className="grid grid-cols-4 gap-x-8 gap-y-4">
+          <form id="tpl-edit" action={updateTemplate} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <input type="hidden" name="id" value={editing.id} />
-            <label className="col-span-2 block">
+            <label className="col-span-1 sm:col-span-2 block">
               <span className="lbl text-muted">Name</span>
               <input name="name" required defaultValue={editing.name} className="field" autoFocus />
             </label>
@@ -177,7 +177,7 @@ export default async function TemplatesPage({
                 ))}
               </select>
             </label>
-            <label className="col-span-4 block">
+            <label className="col-span-1 sm:col-span-2 lg:col-span-4 block">
               <span className="lbl text-muted">Description</span>
               <textarea
                 name="description"
@@ -217,11 +217,11 @@ export default async function TemplatesPage({
           <form
             id="tpl-deploy"
             action={deployTemplate}
-            className="grid grid-cols-4 gap-x-8 gap-y-4"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4"
           >
             <input type="hidden" name="template_id" value={deploying.id} />
 
-            <label className="col-span-2 block">
+            <label className="col-span-1 sm:col-span-2 block">
               <span className="lbl text-muted">Put it</span>
               <select name="parent_id" defaultValue="" className="field">
                 <option value="">As a new project</option>
@@ -264,7 +264,7 @@ export default async function TemplatesPage({
             </label>
 
             {deploying.body.risks.length > 0 && (
-              <label className="col-span-4 flex items-center gap-2.5 text-xs">
+              <label className="col-span-1 sm:col-span-2 lg:col-span-4 flex items-center gap-2.5 text-xs">
                 <input
                   type="checkbox"
                   name="include_risks"

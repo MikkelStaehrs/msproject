@@ -312,7 +312,7 @@ export default async function MapPage({
 
           <div className="shrink-0 text-right">
             <div className="flex items-center justify-end gap-4">
-              <div className="w-[200px]">
+              <div className="w-[120px] sm:w-[200px]">
                 <ProgressScale
                   done={progress?.leaf_done ?? 0}
                   total={progress?.leaf_total ?? 0}

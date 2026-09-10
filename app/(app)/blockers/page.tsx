@@ -255,7 +255,7 @@ export default async function BlockersPage({
                   {all.map((b) => (
                     <div
                       key={b.id}
-                      className="grid grid-cols-[240px_1fr] items-center border-t border-rule py-2.5"
+                      className="grid grid-cols-1 lg:grid-cols-[240px_1fr] items-center border-t border-rule py-2.5"
                     >
                       <div className="pr-4">
                         <div className="text-[12.5px] leading-snug">{b.title}</div>
@@ -281,7 +281,7 @@ export default async function BlockersPage({
                     </div>
                   ))}
 
-                  <div className="grid grid-cols-[240px_1fr] border-t border-rule-strong pt-2">
+                  <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] border-t border-rule-strong pt-2">
                     <div />
                     <div className="relative h-4 text-[10px] tabular-nums text-muted">
                       <span className="absolute left-0">{formatDate(axisStart)}</span>

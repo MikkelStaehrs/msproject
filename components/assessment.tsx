@@ -1,7 +1,14 @@
 import Link from 'next/link'
 import { assessSpark } from '@/lib/spark-actions'
 import { Hint } from '@/components/ui'
-import { impactOf, savingFrom, scopesAgree, type Reference, type Saving } from '@/lib/cogs'
+import {
+  basisCoversTarget,
+  impactOf,
+  savingFrom,
+  scopesAgree,
+  type Reference,
+  type Saving,
+} from '@/lib/cogs'
 import { priorityScore, quadrant } from '@/lib/priority'
 import { SAVING_KINDS, SAVING_KIND_HINT, SAVING_KIND_LABEL, type Spark } from '@/lib/types'
 
@@ -56,6 +63,14 @@ export function Assessment({
     stage !== undefined &&
     !scopesAgree(reference, stage.scope)
 
+  /*
+   * The denominator counts less than the strategy covers, so the target is too
+   * small and every share of it too large. Shown on the figure itself rather
+   * than in a footnote: a percentage nobody has been warned about is a
+   * percentage somebody will quote.
+   */
+  const flattered = reference !== null && !basisCoversTarget(reference)
+
   const saving = savingOf(spark, stageUnits)
   const impact = saving && reference ? impactOf(saving, reference) : null
 
@@ -90,10 +105,15 @@ export function Assessment({
             >
               {(impact.shareOfTarget * 100).toFixed(1)}% of the year
             </span>
+            {flattered && (
+              <span className="text-oxblood">
+                overstated: measured on {reference?.scope}, target covers{' '}
+                {reference?.targetScope}
+              </span>
+            )}
             {mixedPopulations && (
               <span className="text-oxblood">
-                share is overstated: {stage?.scope} against a target for{' '}
-                {reference?.scope}
+                and mixes {stage?.scope} with {reference?.scope}
               </span>
             )}
           </>

@@ -262,6 +262,11 @@ export interface Yardstick {
   cost_basis_units: number
   /** Which population that counts, e.g. «In-house · Sugar». */
   cost_basis_scope: string | null
+  /**
+   * What the strategy covers. Wider than cost_basis_scope means the
+   * denominator is too small: target understated, every share overstated.
+   */
+  target_scope: string | null
   unit_cost_dkk: number | null
   hour_rate_dkk: number
   eur_rate: number

@@ -37,13 +37,9 @@ export const metadata = { title: 'Guide' }
 const SECTIONS = [
   ['Getting around', [
     ['start', 'Where to start'],
-    ['access', 'Who sees what'],
-    ['sparks', 'Sparks'],
-    ['claude', 'The Claude app'],
     ['quick', 'Quick entry'],
     ['tree', 'The tree'],
     ['writing', 'Writing it down'],
-    ['which', 'Which one is it'],
   ]],
   ['What a node says', [
     ['types', 'Types'],
@@ -56,16 +52,13 @@ const SECTIONS = [
     ['roles', 'Who does what'],
   ]],
   ['What it rests on', [
-    ['euro', 'The one euro'],
     ['strategy', 'Strategy'],
     ['basis', 'Basis'],
-    ['origin', 'What it promised'],
     ['cost', 'Cost'],
     ['documents', 'Documents'],
   ]],
   ['Working in it', [
     ['templates', 'Templates'],
-    ['standup', 'The stand-up'],
     ['meeting', 'The meeting screen'],
     ['map', 'The map'],
   ]],
@@ -100,7 +93,7 @@ function Row({
   children: React.ReactNode
 }) {
   return (
-    <div className="grid max-w-[1040px] grid-cols-[168px_1fr] items-baseline gap-6 border-t border-rule py-3 last:border-b">
+    <div className="grid max-w-[1040px] grid-cols-1 lg:grid-cols-[168px_1fr] items-baseline gap-6 border-t border-rule py-3 last:border-b">
       <div className="lbl-tight text-muted">{left}</div>
       <div className="max-w-[820px] text-[13px] leading-relaxed">{children}</div>
     </div>
@@ -166,287 +159,6 @@ export default function GuidePage() {
             with New project. Give it a category so it gets a number, then break it down
             with New node and the <Code>+</Code> on each row. You do not have to plan the
             whole tree up front. Add parts as they become real.
-          </P>
-
-          <H id="access">Who sees what</H>
-          <P>
-            <strong className="font-medium">
-              You see the projects you are a member of, and nothing else.
-            </strong>{' '}
-            Not a filter in the interface: it is enforced in the database, so a
-            page that forgot to filter still could not show you someone
-            else&rsquo;s work.
-          </P>
-          <P>
-            Membership sits on the <span className="text-ink">project</span> and
-            is inherited by everything under it. There is no joining a single
-            subproject: a half-visible tree is worse than no access, because
-            every roll-up above it would be quietly wrong.
-          </P>
-          <P>
-            Add people under <span className="text-ink">Access</span> on a
-            project&rsquo;s Identity page, by email. They need an account here
-            first. Removing the last member is refused, because a project with
-            nobody on it is invisible to everyone, this account included, and
-            nothing in the interface would explain where it went.
-          </P>
-          <P>
-            <strong className="font-medium">A new colleague is asked for two
-            things before they can use anything.</strong> A name, because a
-            project says who owns it and an email address is not an answer to
-            that; and a password of their own, because an account created in the
-            dashboard carries one that somebody else typed and still knows.
-            Until that is replaced, two people can sign in as one, and every
-            line written under that name was written by an account two people
-            can open.
-          </P>
-          <P>
-            There is no skipping it and there is no &laquo;seen it&raquo; flag
-            behind it. Both are facts about the account rather than about a
-            dialog, so the screen goes away by being answered rather than by
-            being closed. Somebody who has landed on the wrong account can sign
-            out from it.
-          </P>
-          <P>
-            Until they give a name they still appear in the role picker, as
-            their email address. That reads as unfinished, which it is, and it
-            beats the alternative: the one moment you have just added a
-            colleague is not the moment for them to be invisible.
-          </P>
-          <P>
-            The single-person role fields carry a small arrow. Typing filters the
-            names; the arrow shows all of them whatever is already in the field,
-            which is the case that matters, because the field you are about to
-            correct is a full one. The field still takes anything typed into it
-            on purpose: most people named on a project will never sign in here,
-            and a picker that refused them would be worse than no picker.
-          </P>
-          <P>
-            <strong className="font-medium">
-              Roles and access are different lists.
-            </strong>{' '}
-            The names under <span className="text-ink">Roles</span> are text on
-            a report, and most of them should be: the product owner and the
-            process owner are often people who will never sign in here.
-            <span className="text-ink"> Access</span> is what decides who can
-            open anything.
-          </P>
-          <P>
-            That separation has one sharp edge, so the page watches for it. Name
-            somebody who <em>does</em> have a login and Access says{' '}
-            <span className="text-ink">Named here, cannot open it</span>, with
-            the roles they hold and one button to fix it. Somebody with no
-            account is not listed: inviting them is a different decision, made
-            somewhere else, and nagging about the product owner who will never
-            sign in would train you to ignore the one case that counts.
-          </P>
-          <div className="mt-4">
-            <Row left="Getting an account">
-              Created in Supabase, then invited. The invitation link lets them
-              choose their own password and give the name that appears on
-              projects.
-            </Row>
-            <Row left="Forgotten password">
-              On the sign-in page. The reply is the same whether the address is
-              known or not, because that form sits on the open side of the login.
-            </Row>
-            <Row left="Sparks">
-              Private to whoever had the thought. A half-formed idea at eleven
-              at night is not project work and no colleague sees it.
-            </Row>
-            <Row left="Strategy figures">
-              Computed over everything, so a strategy reports the same number to
-              everyone. Only the parts behind it are filtered to what you can
-              open. Spend is the exception and says so on the page.
-            </Row>
-          </div>
-
-          <H id="sparks">Sparks</H>
-          <P>
-            <Link href="/spark" className="text-green">Sparks</Link> is where a
-            thought lands before it is work. The capture box asks for one thing:
-            the sentence. No type, no project, no date.
-          </P>
-          <P>
-            That is the whole design. The good ideas arrive in a car park or at
-            eleven at night, and anything that wants to know which project this
-            belongs to before it will accept the words is something you will not
-            open at eleven at night.
-          </P>
-          <P>
-            <strong className="font-medium">
-              A spark is not a node with status idea.
-            </strong>{' '}
-            Deliberately. Putting every passing thought in the tree would drag
-            it into <span className="text-ink">Projects</span>, into the
-            progress counts and into the portfolio, and the tree would stop
-            being a picture of the work that is actually happening.
-          </P>
-          <P>
-            Triage is a separate job, done here with the tree in front of you.
-            Three lists:
-          </P>
-          <div className="mt-4">
-            <Row left="Inbox">
-              Not looked at. Empty is the normal state, not an achievement to
-              protect.
-            </Row>
-            <Row left="Became work">
-              <span className="text-ink">Make it work</span> creates the node
-              where you say and closes the spark in one step. Your original
-              words become the description, and you give it a proper name: how
-              you first put it is often clearer than the name you settle on, so
-              both are kept.
-            </Row>
-            <Row left="Decided against">
-              <span className="text-ink">Drop</span>, with a line saying why.
-              Most sparks should end here, and that is the list working.
-            </Row>
-          </div>
-          <P>
-            <strong className="font-medium">
-              And in the inbox, a spark can be assessed.
-            </strong>{' '}
-            Two numbers go in: what it takes out of cost, and the project
-            group&rsquo;s one to five scores for cost, benefit and complexity.
-            Everything else is worked out &mdash; the kroner a year, the euro
-            per unit, the share of the year&rsquo;s target, the priority and the
-            quadrant &mdash; so none of it can be typed in and then quietly
-            disagree with the figures it came from.
-          </P>
-          <P>
-            The saving goes in however it was actually described: hours a year,
-            kroner per unit at a stage, or kroner a year. A saving per unit
-            needs the stage, because the stages do not run the same quantities.
-            See <Link href="#euro" className="text-green">The one euro</Link> for
-            what the numbers mean.
-          </P>
-          <P>
-            Leaving it all empty is fine and normal. An unassessed idea is not
-            worth nothing, it is not worked out yet, and those are different
-            things.
-          </P>
-          <P>
-            <strong className="font-medium">Dropped sparks are kept.</strong>{' '}
-            The reason is the point: it is what stops the same idea arriving
-            again in three months and going round the loop a second time. The{' '}
-            <span className="text-ink">×</span> deletes for good, and is for the
-            ones that were a typo rather than a thought.
-          </P>
-          <P>
-            Each spark records where it came from, so you can see which way of
-            capturing you actually use.
-          </P>
-
-          <H id="claude">The Claude app</H>
-          <P>
-            Say an idea to Claude on your phone and it lands in your Sparks
-            inbox. That is the whole feature, and it exists because the good
-            ideas arrive at eleven at night, in a car park, or on the way to a
-            line, and none of those are moments for opening a browser.
-          </P>
-          <P>
-            Set it up under <span className="text-ink">Account</span>: make a
-            token, then add Task Studio in Claude as a custom connector with
-            that token as its <Code>Authorization</Code> header. The page has
-            the exact URL and the steps.
-          </P>
-          <P>
-            Three things are possible through it, and all three are the inbox:
-            capture a thought, list what is waiting, and add a paragraph to one
-            of them. The last is for the conversation that starts with
-            &ldquo;save this idea about a mini rack&rdquo; and goes on for ten
-            minutes about actual equipment and actual prices: that substance
-            belongs with the thought that started it, not as a second
-            unconnected spark.
-          </P>
-          <P>
-            <strong className="font-medium">
-              Adding to a note only ever adds.
-            </strong>{' '}
-            It cannot replace or remove, so a line you wrote yourself is safe
-            even if Claude picks the wrong thought. That is what makes a write
-            tool safe to hand over at all.
-          </P>
-          <P>
-            <strong className="font-medium">
-              And it reaches your own inbox, nothing more.
-            </strong>{' '}
-            Not your projects, not your prices, not your documents, not the
-            tree, and not anybody else&rsquo;s inbox. That is enforced in the
-            database rather than promised here: the connector holds no
-            privileges of its own, and each function it calls takes the owner
-            from the token instead of from an argument, so there is nothing to
-            point somewhere else. Writing onto a project was asked for and
-            deliberately not built, because that is the point at which a token
-            going astray stops being an annoyance.
-          </P>
-          <P>
-            It is shown once, when you make it, because only a hash of it is
-            kept. Lost it, or suspect it? Make another and revoke the old one.
-            The list shows when each was last used, which is how you notice one
-            being used that should not be.
-          </P>
-          <P>
-            What arrives is captured, not planned. Claude passes the thought on
-            in the words you said it, without tidying it into a task or asking
-            which project it belongs to, because that is the job triage does
-            later with the tree in front of you.
-          </P>
-          <P>
-            <strong className="font-medium">
-              It also keeps what was around it.
-            </strong>{' '}
-            The first spark captured this way read &ldquo;OT Test Center med
-            mini rack&rdquo;: correct, in the right words, and close to useless
-            in three weeks. So a spark has two halves, and they stay apart. The
-            thought is what you said, untouched. The note underneath is what
-            made it make sense: what prompted it, what was being discussed, the
-            machine or the supplier or the number mentioned in passing.
-          </P>
-          <P>
-            Facts from the conversation only. Not a plan, not next steps, not a
-            guess at what it should become. Both halves travel into the
-            description when the spark becomes work, and you can edit or empty
-            either of them.
-          </P>
-          <P>
-            <strong className="font-medium">
-              Where the substance really is a table, it is shown as one.
-            </strong>{' '}
-            Equipment with prices, options with lead times, three quotes side by
-            side: written as pipe rows, that is drawn as a table wherever
-            written text appears in this application. Nothing is stored as a
-            structure, though. It stays plain text, so the raw lines remain
-            editable and printable, and you can type one by hand:
-          </P>
-          <div className="mt-3 max-w-prose">
-            <Code>{'| Item | Price |'}</Code>
-            <br />
-            <Code>{'|---|---|'}</Code>
-            <br />
-            <Code>{'| Switch | 4 200 |'}</Code>
-          </div>
-          <P>
-            A single line, or a single column, is left as text: that is a list
-            and reads better as one. A sentence that merely happens to contain a
-            pipe is left alone too, because every line has to carry one before
-            it counts.
-          </P>
-          <P>
-            <Code>{'**Like this**'}</Code> comes out bold, and that is the only
-            mark that renders. Not italics, not links, not headings: every one
-            added after it is another thing the raw text stops being. Bold is
-            there because a model writes it unprompted to mark a section
-            heading or a total, and it earns its place doing that.
-          </P>
-          <P>
-            <strong className="font-medium">A long note folds itself away</strong>{' '}
-            and says what it is hiding: <span className="text-ink">2 tables, 24
-            rows</span>. Two price tables would otherwise push the thought they
-            belong to off the screen, and folded to nothing they would look like
-            nothing at all. Units go in the column heading rather than in every
-            cell, so the numbers stay numbers and still say what they are.
           </P>
 
           <H id="quick">Quick entry</H>
@@ -550,61 +262,6 @@ export default function GuidePage() {
             delete button lives in that same form. Deleting a node deletes
             everything under it: its children, log, blockers, decisions, cost
             lines and files.
-          </P>
-
-          <H id="which">Which one is it</H>
-          <P>
-            There are five ways to record something, and until now nothing said
-            which was which. That is not a small omission: the whole database
-            held two log lines, no decisions and no priced lines, which is what
-            happens when five buttons are offered with no rule. Faced with a
-            choice you cannot make, the safe move is to write nothing, and
-            writing nothing is the one failure this tool cannot survive.
-          </P>
-          <P>
-            They do not overlap. Each is a different <em>tense</em> or a
-            different <em>shape</em>:
-          </P>
-          <P>
-            <span className="text-ink">It happened</span> &rarr; a line in the
-            log. Past tense. This is the raw material the weekly report is
-            assembled from, so a week with none has nothing to report.
-          </P>
-          <P>
-            <span className="text-ink">Somebody will, by a date</span> &rarr;
-            agreed here, on the stand-up. Future tense, with a name and a
-            deadline. It becomes an owner and a due date on real work, which is
-            why it can be answered later without anybody updating a document.
-          </P>
-          <P>
-            <span className="text-ink">We are waiting on someone</span> &rarr; a
-            blocker. Suspended: it counts days by itself, it puts that person in
-            the stand-up room, and it turns the piece red without you saying so.
-          </P>
-          <P>
-            <span className="text-ink">We chose, and turned something down</span>{' '}
-            &rarr; a decision. Settled. The alternatives field is the part that
-            earns it: six months later it is the only thing that answers
-            &laquo;why didn&rsquo;t you just use a Raspberry Pi&raquo;.
-          </P>
-          <P>
-            <span className="text-ink">It costs money</span> &rarr; a cost line
-            on Cost, with a vendor and a quotation. Not a meeting gesture,
-            because money needs paper.
-          </P>
-          <P>
-            That line is printed under the buttons on both working surfaces, so
-            the rule is where the choice is rather than in here.
-          </P>
-          <P>
-            <strong className="font-medium">A log line is not asked what kind it
-            is.</strong> Quick entry used to offer Work, Note, Meeting and Risk
-            with keyboard shortcuts, at the exact moment somebody was trying to
-            write one sentence in a meeting. They changed nothing: the weekly
-            report never read them. It now follows from where the line was
-            written - a stand-up writes <span className="text-ink">meeting</span>,
-            everything else <span className="text-ink">work</span> - and nobody
-            is asked. Lines written before still wear the kind they were given.
           </P>
 
           <H id="types">Types</H>
@@ -791,16 +448,6 @@ export default function GuidePage() {
 
           <H id="roles">Who does what</H>
           <P>
-            The single-person fields offer everyone this portfolio already knows
-            about: anyone with an account, plus every name already written into
-            a role anywhere. It suggests rather than constrains, because half
-            the people holding roles have no login. Where the same person has
-            been typed two ways, the spelling used most is the one offered, so
-            the typo cannot be picked again. The comma separated fields show the
-            known spellings underneath instead, where a suggestion would replace
-            the list rather than extend it.
-          </P>
-          <P>
             Roles live on Identity, and they can be set on any node: a hardware subproject
             may have a different project manager than the programme around it. A part with
             no roles of its own shows the project&rsquo;s, marked{' '}
@@ -850,142 +497,6 @@ export default function GuidePage() {
             decides.
           </P>
 
-          <H id="euro">The one euro</H>
-          <P>
-            The whole strategy is one sentence:{' '}
-            <strong className="font-medium">
-              take one euro of cost out of every unit sold, every year.
-            </strong>{' '}
-            Everything below is what that sentence means in numbers, and it is
-            worth reading once slowly, because every idea gets measured against
-            it.
-          </P>
-
-          <P>
-            A <span className="text-ink">unit</span> is one hectare&rsquo;s worth
-            of sugar beet seed. In FY26 the company sold{' '}
-            <span className="text-ink">266 253</span> of them, and each one cost{' '}
-            <span className="text-ink">577,70 kr</span> to produce, all in. So:
-          </P>
-          <div className="mt-4">
-            <Row left="The target, a year">
-              1 &euro; &times; 266 253 units = <strong className="font-medium">266 253 &euro;</strong>,
-              about 2,0 million kroner.
-            </Row>
-            <Row left="As a share of cost">
-              1 &euro; is 7,46 kr out of 577,70 kr:{' '}
-              <strong className="font-medium">1,3 %</strong> of what a unit
-              costs. Demanding, not impossible.
-            </Row>
-          </div>
-
-          <P>
-            <strong className="font-medium">
-              Any saving can be turned into a share of that.
-            </strong>{' '}
-            Ideas arrive described three different ways, and all three become
-            kroner a year first. Then one division does the rest.
-          </P>
-          <div className="mt-4">
-            <Row left="Hours saved">
-              &times; 240 kr, the cost of a man-hour. Belgium is the same figure
-              in euro.
-            </Row>
-            <Row left="Kroner per unit at a stage">
-              &times; what that stage actually ran. Cleaning handled 465 216
-              units in FY26 where coating handled 277 393, so the same saving is
-              worth <strong className="font-medium">68 % more</strong> on the
-              cleaning line. That is a fact about the process, not about the
-              idea.
-            </Row>
-            <Row left="Kroner a year">Already there.</Row>
-          </div>
-          <P>
-            Then: <Code>kroner a year ÷ 7,46 ÷ 266 253 = euro per unit</Code>,
-            and that against the 1 &euro; is the share. Two hundred hours saved
-            a year comes out at 2,4 % of the target. A thousand hours is 12,1 %.
-          </P>
-
-          <P>
-            <strong className="font-medium">
-              Which is the first uncomfortable thing this arithmetic says.
-            </strong>{' '}
-            Meeting the target on saved time alone would take{' '}
-            <span className="text-ink">8 276 hours a year</span> &mdash; about
-            five people, every year, for ever. The target cannot be reached by
-            working faster, and that is worth knowing before a quarter goes into
-            an idea that turns out to be three per cent of it.
-          </P>
-          <P>
-            The money is in waste and material instead. Pelleting waste runs at
-            3,6 % of a seed cost of 243,50 kr per unit. Halving it is 4,38 kr
-            per unit, which is{' '}
-            <strong className="font-medium">59 % of the whole year&rsquo;s target
-            from one thing</strong>. That is the size of prize worth chasing,
-            and it is a different order of magnitude from a thousand saved
-            hours.
-          </P>
-
-          <P>
-            <strong className="font-medium">
-              And the second uncomfortable thing: the denominator does not move.
-            </strong>{' '}
-            Units sold fell 23 % between FY25 and FY26, from 349 140 to 267 626,
-            and indirect cost per unit rose about 33 kr because of it. That is
-            roughly four and a half times the entire annual target, from volume
-            alone, with no project involved.
-          </P>
-          <P>
-            So a saving is held in <span className="text-ink">absolute
-            kroner</span> and converted at a <span className="text-ink">stated
-            reference volume</span>. Measured against whatever volume happens to
-            be current, every project would look better in a bad year and worse
-            in a good one, having changed nothing at all. Same reasoning as the
-            exchange rate on a cost line: it is captured when the figure lands,
-            so a number that moves tomorrow cannot rewrite what was reported in
-            week 34.
-          </P>
-          <P>
-            All of it lives in one row, called the yardstick: the year, the
-            cost basis, the unit cost, the hourly rate, the exchange rate and
-            the target. Changing one of those is a deliberate act with a date on
-            it, not a number drifting in a spreadsheet.
-          </P>
-
-          <P>
-            <strong className="font-medium">The denominator is processed units,
-            and it is filtered.</strong> On the COGS dashboard the figure is
-            labelled simply <span className="text-ink">Units</span>, beside{' '}
-            <span className="text-ink">Unit Cost + IPC</span>: it is the divisor
-            the 577,70 kr is computed with, over one slice of production. It is
-            not units sold, and this guide said it was for a day on nothing but
-            an assumption.
-          </P>
-          <P>
-            <strong className="font-medium">And the slice is narrower than the
-            strategy.</strong> The euro applies to the whole company&rsquo;s
-            sugar beet seed; the figure is filtered to In-house, so In-License is
-            missing from it. Both errors that follow point the same way and both
-            flatter: the year&rsquo;s target is the cost basis times one euro, so
-            too small a denominator <em>understates</em> it, and every share
-            divides by the same figure, so each idea is{' '}
-            <em>overstated</em> against it. A smaller mountain with every step up
-            it looking longer, and nothing on the screen out of place. So the
-            target reads &laquo;a floor, not the figure&raquo; until the two
-            scopes match.
-          </P>
-          <P>
-            That matters twice. Once because the target has to use the{' '}
-            <em>same</em> denominator the unit cost uses, or &laquo;one euro per
-            unit&raquo; and &laquo;577,70 kr per unit&raquo; are per different
-            units and cannot be subtracted. And once because the process volumes
-            are <em>not</em> filtered the same way: a saving per cleaned unit is
-            spread across every type while the target is set for a slice. The
-            kroner are right; the percentage comes out too large, and the page
-            says so in oxblood rather than correcting it, because correcting it
-            would need a filtered stage volume nobody has.
-          </P>
-
           <H id="strategy">Strategy</H>
           <P>
             <Link href="/strategy" className="text-green">Strategy</Link> is the
@@ -1013,12 +524,6 @@ export default function GuidePage() {
             rather than ticked: the topmost one in each branch is the one the
             figures use, and the one underneath still shows, because it says
             where the saving comes from.
-          </P>
-          <P>
-            A target here is a year&rsquo;s worth of euro, and where it comes
-            from is <Link href="#euro" className="text-green">The one euro</Link>:
-            one euro out of every unit, times the cost basis, is what the
-            strategy is worth in a year.
           </P>
           <P>
             The money works the same way as everywhere else, with one wrinkle
@@ -1130,37 +635,6 @@ export default function GuidePage() {
             <span className="text-ink">loose ends</span> on the front page. It is
             the one loose end whose answer is not a log line, so it links to Basis
             rather than to the entry box.
-          </P>
-
-          <H id="origin">What it promised</H>
-          <P>
-            A project that began as a spark carries{' '}
-            <span className="text-ink">Where it came from</span> at the top of
-            Basis: the sentence somebody first said, and the figure it was
-            approved on. Six months in, that is the only thing that answers
-            &laquo;what did we say this would save&raquo;.
-          </P>
-          <P>
-            <strong className="font-medium">It is a copy, on purpose.</strong>{' '}
-            Sparks are private to whoever wrote them, so reading the promise back
-            through the spark would show it to one person and show nothing at all
-            to everyone else on the project. Copied at the moment of promotion it
-            belongs to the work, and follows the work&rsquo;s own access.
-          </P>
-          <P>
-            It is also a different fact from the spark rather than a duplicate of
-            one. The spark holds what the idea says <em>now</em> and stays
-            editable; this holds what was claimed on the day it became work,
-            which is what somebody decided on. Editing the idea afterwards does
-            not quietly rewrite the promise.
-          </P>
-          <P>
-            The words are stored, the money is not. Kroner a year, euro per unit
-            and share of the target are worked out from the same figures the
-            spark carried, so an old claim can be read in today&rsquo;s terms.
-            Which year it was weighed in is stamped alongside, and if that is not
-            the current one the page says so: a saving is a share of a target,
-            and the target moves.
           </P>
 
           <H id="cost">Cost</H>
@@ -1331,131 +805,6 @@ export default function GuidePage() {
               does.
             </Row>
           </div>
-
-          <H id="standup">The stand-up</H>
-          <P>
-            The weekly meeting, in three chapters, and none of it is written in
-            advance. <Code>Standup</Code> reads what is already in here and works
-            out what the room has to talk about. The numbered links at the top
-            walk them in the order the meeting runs; it opens on the second,
-            because that is the one holding the work.
-          </P>
-          <P>
-            <strong className="font-medium">1. Since last time.</strong> What was
-            finished, what came unstuck, what got stuck. It also counts the log
-            lines written, because the weekly report is assembled from those and
-            a week with none has nothing to report. Measured from the day the
-            room last met, not from a week ago, so skipping a week still tells
-            the truth.
-          </P>
-          <P>
-            <strong className="font-medium">2. Until next time, and this is the
-            working half.</strong> The agenda runs down the left, across every
-            project, hardest first: a late answer, then anything anyone is
-            waiting on, then work whose date has passed, then work due before the
-            next stand-up, then anything ready with nobody on it, then what
-            happened that nobody wrote a line about. Waiting comes before
-            lateness on purpose. A wait needs a person, a late task needs a
-            decision, and the person is the one who might leave the room.
-          </P>
-          <P>
-            <strong className="font-medium">The rest of the portfolio is right
-            underneath it,</strong> by project, in tree order, with a status mark
-            and a date on every line. That is not decoration. On the real
-            portfolio the ranked rules flagged four pieces out of thirty five:
-            twenty five carry no date at all and sit at{' '}
-            <span className="text-ink">idea</span>, so no dated rule could see
-            them. A screen showing a ninth of the work is not a stand-up screen,
-            however well the ninth is chosen. Nothing is behind a toggle, because
-            a toggle is where those twenty five would go to be forgotten again.
-          </P>
-          <P>
-            Click one and it fills the right, exactly like the meeting screen:
-            the description, why it is on the agenda, and everything you might
-            change about it. <span className="text-ink">Status</span> saves
-            itself, <span className="text-ink">Due</span> is a date you can move
-            in one gesture, a blocker opens or closes in place, a decision gets
-            recorded, and <Code>write a line</Code> puts an entry on that piece
-            without leaving. <Code>Prev</Code> and <Code>Next</Code> walk the
-            agenda. It was a list to read out first, and that was wrong: it
-            picked the right things to talk about and then made you leave the
-            page to do anything about them.
-          </P>
-          <P>
-            The rail scrolls on its own, so walking down the list never takes
-            the piece under discussion off the screen. A project can be rolled up
-            with the small triangle on its heading, and the fold travels in the
-            address: send somebody the link and it arrives folded the way you
-            folded it. The triangle folds and the title opens, deliberately two
-            targets, because a row that did both would make it impossible to look
-            at a project without also collapsing it.
-          </P>
-          <P>
-            One row per piece, not one per reason. A task with two blockers and a
-            missed date is one conversation, and three rows for it would push
-            somebody else&rsquo;s item off the screen. The other reasons are
-            listed on the right when you open it.
-          </P>
-          <P>
-            <strong className="font-medium">Agreed here</strong> is how a
-            stand-up hands work out. Say what was agreed, who takes it, and by
-            when - the date starts on the next stand-up, because that is what a
-            stand-up commitment means. It lands either on the piece under
-            discussion or as a new task underneath it, and it always writes a
-            line in the log stamped with today&rsquo;s meeting.
-          </P>
-          <P>
-            <strong className="font-medium">There are no minutes, and that is
-            deliberate.</strong> Minutes would say &laquo;Jan takes the firewall
-            quote by the 17th&raquo; in prose beside a task saying the same thing
-            in columns, and the two would disagree the first time somebody moved
-            the date. Here the agreement <em>is</em> the task. Chapter one then
-            shows{' '}
-            <span className="text-ink">Agreed last time</span> with each
-            item&rsquo;s own status beside it, so something that got done reads
-            as done without anybody going back to a document to say so. That is
-            the single reason minutes stop being true by the second meeting.
-          </P>
-          <P>
-            Recording something opens today&rsquo;s stand-up by itself - writing
-            down what the room agreed is proof the room met - so{' '}
-            <Code>We held it</Code> is only needed for a week where nothing
-            required writing down. Undoing a stand-up puts the boundary back and
-            leaves the work alone: the line was still written and the task still
-            exists, only the claim about which meeting produced them goes away.
-          </P>
-          <P>
-            <strong className="font-medium">3. From spark to idea.</strong>{' '}
-            Assessed ideas ranked by what they take out of the year&rsquo;s
-            target, so the last five minutes go on the biggest one rather than
-            the newest one. An idea with no figure cannot be ranked and is only
-            counted: an empty assessment is not zero, it is not worked out.
-          </P>
-          <P>
-            <strong className="font-medium">Nothing is ticked off.</strong> There
-            is no handled button, and that is the mechanism rather than an
-            omission. An item leaves the agenda by being answered: the blocker is
-            resolved, the task is done, the date moves, the line is written.
-            Which is why all four of those are on the page. A list you tick
-            becomes a second copy of the work, and the second copy is the one
-            that goes stale.
-          </P>
-          <P>
-            <strong className="font-medium">The room is derived too.</strong>{' '}
-            Whoever something is actually waiting on, with their longest wait
-            beside them, ordered by how much of the meeting is about them. A
-            standing invitation list invites the same six people every week
-            whether or not anything needs them, and then the one person who could
-            unblock the oldest item is not there.
-          </P>
-          <P>
-            The only thing a stand-up stores is the day it was held, and the only
-            gesture is <Code>We held it</Code> in the band at the top. It is
-            there because &laquo;since last time&raquo; needs a last time: taking
-            it from the calendar looks like a derivation and is a guess. If you
-            close the wrong day, <Code>Undo</Code> puts the boundary back.
-            Nothing else was stored, so nothing else can be lost.
-          </P>
 
           <H id="meeting">The meeting screen</H>
           <P>

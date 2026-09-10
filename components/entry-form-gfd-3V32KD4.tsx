@@ -1,0 +1,77 @@
+import Link from 'next/link'
+import { deleteEntry, updateEntry } from '@/lib/entry-actions'
+import { ENTRY_KIND_LABEL, ENTRY_KIND_ORDER } from '@/lib/quick-add'
+import type { Entry } from '@/lib/types'
+
+export function EntryForm({
+  entry,
+  redirectTo,
+  cancelHref,
+}: {
+  entry: Entry
+  redirectTo: string
+  cancelHref: string
+}) {
+  const formId = `entry-form-${entry.id}`
+
+  return (
+    <div className="border-y border-rule-strong bg-sheet px-6 py-5">
+      <div className="lbl mb-4 text-muted">Edit entry</div>
+
+      <form id={formId} action={updateEntry} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+        <input type="hidden" name="id" value={entry.id} />
+        <input type="hidden" name="redirectTo" value={redirectTo} />
+
+        <label className="col-span-1 sm:col-span-2 lg:col-span-4 block">
+          <span className="lbl text-muted">Text</span>
+          <textarea
+            name="body"
+            rows={2}
+            required
+            autoFocus
+            defaultValue={entry.body}
+            className="field resize-y text-base"
+          />
+        </label>
+
+        <label className="block">
+          <span className="lbl text-muted">Date</span>
+          <input
+            type="date"
+            name="entry_date"
+            required
+            defaultValue={entry.entry_date}
+            className="field"
+          />
+        </label>
+
+        <label className="block">
+          <span className="lbl text-muted">Kind</span>
+          <select name="kind" defaultValue={entry.kind} className="field">
+            {ENTRY_KIND_ORDER.map((k) => (
+              <option key={k} value={k}>
+                {ENTRY_KIND_LABEL[k]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </form>
+
+      <div className="mt-6 flex items-center gap-3">
+        <button type="submit" form={formId} className="btn">
+          Save
+        </button>
+        <Link href={cancelHref} className="btn btn-ghost">
+          Cancel
+        </Link>
+        <form action={deleteEntry} className="ml-auto">
+          <input type="hidden" name="id" value={entry.id} />
+          <input type="hidden" name="redirectTo" value={redirectTo} />
+          <button type="submit" className="btn btn-danger">
+            Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}

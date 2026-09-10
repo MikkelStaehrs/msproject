@@ -61,7 +61,7 @@ export async function BlockerForm({
       <form
         id={formId}
         action={editing ? updateBlocker : createBlocker}
-        className="grid grid-cols-4 gap-x-8 gap-y-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4"
       >
         {editing ? (
           <input type="hidden" name="id" value={blocker.id} />
@@ -190,11 +190,11 @@ export function ResolveBlockerForm({
       <div className="lbl mb-1 text-muted">Close blocker</div>
       <div className="mb-4 text-[13px]">{blocker.title}</div>
 
-      <form action={resolveBlocker} className="grid grid-cols-4 gap-x-8 gap-y-4">
+      <form action={resolveBlocker} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
         <input type="hidden" name="id" value={blocker.id} />
         <input type="hidden" name="redirectTo" value={redirectTo} />
 
-        <label className="col-span-3 block">
+        <label className="col-span-1 sm:col-span-2 lg:col-span-3 block">
           <span className="lbl text-muted">How it was resolved</span>
           <input
             name="resolution"
@@ -209,7 +209,7 @@ export function ResolveBlockerForm({
           <input type="date" name="resolved_at" defaultValue={today()} className="field" />
         </label>
 
-        <div className="col-span-4 mt-2 flex items-center gap-3">
+        <div className="col-span-1 sm:col-span-2 lg:col-span-4 mt-2 flex items-center gap-3">
           <button type="submit" className="btn">
             Close
           </button>

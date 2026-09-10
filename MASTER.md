@@ -1213,6 +1213,24 @@ different units and the subtraction is meaningless. So the number is probably
 the right one for the job. The NAME was a guess and the SCOPE was never recorded
 at all.
 
+**The slice is also narrower than the strategy.** The euro applies to the whole
+company's sugar beet seed; the stored figure is filtered to In-house, so
+In-License is missing. Both errors that follow point the same way and both
+flatter: `targetAnnual` is `costBasisUnits x 1 euro`, so too small a denominator
+UNDERSTATES the target, and every `shareOfTarget` divides by the same figure, so
+each idea is OVERSTATED against it. A smaller mountain with every step up it
+looking longer, and nothing on the screen out of place. `target_scope` records
+what the strategy covers, `basisCoversTarget()` compares the two, and the target
+reads «a floor, not the figure» until they match.
+
+The right number is one click away on the same dashboard - Type = Sugar with
+both brand codes selected - and was NOT estimated in the meantime. In-house
+sugar shipped 266 253 against an unfiltered 267 626, which makes In-License look
+negligible and the correction look safe to skip. That is exactly the reasoning
+that produced `sold_units`: a plausible inference, written down as a fact, and
+believed by everyone who read it after. A number this one divides by is not a
+place to be approximately right.
+
 **The live mismatch this exposed.** `stage_volume` is unfiltered: Rensning ran
 465 216 units of everything. The cost basis counts 266 253 units of in-house
 sugar. A saving per cleaned unit multiplied by the first and divided by the

@@ -61,7 +61,7 @@ export function DecisionForm({
       <form
         id={formId}
         action={editing ? updateDecision : createDecision}
-        className="grid grid-cols-4 gap-x-8 gap-y-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4"
       >
         {editing ? (
           <input type="hidden" name="id" value={decision.id} />

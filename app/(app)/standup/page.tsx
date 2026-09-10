@@ -14,6 +14,7 @@ import {
 } from '@/lib/standup'
 import { holdStandup, reopenStandup } from '@/lib/standup-actions'
 import {
+  basisCoversTarget,
   impactOf,
   referenceFrom,
   savingFrom,
@@ -1143,14 +1144,24 @@ export default async function StandupPage({
                 a year. A percentage here is a percentage of that.
               </p>
             )}
-            {reference?.scope && (
+            {reference !== null && !basisCoversTarget(reference) ? (
+              <p className="mt-3 max-w-[26ch] border-l-2 border-oxblood pl-2.5 text-[10.5px] leading-relaxed text-oxblood">
+                A floor, not the figure. It is measured on{' '}
+                <span className="font-medium">{reference.scope}</span> while the
+                strategy covers{' '}
+                <span className="font-medium">{reference.targetScope}</span>, so
+                the target is too small and every percentage below is too large.
+                <span className="mt-1.5 block text-rule-strong">
+                  Same dashboard, both brand codes selected, Type = Sugar: read
+                  Units and Unit Cost + IPC.
+                </span>
+              </p>
+            ) : reference?.scope ? (
               <p className="mt-3 max-w-[26ch] text-[10.5px] leading-relaxed text-rule-strong">
                 Measured on <span className="text-muted">{reference.scope}</span>,
-                the slice the unit cost is computed over. The process volumes are
-                not filtered that way, so a saving through a stage is worth its
-                kroner and less than its percentage suggests.
+                the slice the unit cost is computed over.
               </p>
-            )}
+            ) : null}
           </div>
 
           <div className="border-l border-rule px-5 lg:px-10 py-8">
