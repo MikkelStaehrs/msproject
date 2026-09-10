@@ -229,6 +229,34 @@ export interface SparkToken {
   last_used_at: string | null
 }
 
+/**
+ * The figures the whole portfolio is measured against. One row.
+ *
+ * The volume is frozen and named on purpose: units sold fell 23% between FY25
+ * and FY26, which moved indirect cost per unit by about four and a half times
+ * the entire annual target. Against a moving denominator a project looks better
+ * in a bad year having changed nothing.
+ */
+export interface Yardstick {
+  id: boolean
+  fiscal_year: string
+  sold_units: number
+  unit_cost_dkk: number | null
+  hour_rate_dkk: number
+  eur_rate: number
+  cogs_target_eur_per_unit: number
+  note: string | null
+  updated_at: string
+}
+
+/** Units through one process stage in one year. */
+export interface StageVolume {
+  id: string
+  fiscal_year: string
+  stage: string
+  units: number
+}
+
 export const SPARK_SOURCES = ['app', 'quick', 'claude'] as const
 export type SparkSource = (typeof SPARK_SOURCES)[number]
 
