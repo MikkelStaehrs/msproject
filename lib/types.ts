@@ -55,6 +55,12 @@ export interface Node {
   estimate_low_days: number | null
   estimate_high_days: number | null
   reporting: Record<string, unknown>
+  /**
+   * Which stand-up produced this, where a stand-up did. A stamp rather than a
+   * minutes table: «what did we agree last Thursday» is then a query, and its
+   * progress is this row's own state rather than a second account of it.
+   */
+  standup_id: string | null
   created_at: string
   updated_at: string
 }
@@ -119,6 +125,12 @@ export interface Decision {
   alternatives: string | null
   /** What area the choice was about. `other` means not filed yet. */
   topic: DecisionTopic
+  /**
+   * Which stand-up produced this, where a stand-up did. A stamp rather than a
+   * minutes table: «what did we agree last Thursday» is then a query, and its
+   * progress is this row's own state rather than a second account of it.
+   */
+  standup_id: string | null
   created_at: string
 }
 
@@ -128,6 +140,12 @@ export interface Entry {
   entry_date: string
   kind: EntryKind
   body: string
+  /**
+   * Which stand-up produced this, where a stand-up did. A stamp rather than a
+   * minutes table: «what did we agree last Thursday» is then a query, and its
+   * progress is this row's own state rather than a second account of it.
+   */
+  standup_id: string | null
   created_at: string
 }
 

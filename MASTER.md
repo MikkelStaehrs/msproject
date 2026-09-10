@@ -1088,6 +1088,26 @@ One row per NODE, not one per reason. A task with two blockers and a missed date
 is one conversation, and three rows for it would push the next person's item off
 the screen; the other reasons are listed once you open it.
 
+**A stand-up hands work out, and there are no minutes.** «Agreed here» on the
+piece under discussion takes a sentence, a name and a date: the sentence becomes
+a line in the log, the name becomes the owner, the date becomes the due date
+(defaulting to the next stand-up, because that is what a stand-up commitment
+means), and it lands either on that piece or as a new task underneath it.
+
+Minutes would say «Jan takes the firewall quote by the 17th» in prose beside a
+task saying the same thing in columns, and the two would disagree the first time
+somebody moved the date. So `standup_id` is a STAMP on `entry`, `decision` and
+`node` rather than a table of its own. «Agreed last time» is then a query, and
+each item carries its own status: something that got done reads as done without
+anybody returning to a document to say so, which is the single reason minutes
+stop being true by the second meeting.
+
+Recording something opens today's stand-up by itself - writing down what the
+room agreed is proof the room met - so the explicit button is only needed for a
+week where nothing required writing down. The stamps are `on delete set null`:
+undoing a stand-up puts the boundary back without taking the week's work with
+it.
+
 **Nothing is ticked off**, and that is the mechanism rather than an omission. An
 item leaves the agenda by being answered: the blocker is resolved, the task is
 done, the line is written. A handled button would make the list a second copy of

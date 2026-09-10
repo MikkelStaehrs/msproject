@@ -1298,6 +1298,34 @@ export default function GuidePage() {
             listed on the right when you open it.
           </P>
           <P>
+            <strong className="font-medium">Agreed here</strong> is how a
+            stand-up hands work out. Say what was agreed, who takes it, and by
+            when - the date starts on the next stand-up, because that is what a
+            stand-up commitment means. It lands either on the piece under
+            discussion or as a new task underneath it, and it always writes a
+            line in the log stamped with today&rsquo;s meeting.
+          </P>
+          <P>
+            <strong className="font-medium">There are no minutes, and that is
+            deliberate.</strong> Minutes would say &laquo;Jan takes the firewall
+            quote by the 17th&raquo; in prose beside a task saying the same thing
+            in columns, and the two would disagree the first time somebody moved
+            the date. Here the agreement <em>is</em> the task. Chapter one then
+            shows{' '}
+            <span className="text-ink">Agreed last time</span> with each
+            item&rsquo;s own status beside it, so something that got done reads
+            as done without anybody going back to a document to say so. That is
+            the single reason minutes stop being true by the second meeting.
+          </P>
+          <P>
+            Recording something opens today&rsquo;s stand-up by itself - writing
+            down what the room agreed is proof the room met - so{' '}
+            <Code>We held it</Code> is only needed for a week where nothing
+            required writing down. Undoing a stand-up puts the boundary back and
+            leaves the work alone: the line was still written and the task still
+            exists, only the claim about which meeting produced them goes away.
+          </P>
+          <P>
             <strong className="font-medium">3. From spark to idea.</strong>{' '}
             Assessed ideas ranked by what they take out of the year&rsquo;s
             target, so the last five minutes go on the biggest one rather than

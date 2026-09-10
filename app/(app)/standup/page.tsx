@@ -24,6 +24,7 @@ import { priorityScore, quadrant } from '@/lib/priority'
 import { formatMoney } from '@/lib/cost'
 import { BlockerForm, ResolveBlockerForm } from '@/components/blocker-form'
 import { DecisionForm } from '@/components/decision-form'
+import { AgreedHere } from '@/components/agreed-here'
 import { DueDate } from '@/components/due-date'
 import { NodeForm } from '@/components/node-form'
 import { QuickAddOn } from '@/components/quick-add-on'
@@ -101,6 +102,7 @@ export default async function StandupPage({
     bnew?: string
     bresolve?: string
     dnew?: string
+    agree?: string
   }>
 }) {
   const {
@@ -116,6 +118,7 @@ export default async function StandupPage({
     bnew: newBlocker,
     bresolve: resolveBlocker,
     dnew: newDecision,
+    agree: agreeing,
   } = await searchParams
 
   const supabase = await createClient()
@@ -191,6 +194,23 @@ export default async function StandupPage({
   })
   const room = attendees(items)
   const moved = movement({ nodes, blockers, entries }, since)
+
+  /*
+   * What the room asked for last time, and what became of it.
+   *
+   * Derived from a stamp rather than kept as minutes. The status beside each
+   * line is the task's own, so a thing that got done reads as done without
+   * anybody going back to a document to say so - which is the single reason
+   * minutes stop being true by the second meeting.
+   */
+  const lastStandup = heldToday ? previous : (held[0] ?? null)
+  const agreedLast = lastStandup
+    ? {
+        lines: entries.filter((e) => e.standup_id === lastStandup.id),
+        tasks: nodes.filter((n) => n.standup_id === lastStandup.id),
+        decisions: decisions.filter((d) => d.standup_id === lastStandup.id),
+      }
+    : null
 
   // Which project a node belongs to, so a row can say where it lives.
   const rootIds = new Set(nodes.filter((n) => n.parent_id === null).map((n) => n.id))
@@ -448,6 +468,115 @@ export default async function StandupPage({
                 }))}
               />
             </div>
+
+            {/*
+              What the room asked for last time. The status beside each line is
+              the task's own, so something that got done reads as done without
+              anybody returning to a document to say so - which is the single
+              reason minutes stop being true by the second meeting.
+            */}
+            {agreedLast && (
+              <div className="mt-8 border-t border-rule-strong pt-5">
+                <div className="flex items-baseline gap-4">
+                  <h2 className="lbl">Agreed last time</h2>
+                  <span className="lbl-tight tabular-nums text-rule-strong">
+                    {formatDate(lastStandup!.held_on)}
+                  </span>
+                </div>
+
+                {agreedLast.lines.length === 0 && agreedLast.tasks.length === 0 ? (
+                  <p className="mt-2.5 max-w-prose text-[11.5px] leading-relaxed text-rule-strong">
+                    Nothing was written down at that stand-up. Use{' '}
+                    <span className="text-ink">agreed here</span> on a piece in
+                    chapter two and it lands in this list next week.
+                  </p>
+                ) : (
+                  <div className="mt-3">
+                    {agreedLast.tasks.map((n) => {
+                      const done = n.status === 'done' || n.completed_at !== null
+                      const late =
+                        !done && n.due_date !== null && n.due_date < today
+                      return (
+                        <div
+                          key={n.id}
+                          className="flex items-baseline gap-3 border-t border-rule py-2.5 last:border-b"
+                        >
+                          <StatusMark
+                            status={n.status}
+                            blocked={state.get(n.id)?.is_blocked ?? false}
+                          />
+                          <Link
+                            href={at(n.id)}
+                            className={`min-w-0 flex-1 text-[12.5px] leading-snug hover:text-green ${
+                              done ? 'text-muted line-through' : ''
+                            }`}
+                          >
+                            {n.title}
+                          </Link>
+                          {n.owner && (
+                            <span className="lbl-tight shrink-0 text-muted">
+                              {n.owner}
+                            </span>
+                          )}
+                          <span
+                            className={`shrink-0 text-[10px] tabular-nums ${
+                              late ? 'text-oxblood' : 'text-rule-strong'
+                            }`}
+                          >
+                            {done
+                              ? 'done'
+                              : n.due_date
+                                ? formatDate(n.due_date)
+                                : STATUS_LABEL[n.status]}
+                          </span>
+                        </div>
+                      )
+                    })}
+
+                    {/* Lines that changed nothing structural. Still the record. */}
+                    {agreedLast.lines
+                      .filter(
+                        (e) => !agreedLast.tasks.some((n) => n.title === e.body),
+                      )
+                      .map((e) => (
+                        <div
+                          key={e.id}
+                          className="flex items-baseline gap-3 border-t border-rule py-2.5 last:border-b"
+                        >
+                          <span className="w-[9px] shrink-0" />
+                          <Link
+                            href={at(e.node_id)}
+                            className="min-w-0 flex-1 text-[12.5px] leading-snug hover:text-green"
+                          >
+                            {e.body}
+                            <span className="text-rule-strong">
+                              {' '}
+                              · {byId.get(e.node_id)?.title}
+                            </span>
+                          </Link>
+                        </div>
+                      ))}
+
+                    {agreedLast.decisions.map((d) => (
+                      <div
+                        key={d.id}
+                        className="flex items-baseline gap-3 border-t border-rule py-2.5 last:border-b"
+                      >
+                        <span className="lbl-tight w-[9px] shrink-0 text-green">
+                          &#9670;
+                        </span>
+                        <span className="min-w-0 flex-1 text-[12.5px] leading-snug">
+                          {d.decision}
+                        </span>
+                        <span className="lbl-tight shrink-0 text-rule-strong">
+                          decided
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <p className="mt-7 max-w-prose border-t border-rule pt-3.5 text-[11.5px] leading-relaxed text-rule-strong">
               {moved.written === 0
@@ -738,6 +867,14 @@ export default async function StandupPage({
                     }
                   />
                   <span className="ml-auto flex items-center gap-5">
+                    <AgreedHere
+                      nodeId={selected.id}
+                      nextOn={nextOn}
+                      open={agreeing === selected.id}
+                      openHref={at(selected.id, `agree=${selected.id}`)}
+                      closeHref={at(selected.id)}
+                      redirectTo={at(selected.id)}
+                    />
                     <QuickAddOn nodeId={selected.id} label="write a line" />
                     <Link
                       href={at(selected.id, `bnew=${selected.id}`)}
@@ -753,6 +890,17 @@ export default async function StandupPage({
                     </Link>
                   </span>
                 </div>
+
+                {agreeing === selected.id && (
+                  <AgreedHere
+                    nodeId={selected.id}
+                    nextOn={nextOn}
+                    open
+                    openHref={at(selected.id, `agree=${selected.id}`)}
+                    closeHref={at(selected.id)}
+                    redirectTo={at(selected.id)}
+                  />
+                )}
 
                 {newBlocker === selected.id && (
                   <div className="mt-5">
