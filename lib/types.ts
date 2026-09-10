@@ -257,6 +257,21 @@ export interface StageVolume {
   units: number
 }
 
+/**
+ * One stand-up, held.
+ *
+ * The only thing a stand-up stores. The agenda, who was needed and what moved
+ * are all derived; this row exists solely so "since last time" has a last time
+ * that survives a skipped week.
+ */
+export interface Standup {
+  id: string
+  held_on: string
+  held_by: string | null
+  note: string | null
+  created_at: string
+}
+
 export const SPARK_SOURCES = ['app', 'quick', 'claude'] as const
 export type SparkSource = (typeof SPARK_SOURCES)[number]
 

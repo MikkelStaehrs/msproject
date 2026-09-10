@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { assessSpark } from '@/lib/spark-actions'
 import { Hint } from '@/components/ui'
-import { impactOf, type Reference, type Saving } from '@/lib/cogs'
+import { impactOf, savingFrom, type Reference, type Saving } from '@/lib/cogs'
 import { priorityScore, quadrant } from '@/lib/priority'
 import { SAVING_KINDS, SAVING_KIND_HINT, SAVING_KIND_LABEL, type Spark } from '@/lib/types'
 
@@ -15,21 +15,7 @@ import { SAVING_KINDS, SAVING_KIND_HINT, SAVING_KIND_LABEL, type Spark } from '@
 
 /** The saving as `lib/cogs` wants it, or null where it is not yet described. */
 export function savingOf(spark: Spark, stageUnits: number | null): Saving | null {
-  if (spark.saving_kind === null || spark.saving_value === null) return null
-  const value = Number(spark.saving_value)
-
-  switch (spark.saving_kind) {
-    case 'hours':
-      return { kind: 'hours', hoursPerYear: value }
-    case 'annual':
-      return { kind: 'annual', dkkPerYear: value }
-    case 'per_unit':
-      // Without the stage volume this cannot become kroner at all, and that is
-      // reported as unknown rather than guessed at.
-      return stageUnits === null
-        ? null
-        : { kind: 'perUnit', dkkPerUnit: value, stageUnits }
-  }
+  return savingFrom(spark.saving_kind, spark.saving_value, stageUnits)
 }
 
 const kr = (n: number) =>

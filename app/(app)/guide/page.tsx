@@ -63,6 +63,7 @@ const SECTIONS = [
   ]],
   ['Working in it', [
     ['templates', 'Templates'],
+    ['standup', 'The stand-up'],
     ['meeting', 'The meeting screen'],
     ['map', 'The map'],
   ]],
@@ -1168,6 +1169,57 @@ export default function GuidePage() {
               does.
             </Row>
           </div>
+
+          <H id="standup">The stand-up</H>
+          <P>
+            The weekly meeting, in three parts, and none of it is written in advance.
+            <Code>Standup</Code> reads what is already in here and works out what the
+            room has to talk about.
+          </P>
+          <P>
+            <strong className="font-medium">1. Since last time.</strong> What was
+            finished, what came unstuck, what got stuck. It also says how many log
+            lines were written, because the weekly report is assembled from those and
+            a week with none has nothing to report.
+          </P>
+          <P>
+            <strong className="font-medium">2. Until next time.</strong> The agenda,
+            hardest first: a late answer, then anything anyone is waiting on, then work
+            whose date has passed, then work due before the next stand-up, then anything
+            ready with nobody on it, then what happened that nobody wrote a line about.
+            Waiting comes before lateness on purpose. A wait needs a person, a late task
+            needs a decision, and the person is the one who might leave the room.
+          </P>
+          <P>
+            <strong className="font-medium">3. From spark to idea.</strong> Assessed
+            ideas ranked by what they take out of the year&rsquo;s target, so the room
+            spends its last five minutes on the biggest one rather than the newest one.
+            An idea with no figure on it cannot be ranked and is only counted.
+          </P>
+          <P>
+            <strong className="font-medium">Nothing is ticked off.</strong> There is no
+            handled button, and that is the mechanism rather than an omission. An item
+            leaves the agenda by being answered: the blocker is resolved, the task is
+            done, the line is written. A list you tick becomes a second copy of the
+            work, and the second copy is the one that goes stale.
+          </P>
+          <P>
+            <strong className="font-medium">The room is derived too.</strong> On the
+            right is whoever something is actually waiting on, with their longest wait
+            beside them, ordered by how much of the meeting is about them. A standing
+            invitation list invites the same six people every week whether or not
+            anything needs them, and then the one person who could unblock the oldest
+            item is not there.
+          </P>
+          <P>
+            The only thing a stand-up stores is the day it was held, and the only
+            gesture is the <Code>We held it</Code> button. It is there because
+            &laquo;since last time&raquo; needs a last time: taking it from the calendar
+            looks like a derivation and is a guess, and a skipped week would then report
+            a fortnight of movement as a week&rsquo;s. If you close the wrong day,{' '}
+            <Code>Undo</Code> puts the boundary back. Nothing else was stored, so
+            nothing else can be lost.
+          </P>
 
           <H id="meeting">The meeting screen</H>
           <P>

@@ -12,7 +12,7 @@ import {
 } from '@/lib/spark-actions'
 import { Hint, Prose, ProseFolded, Rule, formatDate } from '@/components/ui'
 import { Assessment } from '@/components/assessment'
-import type { Reference } from '@/lib/cogs'
+import { referenceFrom, stagesFrom } from '@/lib/cogs'
 import {
   SPARK_SOURCE_LABEL,
   TYPE_HINT,
@@ -68,20 +68,8 @@ export default async function SparkPage({
    * with no reference is not zero, it is not yet knowable.
    */
   const yard = yardstickRes.data as Yardstick | null
-  const reference: Reference | null = yard
-    ? {
-        fiscalYear: yard.fiscal_year,
-        soldUnits: Number(yard.sold_units),
-        hourRateDkk: Number(yard.hour_rate_dkk),
-        eurRate: Number(yard.eur_rate),
-        targetEurPerUnit: Number(yard.cogs_target_eur_per_unit),
-      }
-    : null
-
-  const stages = ((stageRes.data ?? []) as StageVolume[])
-    .filter((v) => v.fiscal_year === yard?.fiscal_year)
-    .map((v) => ({ stage: v.stage, units: Number(v.units) }))
-    .sort((a, b) => b.units - a.units)
+  const reference = referenceFrom(yard)
+  const stages = stagesFrom((stageRes.data ?? []) as StageVolume[], yard?.fiscal_year ?? null)
 
   const sparks = (sparkRes.data ?? []) as Spark[]
   const nodes = (nodeRes.data ?? []) as Pick<Node, 'id' | 'parent_id' | 'title' | 'type'>[]

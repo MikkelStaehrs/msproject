@@ -141,3 +141,75 @@ export function targetInHours(reference: Reference): number | null {
   }
   return target.dkk / reference.hourRateDkk
 }
+
+// ---------------------------------------------------------------------------
+// From stored rows to the shapes above.
+//
+// These live here rather than on a page because two pages now need them, and a
+// reference assembled twice is a reference that eventually differs. They take
+// structural arguments rather than the row types so this file keeps its one
+// job and no imports.
+// ---------------------------------------------------------------------------
+
+/**
+ * The yardstick row as a Reference, or null where there is no yardstick.
+ *
+ * Null rather than a set of sensible defaults. A saving measured against a made
+ * up denominator is worse than a saving with no figure beside it: the first
+ * looks like an answer.
+ */
+export function referenceFrom(
+  y: {
+    fiscal_year: string
+    sold_units: number | string
+    hour_rate_dkk: number | string
+    eur_rate: number | string
+    cogs_target_eur_per_unit: number | string
+  } | null,
+): Reference | null {
+  if (y === null) return null
+  return {
+    fiscalYear: y.fiscal_year,
+    soldUnits: Number(y.sold_units),
+    hourRateDkk: Number(y.hour_rate_dkk),
+    eurRate: Number(y.eur_rate),
+    targetEurPerUnit: Number(y.cogs_target_eur_per_unit),
+  }
+}
+
+/** The stages that ran in the reference year, busiest first. */
+export function stagesFrom(
+  rows: { fiscal_year: string; stage: string; units: number | string }[],
+  fiscalYear: string | null,
+): { stage: string; units: number }[] {
+  if (fiscalYear === null) return []
+  return rows
+    .filter((v) => v.fiscal_year === fiscalYear)
+    .map((v) => ({ stage: v.stage, units: Number(v.units) }))
+    .sort((a, b) => b.units - a.units)
+}
+
+/**
+ * A stored assessment as a Saving.
+ *
+ * The `per_unit` case is the reason this is not a one liner: without the volume
+ * of the stage it names it cannot become kroner at all, and that is reported as
+ * unknown rather than guessed at.
+ */
+export function savingFrom(
+  kind: 'hours' | 'per_unit' | 'annual' | null,
+  value: number | string | null,
+  stageUnits: number | null,
+): Saving | null {
+  if (kind === null || value === null) return null
+  const n = Number(value)
+
+  switch (kind) {
+    case 'hours':
+      return { kind: 'hours', hoursPerYear: n }
+    case 'annual':
+      return { kind: 'annual', dkkPerYear: n }
+    case 'per_unit':
+      return stageUnits === null ? null : { kind: 'perUnit', dkkPerUnit: n, stageUnits }
+  }
+}

@@ -64,6 +64,16 @@ export function Nav() {
         Blockers
       </Link>
       <Link
+        href="/standup"
+        className={
+          pathname.startsWith('/standup')
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-muted hover:text-ink'
+        }
+      >
+        Standup
+      </Link>
+      <Link
         href="/friday"
         className={
           pathname.startsWith('/friday')

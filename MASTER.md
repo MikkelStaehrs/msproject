@@ -680,12 +680,13 @@ itself, so the overlay can never promise one thing and write another.
 | `/p/[id]/brief` | The brief: the identity laid out to be read by someone who was not in the room. Carries the money in full, priced against planned, how much has a document behind it, the yearly running cost and the payback after it, because «paid back in 3.5 years» without saying what it costs is half an answer. Read only, and an actual A4 page: 794 px wide at 96 dpi with the same 14 mm margin the printer gets, so the screen and the paper are the same shape |
 | `/p/[id]/meeting` | The working surface for a meeting. You bring up a project or a part and walk its pieces one at a time: the list stays on the left, the piece under discussion fills the right, with its description, status, dates, estimate, blockers, decisions, log and cost lines. The tree is the wrong shape for this, being built to show a hundred rows at once, which is what nobody can read together. Status changes inline, blockers and decisions open without leaving the screen, and `Ctrl+K` writes on whatever is selected: a meeting is when those surface, and a record is worth nothing if capturing it costs you the room. Navigation is the tree, not a flat list: a breadcrumb climbs, «Go into it» descends, and a piece can be edited or added in place with the same form the tree uses. Two things were wrong first time round: it was a presentation rather than a workspace, and the subject picker was every container in the project dumped in a row, unordered and saying nothing about what holds what |
 | `/p/[id]/map` | The project map: the tree drawn as a diagram, landscape and printable. Hierarchy as elbows in grey, sequence as dashed oxblood arrows leaving the boxes sideways, so «under» and «before» cannot be confused. `?depth=` stops the drawing at a level and marks each cut branch with how much it holds, because five levels of tasks on one sheet is a wall rather than an explanation; cutting is not hiding. `?zoom=` scales the finished drawing rather than laying it out again, so the connectors keep meeting the box centres, and «Fit» means fits on one printed sheet. A dependency pointing outside the project has no box to reach, so the box carries «waits N» instead |
+| `/standup` | The weekly stand-up, in three parts, none of it written in advance. **Since last time**: what was finished, what came unstuck, what got stuck, and how many log lines were written, because Friday assembles the report from those and a week with none has nothing to say. **Until next time**: the agenda, ranked by `lib/standup.ts` as late answer, waiting, past its date, due before next time, ready with nobody on it, unwritten. Waiting outranks lateness because a wait needs a person and a late task needs a decision, and the person is the one who might leave the room. **From spark to idea**: assessed sparks ranked by share of the year's target. The right column is the room, derived from whoever the agenda is waiting on, ordered by how much of the meeting is about them. Nothing is ticked off, and the only thing stored is the day it was held |
 | `/friday` | Weekly report: the four fields per running project, each with a copy button, plus the basis and the previous report |
 | `/blockers` | Every blocker, waiting days per `waiting_on`, a lifetime chart and key figures |
 | `/templates` | Template library: derive from a project, deploy on a new start date |
 | `/spark` | Where a thought lands before it is work. One field to capture, three lists to triage: inbox, became work, decided against. Promoting one creates the node and closes the spark in a single step, because creating it on one page and remembering to tick the spark off on another is a thing nobody does |
 | `/strategy` | What the work is for, across the projects. The only page that cuts the tree sideways. Each strategy shows what the marked work promises a year, how much of that is delivered, what has been invested to get it, and what is still to find. `/strategy/<id>` lists the parts behind the figure, because a number without them is one somebody has to take on trust |
-| `/guide` | How to use the tool. Twenty four sections under five headings: getting around, what a node says, what it rests on, working in it, showing it to someone. It reads the labels and hints out of `lib/types.ts`, so a picker and the guide cannot come to disagree. It lives in the app rather than beside this file because a guide you have to leave the app to open is a guide you never open. MASTER says why the app is built this way; the guide says what to do |
+| `/guide` | How to use the tool. Twenty nine sections under five headings: getting around, what a node says, what it rests on, working in it, showing it to someone. It reads the labels and hints out of `lib/types.ts`, so a picker and the guide cannot come to disagree. It lives in the app rather than beside this file because a guide you have to leave the app to open is a guide you never open. MASTER says why the app is built this way; the guide says what to do |
 
 **The project frame.** `(shell)/layout.tsx` holds **only** the context band. The
 title block, the sub navigation and the right column live in
@@ -978,6 +979,39 @@ spark became must not erase the record that the thought was had and acted on.
 
 `source` exists to tell you which capture route you actually use, and which one
 was a nice idea nobody touched.
+
+## The stand-up, and the one thing it stores
+
+An agenda is normally a document somebody prepares, which means it is stale by
+the time the room sits down and it is prepared by the person who least needs it.
+Everything on this one is already in the database: what is waiting, what is
+late, what is ready with nobody on it, what happened that nobody wrote a line
+about. So `lib/standup.ts` derives it, and the only thing anyone does is hold
+the meeting.
+
+**Nothing is ticked off**, and that is the mechanism rather than an omission. An
+item leaves the agenda by being answered: the blocker is resolved, the task is
+done, the line is written. A handled button would make the list a second copy of
+the work, and the second copy is the one that goes stale.
+
+**The room is derived from the agenda.** Whoever something is waiting on, with
+their longest wait, ordered by how much of the meeting is about them. A standing
+invitation list invites the same six people every week whether or not anything
+needs them, and then the one person who could unblock the oldest item is not
+there.
+
+**One table, one column that matters.** `standup.held_on`, the day the room met.
+It is the single fact on the whole screen that is not derivable, and the
+temptation is to take it from the calendar: it is weekly, so last Monday. That
+looks like a derivation and is a guess. Skip a week and a fortnight of movement
+gets reported as a week's, silently. So it is recorded by the one gesture that
+is honest about being a gesture, somebody pressing a button to say the meeting
+happened, and `Undo` puts the boundary back if the wrong day gets closed.
+
+`since` is null before the first stand-up, deliberately, rather than falling
+back to a week ago. The first meeting should have the whole history in front of
+it, and a fallback would make "we have never met" and "a quiet week" look the
+same.
 
 ## The stress test, and why it lives on the spark
 
