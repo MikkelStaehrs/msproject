@@ -55,6 +55,7 @@ const SECTIONS = [
     ['roles', 'Who does what'],
   ]],
   ['What it rests on', [
+    ['euro', 'The one euro'],
     ['strategy', 'Strategy'],
     ['basis', 'Basis'],
     ['cost', 'Cost'],
@@ -728,6 +729,108 @@ export default function GuidePage() {
             decides.
           </P>
 
+          <H id="euro">The one euro</H>
+          <P>
+            The whole strategy is one sentence:{' '}
+            <strong className="font-medium">
+              take one euro of cost out of every unit sold, every year.
+            </strong>{' '}
+            Everything below is what that sentence means in numbers, and it is
+            worth reading once slowly, because every idea gets measured against
+            it.
+          </P>
+
+          <P>
+            A <span className="text-ink">unit</span> is one hectare&rsquo;s worth
+            of sugar beet seed. In FY26 the company sold{' '}
+            <span className="text-ink">266 253</span> of them, and each one cost{' '}
+            <span className="text-ink">577,70 kr</span> to produce, all in. So:
+          </P>
+          <div className="mt-4">
+            <Row left="The target, a year">
+              1 &euro; &times; 266 253 units = <strong className="font-medium">266 253 &euro;</strong>,
+              about 2,0 million kroner.
+            </Row>
+            <Row left="As a share of cost">
+              1 &euro; is 7,46 kr out of 577,70 kr:{' '}
+              <strong className="font-medium">1,3 %</strong> of what a unit
+              costs. Demanding, not impossible.
+            </Row>
+          </div>
+
+          <P>
+            <strong className="font-medium">
+              Any saving can be turned into a share of that.
+            </strong>{' '}
+            Ideas arrive described three different ways, and all three become
+            kroner a year first. Then one division does the rest.
+          </P>
+          <div className="mt-4">
+            <Row left="Hours saved">
+              &times; 240 kr, the cost of a man-hour. Belgium is the same figure
+              in euro.
+            </Row>
+            <Row left="Kroner per unit at a stage">
+              &times; what that stage actually ran. Cleaning handled 465 216
+              units in FY26 where coating handled 277 393, so the same saving is
+              worth <strong className="font-medium">68 % more</strong> on the
+              cleaning line. That is a fact about the process, not about the
+              idea.
+            </Row>
+            <Row left="Kroner a year">Already there.</Row>
+          </div>
+          <P>
+            Then: <Code>kroner a year ÷ 7,46 ÷ 266 253 = euro per unit</Code>,
+            and that against the 1 &euro; is the share. Two hundred hours saved
+            a year comes out at 2,4 % of the target. A thousand hours is 12,1 %.
+          </P>
+
+          <P>
+            <strong className="font-medium">
+              Which is the first uncomfortable thing this arithmetic says.
+            </strong>{' '}
+            Meeting the target on saved time alone would take{' '}
+            <span className="text-ink">8 276 hours a year</span> &mdash; about
+            five people, every year, for ever. The target cannot be reached by
+            working faster, and that is worth knowing before a quarter goes into
+            an idea that turns out to be three per cent of it.
+          </P>
+          <P>
+            The money is in waste and material instead. Pelleting waste runs at
+            3,6 % of a seed cost of 243,50 kr per unit. Halving it is 4,38 kr
+            per unit, which is{' '}
+            <strong className="font-medium">59 % of the whole year&rsquo;s target
+            from one thing</strong>. That is the size of prize worth chasing,
+            and it is a different order of magnitude from a thousand saved
+            hours.
+          </P>
+
+          <P>
+            <strong className="font-medium">
+              And the second uncomfortable thing: the denominator does not move.
+            </strong>{' '}
+            Units sold fell 23 % between FY25 and FY26, from 349 140 to 267 626,
+            and indirect cost per unit rose about 33 kr because of it. That is
+            roughly four and a half times the entire annual target, from volume
+            alone, with no project involved.
+          </P>
+          <P>
+            So a saving is held in <span className="text-ink">absolute
+            kroner</span> and converted at a <span className="text-ink">stated
+            reference volume</span>. Measured against whatever volume happens to
+            be current, every project would look better in a bad year and worse
+            in a good one, having changed nothing at all. Same reasoning as the
+            exchange rate on a cost line: it is captured when the figure lands,
+            so a number that moves tomorrow cannot rewrite what was reported in
+            week 34.
+          </P>
+          <P>
+            All of it lives in one row, called the yardstick: the year, the
+            units sold, the unit cost, the hourly rate, the exchange rate and
+            the target. Changing one of those is a deliberate act with a date on
+            it, not a number drifting in a spreadsheet.
+          </P>
+
           <H id="strategy">Strategy</H>
           <P>
             <Link href="/strategy" className="text-green">Strategy</Link> is the
@@ -755,6 +858,12 @@ export default function GuidePage() {
             rather than ticked: the topmost one in each branch is the one the
             figures use, and the one underneath still shows, because it says
             where the saving comes from.
+          </P>
+          <P>
+            A target here is a year&rsquo;s worth of euro, and where it comes
+            from is <Link href="#euro" className="text-green">The one euro</Link>:
+            one euro out of every unit sold, times the units sold, is what the
+            strategy is worth in a year.
           </P>
           <P>
             The money works the same way as everywhere else, with one wrinkle

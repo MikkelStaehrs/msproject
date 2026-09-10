@@ -979,6 +979,39 @@ spark became must not erase the record that the thought was had and acted on.
 `source` exists to tell you which capture route you actually use, and which one
 was a nice idea nobody touched.
 
+## The one euro, and the frozen denominator
+
+The strategy is one sentence: take a euro of COGS out of every unit sold, every
+year. A unit is one hectare's worth of sugar beet seed; FY26 sold 266 253 of
+them at 577,70 kr each, all in. So the target is 266 253 euro a year, and 1,3%
+of what a unit costs.
+
+`lib/cogs.ts` is the only place that arithmetic happens. Ideas arrive described
+three ways and all three become **annual kroner** first: hours times the rate,
+kroner per processed unit times that stage's volume, or an annual figure
+already. One hinge, then one division.
+
+**The denominator is frozen, and that is the part worth defending.** Units sold
+fell 23% between FY25 and FY26, and indirect cost per unit rose about 33 kr
+because of it: roughly four and a half times the entire annual target, from
+volume alone, with no project involved. Against a moving denominator every
+project would look better in a bad year and worse in a good one, having changed
+nothing. So a saving is held in absolute kroner and converted at a stated
+reference volume. Same reasoning as `eur_rate` on a cost line.
+
+Stage volumes are kept because the stages do not run the same quantities:
+cleaning ran 465 216 units in FY26 where coating ran 277 393, so the same saving
+per processed unit is worth 68% more on the cleaning line.
+
+`targetInHours` is the calculation nobody asked for and the most useful one
+here: about 8 300 hours, five people, every year. The target cannot be reached
+by saving time, and knowing that early is worth more than any ranking.
+
+The `yardstick` table holds all of it in **one row**, its primary key a boolean
+fixed to true so there cannot be two. `defaultRate = 7.46` used to sit as a
+literal in the middle of the cost page and was about to be typed into a second
+file, which is how a number ends up meaning two things.
+
 ## What the work is for
 
 The tree answers where a piece of work sits. `strategy` answers what it is for,

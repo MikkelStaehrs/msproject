@@ -54,14 +54,25 @@ export default async function CostPage({
    * One round trip. Asking which nodes sit underneath and only then filtering
    * by the answer costs a second wait for nothing at this size.
    */
-  const [projectRes, nodesRes, costRes, rollRes, docRes] = await Promise.all([
+  const [projectRes, nodesRes, costRes, rollRes, docRes, yardstickRes] = await Promise.all([
     supabase.from('node').select('*').eq('id', id).single(),
     supabase.from('node').select('id, parent_id, title, type').order('sort_order'),
     supabase.from('cost').select('*').order('dated', { ascending: false }),
     supabase.from('v_node_cost').select('*'),
     supabase.from('document').select('id, node_id, name').order('created_at', { ascending: false }),
+    supabase.from('yardstick').select('eur_rate').maybeSingle(),
   ])
 
+  /*
+   * The yardstick is deliberately absent from this check.
+   *
+   * Everywhere else a failed query is an error rather than an empty state,
+   * because a missing view rendering as nothing is how a fault hides. This one
+   * is different in kind: it supplies the default value of one form field, and
+   * nothing the page reports depends on it. Taking the whole cost page down
+   * because a default could not be read would be the wrong trade, so it falls
+   * back and says so where the fallback is written.
+   */
   const failure = firstError([projectRes, nodesRes, costRes, rollRes, docRes])
   if (failure) return <QueryFailure message={failure} />
 
@@ -110,7 +121,14 @@ export default async function CostPage({
   const identity = readIdentity(project.reporting)
   // Everything rolled up is euro. A line keeps whatever the quote said.
   const currency = identity.economics.currency
-  const defaultRate = 7.46
+  /*
+   * From the yardstick, not from a literal in this file. It sat here as
+   * `defaultRate = 7.46` and was about to be typed into a second page, which is
+   * how a number ends up meaning two things. Changing it never touches a line
+   * already written: each one keeps the rate that applied when its price
+   * landed.
+   */
+  const defaultRate = Number(yardstickRes.data?.eur_rate ?? 7.46)
   /*
    * Approved and planned belong to the project and only to the project. A part
    * has no grant of its own, so comparing its lines against the project's
