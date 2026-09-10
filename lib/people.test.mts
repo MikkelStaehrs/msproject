@@ -1,4 +1,4 @@
-import { knownPeople } from './people.ts'
+import { knownPeople, namedButLockedOut } from './people.ts'
 
 let failed = 0
 function check(name: string, got: unknown, expected: unknown) {
@@ -132,6 +132,85 @@ check(
 )
 
 check('a node with no people at all', run({ roles: [{}] }), [])
+
+// --- Named in a role, and still cannot open the project ---------------------
+/*
+ * The case that sent this back: Test was made Product owner and nothing said
+ * they still could not see the project. Roles and access stay separate lists,
+ * but this is the one place they are held against each other.
+ */
+const TEST = { id: 'u-test', email: 'test@testesen.dk', full_name: 'Test Testesen' }
+const ME = { id: 'u-me', email: 'mikkel@ubs.dk', full_name: 'Mikkel Stæhr' }
+
+check(
+  'named in a role, has an account, is not a member',
+  namedButLockedOut({
+    roles: [{ label: 'Product owner', value: 'Test Testesen' }],
+    accounts: [TEST, ME],
+    members: new Set(['u-me']),
+  }),
+  [{ id: 'u-test', email: 'test@testesen.dk', label: 'Test Testesen', roles: ['Product owner'] }],
+)
+
+check(
+  'silent once they are a member',
+  namedButLockedOut({
+    roles: [{ label: 'Product owner', value: 'Test Testesen' }],
+    accounts: [TEST],
+    members: new Set(['u-test']),
+  }),
+  [],
+)
+
+/*
+ * Silent for somebody with no account at all. The product owner on a real
+ * project is often a person who will never sign in, and nagging about them
+ * every time the page loads would train you to ignore the one case that counts.
+ */
+check(
+  'silent for a name with no account behind it',
+  namedButLockedOut({
+    roles: [{ label: 'Process owner', value: 'Jan T. Hansen' }],
+    accounts: [TEST],
+    members: new Set(),
+  }),
+  [],
+)
+
+check(
+  'the email counts too, because that is what the picker offered before a name',
+  namedButLockedOut({
+    roles: [{ label: 'Product owner', value: 'test@testesen.dk' }],
+    accounts: [{ id: 'u-test', email: 'test@testesen.dk', full_name: null }],
+    members: new Set(),
+  }),
+  [{ id: 'u-test', email: 'test@testesen.dk', label: 'test@testesen.dk', roles: ['Product owner'] }],
+)
+
+check(
+  'every role they hold is named, once each',
+  namedButLockedOut({
+    roles: [
+      { label: 'Product owner', value: 'Test Testesen' },
+      { label: 'Process owner', value: 'Test Testesen' },
+      { label: 'Project members', value: 'Jan T. Hansen, Test Testesen' },
+      { label: 'Steering committee', value: 'Somebody Else' },
+    ],
+    accounts: [TEST],
+    members: new Set(),
+  })[0].roles,
+  ['Product owner', 'Process owner', 'Project members'],
+)
+
+check(
+  'a name that merely contains theirs is not them',
+  namedButLockedOut({
+    roles: [{ label: 'Project members', value: 'Test Testesen Junior' }],
+    accounts: [TEST],
+    members: new Set(),
+  }),
+  [],
+)
 
 console.log(failed === 0 ? '\nAll tests passed.' : `\n${failed} test(s) failed.`)
 process.exitCode = failed === 0 ? 0 : 1

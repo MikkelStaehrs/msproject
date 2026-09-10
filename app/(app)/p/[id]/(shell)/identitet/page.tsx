@@ -9,7 +9,7 @@ import { ProjectFrame } from '@/components/project-frame'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { addMember, removeMember } from '@/lib/member-actions'
-import { knownPeople } from '@/lib/people'
+import { knownPeople, namedButLockedOut } from '@/lib/people'
 import { PeopleHint } from '@/components/people-list'
 import { subtreeSet } from '@/lib/subtree'
 import { saveIdentity } from '@/lib/identity-actions'
@@ -166,6 +166,24 @@ export default async function IdentityPage({
   })
 
   const identity = readIdentity(project.reporting)
+
+  /*
+   * Named in a role here, has a login, and still cannot open the project.
+   *
+   * Roles and access stay two lists, deliberately, because most people named on
+   * a project will never sign in. But the separation has one sharp edge: name a
+   * colleague who DOES have an account and nothing says they still cannot see
+   * anything. It looks like it worked. This is the only place the two lists are
+   * held against each other, and it is silent unless all three are true.
+   */
+  const lockedOut = namedButLockedOut({
+    roles: PEOPLE_FIELDS.map((f) => ({
+      label: f.label,
+      value: identity.people[f.key],
+    })),
+    accounts,
+    members: new Set(members.map((m) => m.user_id)),
+  })
   const stage = readStage(project.reporting)
   // Fetched whole, cut here. See lib/subtree.
   const inProject = subtreeSet(
@@ -608,6 +626,43 @@ export default async function IdentityPage({
                   </form>
                 </div>
               ))}
+            </div>
+          )}
+
+          {lockedOut.length > 0 && (
+            <div className="mt-4 border-l-2 border-oxblood pl-3">
+              <div className="lbl-tight text-oxblood">
+                Named here, cannot open it
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted">
+                They have a login, so this is one click from being true. Somebody
+                without an account is not listed: that is a different decision.
+              </p>
+              <div className="mt-2.5">
+                {lockedOut.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-baseline gap-4 border-t border-rule py-2 last:border-b"
+                  >
+                    <span className="min-w-0 flex-1 text-[12.5px]">
+                      {p.label}
+                      <span className="text-muted"> · {p.roles.join(', ')}</span>
+                    </span>
+                    <form action={addMember}>
+                      <input type="hidden" name="project_id" value={id} />
+                      <input type="hidden" name="email" value={p.email} />
+                      <input
+                        type="hidden"
+                        name="redirectTo"
+                        value={`/p/${id}/identitet`}
+                      />
+                      <button className="lbl-tight shrink-0 text-rule-strong hover:text-green">
+                        Give access
+                      </button>
+                    </form>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

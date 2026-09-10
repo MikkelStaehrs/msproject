@@ -221,6 +221,15 @@ export default function GuidePage() {
             <span className="text-ink"> Access</span> is what decides who can
             open anything.
           </P>
+          <P>
+            That separation has one sharp edge, so the page watches for it. Name
+            somebody who <em>does</em> have a login and Access says{' '}
+            <span className="text-ink">Named here, cannot open it</span>, with
+            the roles they hold and one button to fix it. Somebody with no
+            account is not listed: inviting them is a different decision, made
+            somewhere else, and nagging about the product owner who will never
+            sign in would train you to ignore the one case that counts.
+          </P>
           <div className="mt-4">
             <Row left="Getting an account">
               Created in Supabase, then invited. The invitation link lets them
