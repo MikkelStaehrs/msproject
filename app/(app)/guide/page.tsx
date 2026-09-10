@@ -261,6 +261,29 @@ export default function GuidePage() {
             </Row>
           </div>
           <P>
+            <strong className="font-medium">
+              And in the inbox, a spark can be assessed.
+            </strong>{' '}
+            Two numbers go in: what it takes out of cost, and the project
+            group&rsquo;s one to five scores for cost, benefit and complexity.
+            Everything else is worked out &mdash; the kroner a year, the euro
+            per unit, the share of the year&rsquo;s target, the priority and the
+            quadrant &mdash; so none of it can be typed in and then quietly
+            disagree with the figures it came from.
+          </P>
+          <P>
+            The saving goes in however it was actually described: hours a year,
+            kroner per unit at a stage, or kroner a year. A saving per unit
+            needs the stage, because the stages do not run the same quantities.
+            See <Link href="#euro" className="text-green">The one euro</Link> for
+            what the numbers mean.
+          </P>
+          <P>
+            Leaving it all empty is fine and normal. An unassessed idea is not
+            worth nothing, it is not worked out yet, and those are different
+            things.
+          </P>
+          <P>
             <strong className="font-medium">Dropped sparks are kept.</strong>{' '}
             The reason is the point: it is what stops the same idea arriving
             again in three months and going round the loop a second time. The{' '}

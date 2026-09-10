@@ -3,8 +3,8 @@
 import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { back, required, text } from '@/lib/form'
-import type { NodeType, SparkSource } from '@/lib/types'
+import { back, number, required, text } from '@/lib/form'
+import type { NodeType, SavingKind, SparkSource } from '@/lib/types'
 
 /**
  * Capturing a thought, and deciding about it later.
@@ -36,6 +36,61 @@ export async function editSpark(fd: FormData) {
     .eq('id', required(fd, 'id'))
 
   if (error) throw new Error(`Could not save it: ${error.message}`)
+  revalidatePath('/', 'layout')
+  back(fd)
+}
+
+/**
+ * The stress test: what it is worth, and what it would take.
+ *
+ * Two numbers and three scores. Everything a page shows about an idea - the
+ * annual kroner, the euro per unit, the share of the year's target, the
+ * priority, the quadrant - follows from these and is computed, so none of it
+ * can be typed in and then quietly go stale.
+ *
+ * Every field is optional and clearing one is a real act. An assessment made
+ * on Tuesday from a guess should be removable on Friday when the guess turns
+ * out to be wrong, and a form that only ever accumulates numbers is a form
+ * whose numbers stop meaning anything.
+ */
+export async function assessSpark(fd: FormData) {
+  const supabase = await createClient()
+
+  const kind = text(fd, 'saving_kind') as SavingKind | null
+  const value = number(fd, 'saving_value')
+
+  // A kind without a figure, or a figure without a kind, is half an answer.
+  // The database refuses it too; this is so it is refused legibly.
+  if (kind !== null && value === null) {
+    throw new Error('That way of describing a saving needs a figure.')
+  }
+  if (kind === 'per_unit' && (text(fd, 'saving_stage') ?? '') === '') {
+    throw new Error(
+      'A saving per unit needs the stage those units pass through: the stages ' +
+        'do not run the same quantities.',
+    )
+  }
+
+  const score = (key: string) => {
+    const n = number(fd, key)
+    if (n === null) return null
+    return Math.min(5, Math.max(1, Math.round(n)))
+  }
+
+  const { error } = await supabase
+    .from('spark')
+    .update({
+      saving_kind: kind,
+      saving_value: kind === null ? null : value,
+      saving_stage: kind === 'per_unit' ? text(fd, 'saving_stage') : null,
+      cost_score: score('cost_score'),
+      benefit_score: score('benefit_score'),
+      complexity_score: score('complexity_score'),
+    })
+    .eq('id', required(fd, 'id'))
+
+  if (error) throw new Error(`Could not save the assessment: ${error.message}`)
+
   revalidatePath('/', 'layout')
   back(fd)
 }

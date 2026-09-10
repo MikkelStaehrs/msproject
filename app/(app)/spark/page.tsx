@@ -11,12 +11,16 @@ import {
   reopenSpark,
 } from '@/lib/spark-actions'
 import { Hint, Prose, ProseFolded, Rule, formatDate } from '@/components/ui'
+import { Assessment } from '@/components/assessment'
+import type { Reference } from '@/lib/cogs'
 import {
   SPARK_SOURCE_LABEL,
   TYPE_HINT,
   TYPE_LABEL,
   type Node,
   type Spark,
+  type StageVolume,
+  type Yardstick,
 } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -37,18 +41,47 @@ export const metadata = { title: 'Sparks' }
 export default async function SparkPage({
   searchParams,
 }: {
-  searchParams: Promise<{ keep?: string; drop?: string; edit?: string; show?: string }>
+  searchParams: Promise<{
+    keep?: string
+    drop?: string
+    edit?: string
+    assess?: string
+    show?: string
+  }>
 }) {
-  const { keep, drop, edit, show = 'new' } = await searchParams
+  const { keep, drop, edit, assess, show = 'new' } = await searchParams
   const supabase = await createClient()
 
-  const [sparkRes, nodeRes] = await Promise.all([
+  const [sparkRes, nodeRes, yardstickRes, stageRes] = await Promise.all([
     supabase.from('spark').select('*').order('captured_at', { ascending: false }),
     supabase.from('node').select('id, parent_id, title, type').order('sort_order'),
+    supabase.from('yardstick').select('*').maybeSingle(),
+    supabase.from('stage_volume').select('fiscal_year, stage, units'),
   ])
 
   const failure = firstError([sparkRes, nodeRes])
   if (failure) return <QueryFailure message={failure} />
+
+  /*
+   * The yardstick is what a saving is measured against. Absent, the page still
+   * works and simply says nothing about what an idea is worth: an assessment
+   * with no reference is not zero, it is not yet knowable.
+   */
+  const yard = yardstickRes.data as Yardstick | null
+  const reference: Reference | null = yard
+    ? {
+        fiscalYear: yard.fiscal_year,
+        soldUnits: Number(yard.sold_units),
+        hourRateDkk: Number(yard.hour_rate_dkk),
+        eurRate: Number(yard.eur_rate),
+        targetEurPerUnit: Number(yard.cogs_target_eur_per_unit),
+      }
+    : null
+
+  const stages = ((stageRes.data ?? []) as StageVolume[])
+    .filter((v) => v.fiscal_year === yard?.fiscal_year)
+    .map((v) => ({ stage: v.stage, units: Number(v.units) }))
+    .sort((a, b) => b.units - a.units)
 
   const sparks = (sparkRes.data ?? []) as Spark[]
   const nodes = (nodeRes.data ?? []) as Pick<Node, 'id' | 'parent_id' | 'title' | 'type'>[]
@@ -228,6 +261,24 @@ export default async function SparkPage({
                           className="mt-1.5 border-l-2 border-rule pl-3 text-[12.5px] text-muted"
                         />
                       </>
+                    )}
+
+                    {/*
+                      What it is worth, in the one currency the strategy is
+                      written in. Only in the inbox: once a spark has become
+                      work or been decided against, the assessment has done its
+                      job and the tree carries the story from there.
+                    */}
+                    {s.state === 'new' && (
+                      <Assessment
+                        spark={s}
+                        reference={reference}
+                        stages={stages}
+                        editing={assess === s.id}
+                        editHref={`${here}&assess=${s.id}`}
+                        cancelHref={here}
+                        redirectTo={here}
+                      />
                     )}
 
                     <div className="lbl-tight mt-1.5 flex flex-wrap items-baseline gap-x-4 text-rule-strong">

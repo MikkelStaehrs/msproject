@@ -266,6 +266,26 @@ export const SPARK_SOURCE_LABEL: Record<SparkSource, string> = {
   claude: 'Said to Claude',
 }
 
+export const SAVING_KINDS = ['hours', 'per_unit', 'annual'] as const
+export type SavingKind = (typeof SAVING_KINDS)[number]
+
+export const SAVING_KIND_LABEL: Record<SavingKind, string> = {
+  hours: 'Man-hours a year',
+  per_unit: 'Kroner per unit at a stage',
+  annual: 'Kroner a year',
+}
+
+/**
+ * Three ways in, because a saving arrives in whatever unit the person who
+ * spotted it thinks in. Forcing it into kroner at the point of capture is how
+ * a number gets invented on the spot.
+ */
+export const SAVING_KIND_HINT: Record<SavingKind, string> = {
+  hours: 'times the hourly rate',
+  per_unit: 'times what that stage actually runs',
+  annual: 'already there',
+}
+
 export const SPARK_STATES = ['new', 'kept', 'dropped'] as const
 export type SparkState = (typeof SPARK_STATES)[number]
 
@@ -296,6 +316,19 @@ export interface Spark {
    * body is what was said, this is what was around it.
    */
   note: string | null
+  /** How the saving was described. All three end at kroner a year. */
+  saving_kind: SavingKind | null
+  /** Hours a year, kroner per unit at `saving_stage`, or kroner a year. */
+  saving_value: number | null
+  /** Which stage the units pass through. Only meaningful for `per_unit`. */
+  saving_stage: string | null
+  /**
+   * The company's own one to five scale. Only a person sets these; the
+   * priority and the quadrant follow from them and are never stored.
+   */
+  cost_score: number | null
+  benefit_score: number | null
+  complexity_score: number | null
   /** Why it was dropped. The reason dropped sparks are kept, not deleted. */
   verdict: string | null
   captured_at: string

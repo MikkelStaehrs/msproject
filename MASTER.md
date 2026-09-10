@@ -979,6 +979,29 @@ spark became must not erase the record that the thought was had and acted on.
 `source` exists to tell you which capture route you actually use, and which one
 was a nice idea nobody touched.
 
+## The stress test, and why it lives on the spark
+
+Two numbers and three scores, and everything else computed. A twelve field
+template gets filled in once, badly, because it asks for answers nobody has
+yet; two numbers get filled in every week.
+
+`spark` carries the saving in whichever of three forms it was described, plus
+the company's own one to five scores. The annual kroner, the euro per unit, the
+share of the year, the priority and the quadrant all follow from those in
+`lib/cogs.ts` and `lib/priority.ts`, and none of them is stored: in the
+project group's spreadsheet the share is a column, and a column keeps whatever
+it said after somebody edits the figure beside it.
+
+**It sits on the spark rather than on a node.** Most ideas should die, and
+creating a project in order to assess something you are about to kill would put
+every passing thought in the tree, which is the thing sparks exist to prevent.
+A spark that survives keeps its assessment and points at what it became through
+`became_node_id`, so a project can always show what was promised for it while it
+was still an idea.
+
+An empty assessment is not zero. It is not worked out yet, and the two are
+different: the pages say "not worked out" rather than showing nothing.
+
 ## The one euro, and the frozen denominator
 
 The strategy is one sentence: take a euro of COGS out of every unit sold, every
