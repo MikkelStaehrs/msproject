@@ -44,25 +44,35 @@ export function priorityScore(j: Judgement): number | null {
 }
 
 /**
- * Quick win, or a fill-in.
+ * The quadrant: benefit against complexity.
  *
- * Here the recovered rule is thinner than the name suggests, and it is worth
- * being straight about that. Across all fourteen candidates the label follows
- * BENEFIT ALONE: four or five is a quick win, three or below is a fill-in. Cost
- * does not discriminate at all, and one candidate with a cost of five is
- * labelled a quick win.
+ * Recovered wrongly the first time. Across the fourteen candidates the label
+ * followed benefit alone, so that is what the first version did, and it fitted
+ * every row. It fitted because every one of those fourteen happens to sit at
+ * complexity three or below: the other half of the grid had simply never been
+ * used, and a rule inferred from data that never exercises it is a rule you do
+ * not have.
  *
- * So this reproduces what the sheet does rather than what a two by two would
- * normally do. If the real rule has four names and a cost threshold, this is
- * the function to correct, and the label it produces would change for rows
- * nobody has scored that way yet.
+ * The matrix itself settles it:
+ *
+ *                     Low complexity 1-3    High complexity 4-5
+ *   High benefit 4-5      Quick win              Big bet
+ *   Low benefit 1-3       Fill-in                Money pit
+ *
+ * Worth keeping as a lesson: fourteen for fourteen felt like proof and was a
+ * coincidence of coverage.
  */
-export const QUADRANTS = ['Quick win', 'Fill-in'] as const
+export const QUADRANTS = ['Quick win', 'Big bet', 'Fill-in', 'Money pit'] as const
 export type Quadrant = (typeof QUADRANTS)[number]
 
 export function quadrant(j: Judgement): Quadrant | null {
-  if (!inScale(j.benefit)) return null
-  return j.benefit >= 4 ? 'Quick win' : 'Fill-in'
+  if (!inScale(j.benefit) || !inScale(j.complexity)) return null
+
+  const worthIt = j.benefit >= 4
+  const hard = j.complexity >= 4
+
+  if (worthIt) return hard ? 'Big bet' : 'Quick win'
+  return hard ? 'Money pit' : 'Fill-in'
 }
 
 /**

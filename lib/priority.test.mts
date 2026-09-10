@@ -60,12 +60,18 @@ check(
 check('off the scale is not a judgement', priorityScore({ cost: 0, benefit: 4, complexity: 2 }), null)
 check('above the scale either', priorityScore({ cost: 2, benefit: 6, complexity: 2 }), null)
 
-check(
-  'the quadrant needs only the benefit',
-  quadrant({ cost: null, benefit: 5, complexity: null }),
-  'Quick win',
-)
-check('and nothing without it', quadrant({ cost: 2, benefit: null, complexity: 2 }), null)
+/*
+ * The half of the grid the sheet has never used. The first version of this
+ * function inferred the rule from those fourteen rows alone, all of which sit
+ * at complexity three or below, and got it wrong in a way no row could catch.
+ */
+check('high benefit, hard: a big bet', quadrant({ cost: 2, benefit: 5, complexity: 4 }), 'Big bet')
+check('low benefit, hard: a money pit', quadrant({ cost: 2, benefit: 2, complexity: 5 }), 'Money pit')
+check('the boundary is four, not three', quadrant({ cost: 2, benefit: 4, complexity: 3 }), 'Quick win')
+check('and four is already hard', quadrant({ cost: 2, benefit: 4, complexity: 4 }), 'Big bet')
+
+check('no quadrant without a benefit', quadrant({ cost: 2, benefit: null, complexity: 2 }), null)
+check('nor without a complexity', quadrant({ cost: 2, benefit: 5, complexity: null }), null)
 
 // A negative score is the scale working, not a fault. One real candidate has one.
 check('a negative score is allowed', priorityScore({ cost: 5, benefit: 3, complexity: 2 }), -1)
