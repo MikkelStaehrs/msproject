@@ -686,7 +686,7 @@ itself, so the overlay can never promise one thing and write another.
 | `/templates` | Template library: derive from a project, deploy on a new start date |
 | `/spark` | Where a thought lands before it is work. One field to capture, three lists to triage: inbox, became work, decided against. Promoting one creates the node and closes the spark in a single step, because creating it on one page and remembering to tick the spark off on another is a thing nobody does |
 | `/strategy` | What the work is for, across the projects. The only page that cuts the tree sideways. Each strategy shows what the marked work promises a year, how much of that is delivered, what has been invested to get it, and what is still to find. `/strategy/<id>` lists the parts behind the figure, because a number without them is one somebody has to take on trust |
-| `/guide` | How to use the tool. Thirty sections under five headings: getting around, what a node says, what it rests on, working in it, showing it to someone. It reads the labels and hints out of `lib/types.ts`, so a picker and the guide cannot come to disagree. It lives in the app rather than beside this file because a guide you have to leave the app to open is a guide you never open. MASTER says why the app is built this way; the guide says what to do |
+| `/guide` | How to use the tool. Thirty one sections under five headings: getting around, what a node says, what it rests on, working in it, showing it to someone. It reads the labels and hints out of `lib/types.ts`, so a picker and the guide cannot come to disagree. It lives in the app rather than beside this file because a guide you have to leave the app to open is a guide you never open. MASTER says why the app is built this way; the guide says what to do |
 
 **The project frame.** `(shell)/layout.tsx` holds **only** the context band. The
 title block, the sub navigation and the right column live in
@@ -1056,6 +1056,38 @@ It needs that account's password, which nothing can derive, so it comes from
 section prints `----` and the verdict counts what was not measured. **A green
 line for a check that never ran is worse than a missing one**, and that is why
 the audit grew a third state rather than staying pass/fail.
+
+## Five ways to write, and the rule that was never stated
+
+Measured, because the symptom was somebody asking «how do I know whether this
+is a decision, a log line or a cost»: the whole database held **two log lines**,
+both the same kind, **no decisions** and **no cost lines**. Three blockers, and
+those exist only because a blocker is the one of the five whose purpose is
+obvious from its name.
+
+That is not a modelling failure. The five do not overlap - each is a different
+tense or a different shape:
+
+| when | what | why it is its own thing |
+|---|---|---|
+| it happened | a line in the log | the raw material the weekly report is assembled from |
+| somebody will, by a date | agreed here | becomes an owner and a due date on real work |
+| we are waiting on someone | a blocker | counts days by itself and puts that person in the room |
+| we chose, and turned something down | a decision | `alternatives` is what answers «why not a Raspberry Pi» |
+| it costs money | a cost line | money needs a vendor and a quotation, not a meeting gesture |
+
+It is a failure to SAY so. Faced with five buttons and no way to tell them
+apart, the safe move is to write nothing, and writing nothing is the one failure
+this application cannot survive. So `components/which-one.tsx` prints the rule
+under the buttons on both working surfaces, in one component so the two cannot
+come to disagree.
+
+**`entry.kind` is the part that does not earn its place.** Work, note, meeting
+and risk: four options, offered at the moment somebody is trying to write one
+sentence in a meeting, and they change NOTHING. `lib/report.ts` does not read
+them; they set a label and a colour in two places. Two entries exist and both
+are `note`. A question with no consequence, asked at the worst possible moment,
+is worse than no question.
 
 ## The stand-up, and the one thing it stores
 

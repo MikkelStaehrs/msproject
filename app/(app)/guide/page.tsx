@@ -43,6 +43,7 @@ const SECTIONS = [
     ['quick', 'Quick entry'],
     ['tree', 'The tree'],
     ['writing', 'Writing it down'],
+    ['which', 'Which one is it'],
   ]],
   ['What a node says', [
     ['types', 'Types'],
@@ -549,6 +550,51 @@ export default function GuidePage() {
             delete button lives in that same form. Deleting a node deletes
             everything under it: its children, log, blockers, decisions, cost
             lines and files.
+          </P>
+
+          <H id="which">Which one is it</H>
+          <P>
+            There are five ways to record something, and until now nothing said
+            which was which. That is not a small omission: the whole database
+            held two log lines, no decisions and no priced lines, which is what
+            happens when five buttons are offered with no rule. Faced with a
+            choice you cannot make, the safe move is to write nothing, and
+            writing nothing is the one failure this tool cannot survive.
+          </P>
+          <P>
+            They do not overlap. Each is a different <em>tense</em> or a
+            different <em>shape</em>:
+          </P>
+          <P>
+            <span className="text-ink">It happened</span> &rarr; a line in the
+            log. Past tense. This is the raw material the weekly report is
+            assembled from, so a week with none has nothing to report.
+          </P>
+          <P>
+            <span className="text-ink">Somebody will, by a date</span> &rarr;
+            agreed here, on the stand-up. Future tense, with a name and a
+            deadline. It becomes an owner and a due date on real work, which is
+            why it can be answered later without anybody updating a document.
+          </P>
+          <P>
+            <span className="text-ink">We are waiting on someone</span> &rarr; a
+            blocker. Suspended: it counts days by itself, it puts that person in
+            the stand-up room, and it turns the piece red without you saying so.
+          </P>
+          <P>
+            <span className="text-ink">We chose, and turned something down</span>{' '}
+            &rarr; a decision. Settled. The alternatives field is the part that
+            earns it: six months later it is the only thing that answers
+            &laquo;why didn&rsquo;t you just use a Raspberry Pi&raquo;.
+          </P>
+          <P>
+            <span className="text-ink">It costs money</span> &rarr; a cost line
+            on Cost, with a vendor and a quotation. Not a meeting gesture,
+            because money needs paper.
+          </P>
+          <P>
+            That line is printed under the buttons on both working surfaces, so
+            the rule is where the choice is rather than in here.
           </P>
 
           <H id="types">Types</H>

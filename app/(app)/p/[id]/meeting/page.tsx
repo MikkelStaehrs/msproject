@@ -6,6 +6,7 @@ import { BlockerForm, ResolveBlockerForm } from '@/components/blocker-form'
 import { DecisionForm } from '@/components/decision-form'
 import { StatusSelect } from '@/components/status-select'
 import { QuickAddOn } from '@/components/quick-add-on'
+import { WhichOne } from '@/components/which-one'
 import {
   ProgressScale,
   Prose,
@@ -441,6 +442,8 @@ export default async function MeetingPage({
                   </Link>
                 </span>
               </div>
+
+              <WhichOne pricing />
 
               {selectedReady && !selectedReady.is_ready && (
                 <div

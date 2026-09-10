@@ -25,6 +25,7 @@ import { formatMoney } from '@/lib/cost'
 import { BlockerForm, ResolveBlockerForm } from '@/components/blocker-form'
 import { DecisionForm } from '@/components/decision-form'
 import { AgreedHere } from '@/components/agreed-here'
+import { WhichOne } from '@/components/which-one'
 import { DueDate } from '@/components/due-date'
 import { NodeForm } from '@/components/node-form'
 import { QuickAddOn } from '@/components/quick-add-on'
@@ -888,8 +889,16 @@ export default async function StandupPage({
                     >
                       record a decision
                     </Link>
+                    <Link
+                      href={`/p/${projectOf.get(selected.id) ?? selected.id}/cost?focus=${selected.id}`}
+                      className="lbl-tight text-rule-strong hover:text-green"
+                    >
+                      price it
+                    </Link>
                   </span>
                 </div>
+
+                <WhichOne pricing />
 
                 {agreeing === selected.id && (
                   <AgreedHere
