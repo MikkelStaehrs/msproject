@@ -19,7 +19,18 @@ export type QuickIntent =
   | { kind: 'decision'; decision: string; rationale: string | null }
   | { kind: 'invalid'; reason: string }
 
-export function parseQuickAdd(raw: string, entryKind: EntryKind): QuickIntent {
+/**
+ * `entryKind` defaults rather than being chosen.
+ *
+ * It used to be four buttons in the overlay - work, note, meeting, risk - with
+ * keyboard shortcuts, offered at the moment somebody is trying to write one
+ * sentence in a meeting. They changed nothing: `lib/report.ts` never read them,
+ * and after months the database held two entries, both the same kind. A
+ * question with no consequence, asked at the worst possible moment, is worse
+ * than no question, so the kind now follows from WHERE the line was written -
+ * `work` from quick entry, `meeting` from a stand-up - and nobody is asked.
+ */
+export function parseQuickAdd(raw: string, entryKind: EntryKind = 'work'): QuickIntent {
   const text = raw.trim()
   if (text === '') return { kind: 'empty' }
 
@@ -73,6 +84,12 @@ export function guessWaitingOnType(waitingOn: string): WaitingOnType {
   return 'other'
 }
 
+/*
+ * Kept for the two places that DISPLAY a kind, on Friday and in the project
+ * rail. Nothing offers the choice any more: the four buttons that used to sit
+ * in the overlay changed nothing, and after months the database held two
+ * entries, both the same kind. The label survives because old rows wear one.
+ */
 export const ENTRY_KIND_ORDER: EntryKind[] = ['work', 'note', 'meeting', 'risk']
 
 export const ENTRY_KIND_LABEL: Record<EntryKind, string> = {

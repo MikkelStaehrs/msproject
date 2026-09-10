@@ -596,6 +596,16 @@ export default function GuidePage() {
             That line is printed under the buttons on both working surfaces, so
             the rule is where the choice is rather than in here.
           </P>
+          <P>
+            <strong className="font-medium">A log line is not asked what kind it
+            is.</strong> Quick entry used to offer Work, Note, Meeting and Risk
+            with keyboard shortcuts, at the exact moment somebody was trying to
+            write one sentence in a meeting. They changed nothing: the weekly
+            report never read them. It now follows from where the line was
+            written - a stand-up writes <span className="text-ink">meeting</span>,
+            everything else <span className="text-ink">work</span> - and nobody
+            is asked. Lines written before still wear the kind they were given.
+          </P>
 
           <H id="types">Types</H>
           <P>

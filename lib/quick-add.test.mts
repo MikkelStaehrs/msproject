@@ -38,8 +38,17 @@ for (const [name, input, expected] of cases) {
   }
 }
 
-const kindCase = parseQuickAdd('Møde med Vedligehold', 'meeting')
-console.log(JSON.stringify(kindCase) === JSON.stringify({ kind: 'entry', body: 'Møde med Vedligehold', entryKind: 'meeting' }) ? 'ok    the kind follows the choice' : (failed++, 'FAIL  the kind follows the choice'))
+/*
+ * The kind follows from WHERE the line was written, never from a picker. Quick
+ * entry says nothing and gets `work`; a stand-up passes `meeting`. Four buttons
+ * used to ask, they changed nothing, and they were the one question standing
+ * between a person in a meeting and a written sentence.
+ */
+const defaulted = parseQuickAdd('Rykket IT igen')
+console.log(JSON.stringify(defaulted) === JSON.stringify({ kind: 'entry', body: 'Rykket IT igen', entryKind: 'work' }) ? 'ok    quick entry defaults to work, unasked' : (failed++, 'FAIL  quick entry defaults to work, unasked'))
+
+const fromStandup = parseQuickAdd('Møde med Vedligehold', 'meeting')
+console.log(JSON.stringify(fromStandup) === JSON.stringify({ kind: 'entry', body: 'Møde med Vedligehold', entryKind: 'meeting' }) ? 'ok    and the caller can still say where it came from' : (failed++, 'FAIL  and the caller can still say where it came from'))
 
 for (const [inp, exp] of [['IT', 'internal_it'], ['it', 'internal_it'], ['Ledelsen', 'management'], ['Leverandør', 'vendor'], ['Vedligehold', 'other'], ['Videometer', 'other']] as const) {
   const got = guessWaitingOnType(inp)

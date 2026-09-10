@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { quickAdd } from '@/lib/quick-add-actions'
 import {
-  ENTRY_KIND_LABEL,
-  ENTRY_KIND_ORDER,
   parseQuickAdd,
 } from '@/lib/quick-add'
 import { isKnownRecipient } from '@/lib/recipient'
@@ -39,7 +37,6 @@ export function QuickAdd({
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'write' | 'pick'>('write')
   const [raw, setRaw] = useState('')
-  const [entryKind, setEntryKind] = useState<EntryKind>('work')
   const [targetId, setTargetId] = useState<string | null>(null)
   const [pickQuery, setPickQuery] = useState('')
   const [pickIndex, setPickIndex] = useState(0)
@@ -51,7 +48,7 @@ export function QuickAdd({
   const pickRef = useRef<HTMLInputElement>(null)
 
   const target = targets.find((t) => t.id === targetId) ?? null
-  const intent = parseQuickAdd(raw, entryKind)
+  const intent = parseQuickAdd(raw)
 
   /**
    * Where the line belongs, in order: the part you have opened, the project
@@ -131,7 +128,7 @@ export function QuickAdd({
 
     const id = targetId
     startTransition(async () => {
-      const result = await quickAdd({ nodeId: id, raw, entryKind })
+      const result = await quickAdd({ nodeId: id, raw })
       if (!result.ok) {
         setError(result.error)
         return
@@ -165,12 +162,6 @@ export function QuickAdd({
       setPickQuery('')
       setPickIndex(0)
       setMode('pick')
-    } else if ((e.ctrlKey || e.metaKey) && /^[1-4]$/.test(e.key)) {
-      // Ignored while a prefix is writing something other than a log entry,
-      // so the shortcut and the dimmed row tell the same story.
-      if (!kindApplies) return
-      e.preventDefault()
-      setEntryKind(ENTRY_KIND_ORDER[Number(e.key) - 1])
     }
   }
 
@@ -198,9 +189,9 @@ export function QuickAdd({
     if (!target) return 'No nodes to write on yet.'
     switch (intent.kind) {
       case 'empty':
-        return `Log entry, ${ENTRY_KIND_LABEL[entryKind]}, on ${target.title}`
+        return `Log entry on ${target.title}`
       case 'entry':
-        return `Log entry, ${ENTRY_KIND_LABEL[intent.entryKind]}, on ${target.title}`
+        return `Log entry on ${target.title}`
       case 'task':
         return `New task under ${target.title}`
       case 'blocker':
@@ -221,13 +212,6 @@ export function QuickAdd({
 
   const ready = intent.kind !== 'empty' && intent.kind !== 'invalid'
 
-  /*
-   * Work, Note, Meeting and Risk are kinds of LOG ENTRY, not the four things
-   * quick entry can write. A prefix makes something else entirely, and the row
-   * used to stay lit through it, reading as the control that decides what gets
-   * written. It now names its own scope and goes quiet when it has none.
-   */
-  const kindApplies = intent.kind === 'empty' || intent.kind === 'entry'
 
   /*
    * Recipients offered while the blocker is being written.
@@ -332,33 +316,14 @@ export function QuickAdd({
                   </div>
                 )}
 
+                {/*
+                  Work, Note, Meeting and Risk used to sit here as four buttons
+                  with shortcuts. They changed nothing - the weekly report never
+                  read them - and they were the one question in the way of
+                  writing a sentence. The kind now follows from where the line
+                  was written and nobody is asked.
+                */}
                 <div className="flex items-center gap-4 border-t border-rule px-6 py-2.5">
-                  <span
-                    className={`lbl-tight shrink-0 ${
-                      kindApplies ? 'text-muted' : 'text-rule-strong'
-                    }`}
-                  >
-                    Log entry
-                  </span>
-                  <div
-                    className={`flex items-center gap-4 ${
-                      kindApplies ? '' : 'pointer-events-none opacity-30'
-                    }`}
-                  >
-                    {ENTRY_KIND_ORDER.map((k, i) => (
-                      <button
-                        key={k}
-                        type="button"
-                        onClick={() => setEntryKind(k)}
-                        className={`lbl-tight ${
-                          k === entryKind ? 'text-ink' : 'text-rule-strong hover:text-muted'
-                        }`}
-                      >
-                        {ENTRY_KIND_LABEL[k]}
-                        <span className="ml-1.5 tabular-nums">⌃{i + 1}</span>
-                      </button>
-                    ))}
-                  </div>
                   <span className="ml-auto text-[10px] tracking-[0.14em] text-rule-strong uppercase">
                     {pending ? 'Saving...' : ready ? 'Enter saves' : 'Esc closes'}
                   </span>

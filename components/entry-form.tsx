@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { deleteEntry, updateEntry } from '@/lib/entry-actions'
-import { ENTRY_KIND_LABEL, ENTRY_KIND_ORDER } from '@/lib/quick-add'
 import type { Entry } from '@/lib/types'
 
 export function EntryForm({
@@ -45,16 +44,13 @@ export function EntryForm({
           />
         </label>
 
-        <label className="block">
-          <span className="lbl text-muted">Kind</span>
-          <select name="kind" defaultValue={entry.kind} className="field">
-            {ENTRY_KIND_ORDER.map((k) => (
-              <option key={k} value={k}>
-                {ENTRY_KIND_LABEL[k]}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/*
+          The kind used to be a picker here too. It changed nothing - the weekly
+          report never read it - so the stored value travels untouched and is
+          not offered for editing. What a line SAYS is worth correcting; which
+          of four labels it wears is not.
+        */}
+        <input type="hidden" name="kind" value={entry.kind} />
       </form>
 
       <div className="mt-6 flex items-center gap-3">

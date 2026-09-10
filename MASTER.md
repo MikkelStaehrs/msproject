@@ -1082,12 +1082,19 @@ this application cannot survive. So `components/which-one.tsx` prints the rule
 under the buttons on both working surfaces, in one component so the two cannot
 come to disagree.
 
-**`entry.kind` is the part that does not earn its place.** Work, note, meeting
-and risk: four options, offered at the moment somebody is trying to write one
-sentence in a meeting, and they change NOTHING. `lib/report.ts` does not read
-them; they set a label and a colour in two places. Two entries exist and both
-are `note`. A question with no consequence, asked at the worst possible moment,
-is worse than no question.
+**`entry.kind` did not earn its place, and no longer asks.** Work, note, meeting
+and risk were four buttons with keyboard shortcuts, offered at the moment
+somebody was trying to write one sentence in a meeting, and they changed
+NOTHING: `lib/report.ts` never read them, they set a label and a colour in two
+places, and after months the database held two entries, both `note`. A question
+with no consequence, asked at the worst possible moment, is worse than no
+question.
+
+So the kind now follows from WHERE the line was written - `work` from quick
+entry, `meeting` from a stand-up - and the picker is gone from the overlay and
+from the edit form. The column and the labels stay: rows written before wear a
+kind, and two screens display it. What a line SAYS is worth correcting; which of
+four labels it wears is not.
 
 ## The stand-up, and the one thing it stores
 

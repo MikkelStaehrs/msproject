@@ -19,7 +19,12 @@ export type QuickAddResult =
 export async function quickAdd(input: {
   nodeId: string
   raw: string
-  entryKind: EntryKind
+  /**
+   * Optional, and no longer sent by the overlay. Nobody is asked which kind of
+   * log line they are writing: it follows from where the line was written, and
+   * quick entry is `work`.
+   */
+  entryKind?: EntryKind
 }): Promise<QuickAddResult> {
   const intent = parseQuickAdd(input.raw, input.entryKind)
 
