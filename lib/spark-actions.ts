@@ -165,7 +165,7 @@ export async function promoteSpark(fd: FormData) {
 
   const { data: spark, error: readError } = await supabase
     .from('spark')
-    .select('body, note')
+    .select('body, note, saving_kind, saving_value, saving_stage, cost_score, benefit_score, complexity_score')
     .eq('id', id)
     .single()
 
@@ -218,6 +218,47 @@ ${spark.note}` : spark.body,
         `The project was created but you were not added to it: ${memberError.message}`,
       )
     }
+  }
+
+  /*
+   * What was promised, copied onto the work.
+   *
+   * Not read back through `became_node_id` when the project is opened, and the
+   * reason matters: sparks are private to their author, so a promise read that
+   * way would be visible to exactly one person and silently absent for everyone
+   * else. Copied, it belongs to the project and follows the project's own
+   * membership.
+   *
+   * It is also a different fact from the spark, not a duplicate of one. The
+   * spark holds what the idea says now and stays editable; this holds what was
+   * claimed on the day it became work, which is what somebody decided on.
+   *
+   * The year is stamped alongside, because a saving cannot be read back
+   * honestly without the yardstick it was weighed against.
+   */
+  const { data: yard } = await supabase
+    .from('yardstick')
+    .select('fiscal_year')
+    .maybeSingle()
+
+  const { error: originError } = await supabase.from('node_origin').insert({
+    node_id: nodeId,
+    spark_id: id,
+    body: spark.body,
+    note: spark.note,
+    saving_kind: spark.saving_kind,
+    saving_value: spark.saving_value,
+    saving_stage: spark.saving_stage,
+    cost_score: spark.cost_score,
+    benefit_score: spark.benefit_score,
+    complexity_score: spark.complexity_score,
+    fiscal_year: yard?.fiscal_year ?? null,
+  })
+
+  // Not fatal. The work exists and that is the thing that mattered; losing the
+  // origin is worth saying out loud but not worth undoing a project over.
+  if (originError && originError.code !== '23505') {
+    console.error(`node_origin not written for ${nodeId}: ${originError.message}`)
   }
 
   const { error } = await supabase

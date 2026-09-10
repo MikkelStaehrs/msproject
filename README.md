@@ -55,6 +55,21 @@ reads.
 Run the audit after every migration. The schema is applied by hand, so the
 migration files are a record of intent, not proof of state.
 
+**Measuring isolation needs a second account.** Everything else the audit does
+would still pass with the access model completely broken: proving a signed-OUT
+request gets nothing says nothing about whether one colleague can read another
+one's project. So set `AUDIT_PROBE_EMAIL` and `AUDIT_PROBE_PASSWORD` in
+`.env.local` to a real account that is deliberately NOT a member of at least one
+project, and the audit signs in as them and asks for what they must not have -
+every node in the subtree, every blocker, entry, decision, cost line, document
+and report hanging off it, and everyone else's sparks. It also checks the other
+direction, that they can still read the projects they are on, because an audit
+that only looks for leaks passes happily on a database nobody can read at all.
+
+Without those two variables the section prints `----` and the verdict says how
+many checks were not measured. A green line for a check that never ran is worse
+than a missing one.
+
 ## The database
 
 Migrations live in `supabase/migrations/`, applied in filename order through the

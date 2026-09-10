@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 import { subtreeSet } from '@/lib/subtree'
 import { formatDate, Hint, Rule } from '@/components/ui'
 import { formatMoney, lineAmount, lineEur } from '@/lib/cost'
+import { referenceFrom, stagesFrom } from '@/lib/cogs'
+import { Origin } from '@/components/origin'
 import { pathTo } from '@/lib/wbs'
 import {
   COST_KINDS,
@@ -21,6 +23,9 @@ import {
   type Decision,
   type DecisionTopic,
   type Node,
+  type NodeOrigin,
+  type StageVolume,
+  type Yardstick,
 } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -52,11 +57,17 @@ export default async function BasisPage({
   const { focus: focusId, edit: editId, new: newTopic } = await searchParams
   const supabase = await createClient()
 
-  const [projectRes, nodesRes, decisionRes, costRes] = await Promise.all([
+  const [projectRes, nodesRes, decisionRes, costRes, originRes, yardstickRes, stageRes] =
+    await Promise.all([
     supabase.from('node').select('*').eq('id', id).single(),
     supabase.from('node').select('id, parent_id, title, type').order('sort_order'),
     supabase.from('decision').select('*').order('decided_on', { ascending: false }),
     supabase.from('cost').select('*').order('dated', { ascending: false }),
+    // Appended at the end on purpose: inserting a query in the middle silently
+    // rebinds every destructured result after it.
+    supabase.from('node_origin').select('*'),
+    supabase.from('yardstick').select('*').maybeSingle(),
+    supabase.from('stage_volume').select('fiscal_year, stage, units'),
   ])
 
   const failure = firstError([projectRes, nodesRes, decisionRes, costRes])
@@ -85,6 +96,23 @@ export default async function BasisPage({
     inScope.has(d.node_id),
   )
   const lines = ((costRes.data ?? []) as Cost[]).filter((l) => inScope.has(l.node_id))
+
+  /*
+   * What was promised for this, while it was still an idea. Scoped like
+   * everything else on the page, so standing on a part shows that part's
+   * origin rather than the whole programme's.
+   */
+  const origins = ((originRes.data ?? []) as NodeOrigin[])
+    .filter((o) => inScope.has(o.node_id))
+    .sort((a, b) => (a.promised_at < b.promised_at ? -1 : 1))
+
+  const yard = yardstickRes.data as Yardstick | null
+  const reference = referenceFrom(yard)
+  const unitsAt = new Map(
+    stagesFrom((stageRes.data ?? []) as StageVolume[], yard?.fiscal_year ?? null).map(
+      (v) => [v.stage, v.units],
+    ),
+  )
 
   const base = `/p/${id}`
   const here = focusNode ? `${base}/grundlag?focus=${focusNode.id}` : `${base}/grundlag`
@@ -156,6 +184,32 @@ export default async function BasisPage({
                   : undefined
               }
             />
+          </div>
+        )}
+
+        {origins.length > 0 && (
+          <div className="mt-10">
+            <div className="flex items-baseline gap-4">
+              <h3 className="lbl text-muted">Where it came from</h3>
+              <span className="num text-[13px] text-rule-strong">
+                {origins.length}
+              </span>
+            </div>
+            <div className="mt-4 flex flex-col gap-6">
+              {origins.map((o) => (
+                <Origin
+                  key={o.node_id}
+                  origin={o}
+                  reference={reference}
+                  stageUnits={
+                    o.saving_stage === null
+                      ? null
+                      : (unitsAt.get(o.saving_stage) ?? null)
+                  }
+                  title={o.node_id === scopeId ? undefined : titleOf.get(o.node_id)}
+                />
+              ))}
+            </div>
           </div>
         )}
 

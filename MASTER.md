@@ -686,7 +686,7 @@ itself, so the overlay can never promise one thing and write another.
 | `/templates` | Template library: derive from a project, deploy on a new start date |
 | `/spark` | Where a thought lands before it is work. One field to capture, three lists to triage: inbox, became work, decided against. Promoting one creates the node and closes the spark in a single step, because creating it on one page and remembering to tick the spark off on another is a thing nobody does |
 | `/strategy` | What the work is for, across the projects. The only page that cuts the tree sideways. Each strategy shows what the marked work promises a year, how much of that is delivered, what has been invested to get it, and what is still to find. `/strategy/<id>` lists the parts behind the figure, because a number without them is one somebody has to take on trust |
-| `/guide` | How to use the tool. Twenty nine sections under five headings: getting around, what a node says, what it rests on, working in it, showing it to someone. It reads the labels and hints out of `lib/types.ts`, so a picker and the guide cannot come to disagree. It lives in the app rather than beside this file because a guide you have to leave the app to open is a guide you never open. MASTER says why the app is built this way; the guide says what to do |
+| `/guide` | How to use the tool. Thirty sections under five headings: getting around, what a node says, what it rests on, working in it, showing it to someone. It reads the labels and hints out of `lib/types.ts`, so a picker and the guide cannot come to disagree. It lives in the app rather than beside this file because a guide you have to leave the app to open is a guide you never open. MASTER says why the app is built this way; the guide says what to do |
 
 **The project frame.** `(shell)/layout.tsx` holds **only** the context band. The
 title block, the sub navigation and the right column live in
@@ -1009,6 +1009,53 @@ an account whose holder chose their own password, necessarily.
 
 The gate carries a sign out, because otherwise signing in as the wrong person
 is a trap: the layout sends you there and there has no front door.
+
+## What a project promised, and why it is a copy
+
+A spark that survives points at what it became through `became_node_id`, and
+that pointer only worked in one direction. Standing on the project there was no
+way back to the figure it was approved on, which is the one number anybody asks
+about six months later.
+
+Following the pointer backwards does not work, and the reason is the whole
+design. **Sparks are private to their author** - `spark_mine` is
+`user_id = auth.uid()`, because a spark is half a thought at eleven at night.
+Read the promise through the spark and the project shows its origin to exactly
+one person and shows nothing to everybody else, with nothing on screen to
+suggest anything is missing.
+
+So `node_origin` copies it at the moment of promotion, and the copy is a
+different fact rather than a duplicate. The spark holds what the idea says now
+and stays editable; `node_origin` holds what was claimed on the day it became
+work, which is what somebody decided on. The same relationship a cost line has
+with the exchange rate that applied when the price landed.
+
+Nothing computed is stored there either. The kroner a year, the euro per unit,
+the share of the target, the priority and the quadrant are all worked out from
+the same columns by `lib/cogs.ts` and `lib/priority.ts`, so an old claim can be
+read in this year's money. `fiscal_year` is stamped alongside and shown when it
+differs from the current yardstick: a saving is a share of a target, the target
+moves with the volume, and silently recomputing a FY25 claim against FY26 would
+invent a promise nobody made.
+
+## Measuring isolation instead of reading it
+
+Sections 1 to 5 of `npm run audit` would all pass with the access model
+completely broken. Proving a signed-OUT request gets nothing is the easy half
+and says nothing about whether one colleague can read another one's project.
+
+So section 6 signs in as a real second account and asks for what it must not
+have: every node in the subtree of a project it is not on, every blocker, entry,
+decision, cost line, document and report hanging off those nodes, and everyone
+else's sparks. Then the other direction, that it can still read the projects it
+IS on, because an audit that only looks for leaks passes happily on a database
+nobody can read at all.
+
+It needs that account's password, which nothing can derive, so it comes from
+`AUDIT_PROBE_EMAIL` and `AUDIT_PROBE_PASSWORD` in `.env.local`. Without them the
+section prints `----` and the verdict counts what was not measured. **A green
+line for a check that never ran is worse than a missing one**, and that is why
+the audit grew a third state rather than staying pass/fail.
 
 ## The stand-up, and the one thing it stores
 

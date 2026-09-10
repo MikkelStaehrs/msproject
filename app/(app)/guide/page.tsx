@@ -58,6 +58,7 @@ const SECTIONS = [
     ['euro', 'The one euro'],
     ['strategy', 'Strategy'],
     ['basis', 'Basis'],
+    ['origin', 'What it promised'],
     ['cost', 'Cost'],
     ['documents', 'Documents'],
   ]],
@@ -1039,6 +1040,37 @@ export default function GuidePage() {
             <span className="text-ink">loose ends</span> on the front page. It is
             the one loose end whose answer is not a log line, so it links to Basis
             rather than to the entry box.
+          </P>
+
+          <H id="origin">What it promised</H>
+          <P>
+            A project that began as a spark carries{' '}
+            <span className="text-ink">Where it came from</span> at the top of
+            Basis: the sentence somebody first said, and the figure it was
+            approved on. Six months in, that is the only thing that answers
+            &laquo;what did we say this would save&raquo;.
+          </P>
+          <P>
+            <strong className="font-medium">It is a copy, on purpose.</strong>{' '}
+            Sparks are private to whoever wrote them, so reading the promise back
+            through the spark would show it to one person and show nothing at all
+            to everyone else on the project. Copied at the moment of promotion it
+            belongs to the work, and follows the work&rsquo;s own access.
+          </P>
+          <P>
+            It is also a different fact from the spark rather than a duplicate of
+            one. The spark holds what the idea says <em>now</em> and stays
+            editable; this holds what was claimed on the day it became work,
+            which is what somebody decided on. Editing the idea afterwards does
+            not quietly rewrite the promise.
+          </P>
+          <P>
+            The words are stored, the money is not. Kroner a year, euro per unit
+            and share of the target are worked out from the same figures the
+            spark carried, so an old claim can be read in today&rsquo;s terms.
+            Which year it was weighed in is stamped alongside, and if that is not
+            the current one the page says so: a saving is a share of a target,
+            and the target moves.
           </P>
 
           <H id="cost">Cost</H>

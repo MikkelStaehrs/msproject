@@ -277,6 +277,32 @@ export interface Profile {
 }
 
 /**
+ * What was claimed for a piece of work on the day it stopped being an idea.
+ *
+ * Copied from the spark rather than read back through `became_node_id`, and
+ * that is not a duplicate. Sparks are private to their author, so a promise
+ * read through one would be visible to a single person and silently absent for
+ * the rest of the team. And the spark stays editable: it holds what the idea
+ * says now, this holds what somebody decided on.
+ */
+export interface NodeOrigin {
+  node_id: string
+  spark_id: string | null
+  body: string
+  note: string | null
+  saving_kind: SavingKind | null
+  saving_value: number | null
+  saving_stage: string | null
+  cost_score: number | null
+  benefit_score: number | null
+  complexity_score: number | null
+  /** The yardstick the figure was weighed against. A saving needs its year. */
+  fiscal_year: string | null
+  promised_at: string
+  promised_by: string | null
+}
+
+/**
  * One stand-up, held.
  *
  * The only thing a stand-up stores. The agenda, who was needed and what moved

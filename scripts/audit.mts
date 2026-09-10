@@ -56,11 +56,24 @@ const rows = async (path: string) => {
 // --- Reporting --------------------------------------------------------------
 
 let failures = 0
+let unmeasured = 0
 const ok = (m: string) => console.log(`  ok    ${m}`)
 const bad = (m: string, detail: string[] = []) => {
   failures++
   console.log(`  FAIL  ${m}`)
   for (const d of detail.slice(0, 8)) console.log(`          ${d}`)
+}
+/*
+ * A third state, and the reason it exists: a check that cannot run must not
+ * print like a check that passed. Access control is the one thing here that
+ * could be verified by reading the policies and believing them, and reading is
+ * not measuring - so when it cannot be measured it says so, and the verdict at
+ * the bottom stops claiming the database and the code agree.
+ */
+const skip = (m: string, why: string) => {
+  unmeasured++
+  console.log(`  ----  ${m}`)
+  console.log(`          ${why}`)
 }
 const section = (m: string) => console.log(`\n${m}\n${'-'.repeat(m.length)}`)
 
@@ -403,10 +416,174 @@ unwatched.length === 0
   ? ok('and no enum in the schema is going unwatched')
   : bad('enums the database has and this audit was never told about', unwatched)
 
+// --- 6. Membership, measured rather than read --------------------------------
+
+/*
+ * Everything above this point could be true with the access model completely
+ * broken. Section 2 proves a signed-OUT request gets nothing, and that is the
+ * easy half; it says nothing about whether one signed-in colleague can read
+ * another one's project. Until there were two accounts that was unmeasurable,
+ * and the honest thing was to say the policies had been READ.
+ *
+ * So this signs in as a real second user and asks for things they must not
+ * have. It needs their password, which nothing here can derive, so it is taken
+ * from .env.local and the whole section reports "not measured" without it
+ * rather than passing quietly. A green line for a check that never ran is worse
+ * than a missing line.
+ */
+section('6. Membership keeps a second account out')
+
+const PROBE_EMAIL = env.AUDIT_PROBE_EMAIL
+const PROBE_PASSWORD = env.AUDIT_PROBE_PASSWORD
+
+if (!PROBE_EMAIL || !PROBE_PASSWORD) {
+  skip(
+    'isolation between two signed-in accounts',
+    'set AUDIT_PROBE_EMAIL and AUDIT_PROBE_PASSWORD in .env.local to a real ' +
+      'second account. Until then the policies have been read, not measured.',
+  )
+} else {
+  const auth = await fetch(`${URL_}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { apikey: ANON, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: PROBE_EMAIL, password: PROBE_PASSWORD }),
+  })
+  const session = (await auth.json().catch(() => null)) as {
+    access_token?: string
+    user?: { id?: string }
+  } | null
+
+  if (!session?.access_token || !session.user?.id) {
+    bad(`could not sign in as ${PROBE_EMAIL}`, [
+      'the audit cannot measure isolation without a session for it',
+    ])
+  } else {
+    const TOKEN = session.access_token
+    const probeId = session.user.id
+
+    /** As the probe user: their own key for apikey, their session for identity. */
+    const asProbe = async (path: string) => {
+      const r = await fetch(`${URL_}/rest/v1/${path}`, {
+        headers: { apikey: ANON, Authorization: `Bearer ${TOKEN}` },
+      })
+      const body = await r.json().catch(() => null)
+      return { status: r.status, rows: Array.isArray(body) ? body : [] }
+    }
+
+    // What the database says they may see, read with the key that ignores RLS.
+    const membership = await rows(
+      `project_member?select=project_id&user_id=eq.${probeId}`,
+    )
+    const allowed = new Set(membership.map((m) => m.project_id as string))
+    const roots = node.filter((n) => n.parent_id === null)
+    const forbidden = roots.filter((r) => !allowed.has(r.id))
+
+    ok(
+      `signed in as ${PROBE_EMAIL}: member of ${allowed.size} of ${roots.length} ` +
+        `project${roots.length === 1 ? '' : 's'}`,
+    )
+
+    if (forbidden.length === 0) {
+      skip(
+        'nothing to be kept out of',
+        'this account is a member of every project, so a passing result would ' +
+          'prove nothing. Leave them off one project to measure it.',
+      )
+    } else {
+      /*
+       * The whole subtree, not just the root. Membership is inherited, and the
+       * failure worth catching is a policy that guards the project and forgets
+       * the task three levels down where the actual work is written.
+       */
+      const off: string[] = []
+      for (const root of forbidden) {
+        for (const id of subtreeIds(node, root.id)) {
+          const { rows: seen } = await asProbe(`node?select=id&id=eq.${id}`)
+          if (seen.length > 0) {
+            off.push(`node ${id} under ${root.title} is readable`)
+          }
+        }
+      }
+      off.length === 0
+        ? ok(
+            `every node under ${forbidden.length} project${forbidden.length === 1 ? '' : 's'} ` +
+              'they are not on comes back empty',
+          )
+        : bad('nodes readable by an account that is not a member', off)
+
+      // The tables that hang off a node carry their own policy, and each one is
+      // a separate chance to have written can_see_node the wrong way round.
+      const hidden = new Set(
+        forbidden.flatMap((r) => [...subtreeIds(node, r.id)]),
+      )
+      const leaks: string[] = []
+      for (const [rel, ids] of [
+        ['blocker', blocker.filter((b) => hidden.has(b.node_id)).map((b) => b.id)],
+        ['entry', (await rows('entry?select=id,node_id')).filter((e) => hidden.has(e.node_id)).map((e) => e.id)],
+        ['decision', (await rows('decision?select=id,node_id')).filter((d) => hidden.has(d.node_id)).map((d) => d.id)],
+        ['cost', (await rows('cost?select=id,node_id')).filter((c) => hidden.has(c.node_id)).map((c) => c.id)],
+        ['document', (await rows('document?select=id,node_id')).filter((d) => hidden.has(d.node_id)).map((d) => d.id)],
+        ['report', (await rows('report?select=id,node_id')).filter((r) => hidden.has(r.node_id)).map((r) => r.id)],
+      ] as [string, string[]][]) {
+        for (const id of ids.slice(0, 20)) {
+          const { rows: seen } = await asProbe(`${rel}?select=id&id=eq.${id}`)
+          if (seen.length > 0) leaks.push(`${rel} ${id}`)
+        }
+      }
+      leaks.length === 0
+        ? ok('and so does everything hanging off those nodes')
+        : bad('rows on a hidden node that a non-member can read', leaks)
+    }
+
+    /*
+     * Sparks are private to their author, which is a different rule from
+     * membership and therefore a separate measurement. A spark is half a
+     * thought at eleven at night; it is not project work and a colleague has no
+     * business reading it.
+     */
+    const mine = await rows(`spark?select=id&user_id=neq.${probeId}&limit=20`)
+    if (mine.length === 0) {
+      skip('sparks stay private to their author', 'nobody else has captured one')
+    } else {
+      const readable: string[] = []
+      for (const s of mine) {
+        const { rows: seen } = await asProbe(`spark?select=id&id=eq.${s.id}`)
+        if (seen.length > 0) readable.push(`spark ${s.id}`)
+      }
+      readable.length === 0
+        ? ok(`and none of the ${mine.length} sparks belonging to somebody else`)
+        : bad('sparks readable by somebody who did not write them', readable)
+    }
+
+    /*
+     * The other half, and the one a too-strict policy breaks: they must still
+     * see what they ARE on. An audit that only checks for leaks passes happily
+     * on a database nobody can read at all.
+     */
+    if (allowed.size > 0) {
+      const shouldSee = [...allowed].flatMap((r) => [...subtreeIds(node, r)])
+      const missing: string[] = []
+      for (const id of shouldSee.slice(0, 40)) {
+        const { rows: seen } = await asProbe(`node?select=id&id=eq.${id}`)
+        if (seen.length === 0) missing.push(`node ${id}`)
+      }
+      missing.length === 0
+        ? ok('and they can still read every node on the projects they are on')
+        : bad('nodes a member cannot read on their own project', missing)
+    }
+  }
+}
+
 // --- Verdict ----------------------------------------------------------------
 
 console.log()
-console.log(failures === 0
-  ? 'The database and the code agree.'
-  : `${failures} check(s) failed.`)
+if (failures > 0) {
+  console.log(`${failures} check(s) failed.`)
+} else if (unmeasured > 0) {
+  console.log(
+    `The database and the code agree, with ${unmeasured} check(s) not measured.`,
+  )
+} else {
+  console.log('The database and the code agree.')
+}
 process.exitCode = failures === 0 ? 0 : 1
