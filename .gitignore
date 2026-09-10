@@ -14,3 +14,11 @@ next-env.d.ts
 
 supabase/.branches
 supabase/.temp
+
+# OneDrive konfliktkopier. Naar to maskiner roerer den samme fil, lægger
+# OneDrive en kopi ved siden af med et suffiks som `page-gfd-3V32KD4.tsx`.
+# De er gamle versioner af filer der allerede er i git, de forvirrer tsc, og
+# `git add -A` tager dem med hvis intet stopper dem. Det gjorde den een gang.
+*-[a-zA-Z0-9]*-[A-Za-z0-9_]*.tsx.orig
+*-gfd-*.ts
+*-gfd-*.tsx
