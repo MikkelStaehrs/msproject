@@ -47,7 +47,7 @@ export default async function AppLayout({
   const [treeRes, peopleRes, profileRes] = await Promise.all([
     supabase.from('node').select('id, parent_id, title, sort_order').order('sort_order'),
     supabase.from('node').select('reporting'),
-    supabase.from('profile').select('full_name'),
+    supabase.from('profile').select('full_name, email'),
   ])
 
   const targets = buildTargets((treeRes.data ?? []) as Flat[])
@@ -58,14 +58,16 @@ export default async function AppLayout({
    * rather than being handed down through five components, and it is cheap:
    * these are rows already being read to build the quick entry targets.
    *
-   * RLS does the right thing without being asked. The names offered come from
-   * projects you are on, so a colleague never sees who is named on work they
-   * have no access to.
+   * The names TYPED INTO ROLES are cut by RLS without being asked, so a
+   * colleague never sees who is named on work they have no access to. The
+   * ACCOUNTS are not: `profile` is readable by anyone signed in, on purpose,
+   * because you cannot add a colleague to a project without being able to name
+   * them. Which is to say the picker knows every account here and only the
+   * roles you may see, and that asymmetry is deliberate rather than an
+   * oversight.
    */
   const people = knownPeople({
-    accounts: ((profileRes.data ?? []) as { full_name: string | null }[]).map(
-      (p) => p.full_name,
-    ),
+    accounts: (profileRes.data ?? []) as { full_name: string | null; email: string }[],
     roles: ((peopleRes.data ?? []) as { reporting: Record<string, unknown> }[]).map(
       (n) => (n.reporting?.people ?? {}) as Record<string, unknown>,
     ),

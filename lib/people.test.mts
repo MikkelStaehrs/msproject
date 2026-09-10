@@ -24,11 +24,36 @@ check(
 
 check(
   'a name from an account, with no roles anywhere',
-  run({ accounts: ['Jan T. Hansen'] }),
+  run({ accounts: [{ full_name: 'Jan T. Hansen', email: 'jan@ubs.dk' }] }),
   ['Jan T. Hansen'],
 )
 
-check('accounts with no name given yet are skipped', run({ accounts: [null, undefined] }), [])
+/*
+ * The case that sent this back for a second look. A colleague created in
+ * Supabase has no name here until they set one, and skipping them meant the one
+ * thing you had just done was the one thing the picker could not see. The email
+ * reads as unfinished, which it is, and that beats reading as absent.
+ */
+check(
+  'an account with no name yet is offered by its email',
+  run({ accounts: [{ full_name: null, email: 'test@testesen.dk' }] }),
+  ['test@testesen.dk'],
+)
+
+check(
+  'and once they give a name, the email they were picked by folds into it',
+  run({
+    accounts: [{ full_name: 'Test Testesen', email: 'test@testesen.dk' }],
+    roles: [{ product_owner: 'test@testesen.dk' }, { members: 'Test Testesen' }],
+  }),
+  ['Test Testesen'],
+)
+
+check(
+  'an account with nothing at all is nobody',
+  run({ accounts: [{ full_name: null, email: null }, {}] }),
+  [],
+)
 
 check(
   'the comma separated fields hold several people',
@@ -86,8 +111,24 @@ check(
 
 check(
   'an account and a role are the same person, counted once',
-  run({ accounts: ['Mikkel Stæhr'], roles: [{ project_manager: 'Mikkel Stæhr' }] }),
+  run({
+    accounts: [{ full_name: 'Mikkel Stæhr', email: 'mikkel@ubs.dk' }],
+    roles: [{ project_manager: 'Mikkel Stæhr' }],
+  }),
   ['Mikkel Stæhr'],
+)
+
+/*
+ * A tie in usage puts somebody who can log in above a name that was only ever
+ * typed into a field, whatever order the rows arrived in.
+ */
+check(
+  'an account outranks a name that was only ever typed',
+  run({
+    accounts: [{ full_name: 'Has An Account', email: 'has@ubs.dk' }],
+    roles: [{ a: 'Only Ever Typed' }],
+  }),
+  ['Has An Account', 'Only Ever Typed'],
 )
 
 check('a node with no people at all', run({ roles: [{}] }), [])

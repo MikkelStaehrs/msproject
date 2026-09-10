@@ -137,7 +137,7 @@ export default async function IdentityPage({
     supabase.from('v_node_cost').select('*').eq('node_id', id).maybeSingle(),
     supabase.from('node').select('id, parent_id'),
     supabase.from('project_member').select('*').eq('project_id', id),
-    supabase.from('profile').select('id, email'),
+    supabase.from('profile').select('id, email, full_name'),
     supabase.from('node').select('reporting'),
   ])
 
@@ -145,15 +145,21 @@ export default async function IdentityPage({
   if (!project) notFound()
 
   const members = (memberRes.data ?? []) as ProjectMember[]
-  const emailOf = new Map(
-    ((profileRes.data ?? []) as { id: string; email: string }[]).map((p) => [p.id, p.email]),
-  )
+  const accounts = (profileRes.data ?? []) as {
+    id: string
+    email: string
+    full_name: string | null
+  }[]
+  const emailOf = new Map(accounts.map((p) => [p.id, p.email]))
 
   // The same names the picker offers, written out for the fields that hold
   // several people, where a suggestion would replace the list rather than
   // extend it.
   const knownHere = knownPeople({
-    accounts: [],
+    // This said `accounts: []`, which meant the one hint under the fields that
+    // hold several people could see every name already typed and not a single
+    // colleague with a login. Adding a user was the one thing it could not see.
+    accounts,
     roles: ((reportingRes.data ?? []) as { reporting: Record<string, unknown> }[]).map(
       (n) => (n.reporting?.people ?? {}) as Record<string, unknown>,
     ),
