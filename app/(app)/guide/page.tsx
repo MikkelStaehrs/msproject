@@ -1247,7 +1247,8 @@ export default function GuidePage() {
             The weekly meeting, in three chapters, and none of it is written in
             advance. <Code>Standup</Code> reads what is already in here and works
             out what the room has to talk about. The numbered links at the top
-            walk them in the order the meeting runs.
+            walk them in the order the meeting runs; it opens on the second,
+            because that is the one holding the work.
           </P>
           <P>
             <strong className="font-medium">1. Since last time.</strong> What was
@@ -1266,6 +1267,17 @@ export default function GuidePage() {
             happened that nobody wrote a line about. Waiting comes before
             lateness on purpose. A wait needs a person, a late task needs a
             decision, and the person is the one who might leave the room.
+          </P>
+          <P>
+            <strong className="font-medium">The rest of the portfolio is right
+            underneath it,</strong> by project, in tree order, with a status mark
+            and a date on every line. That is not decoration. On the real
+            portfolio the ranked rules flagged four pieces out of thirty five:
+            twenty five carry no date at all and sit at{' '}
+            <span className="text-ink">idea</span>, so no dated rule could see
+            them. A screen showing a ninth of the work is not a stand-up screen,
+            however well the ninth is chosen. Nothing is behind a toggle, because
+            a toggle is where those twenty five would go to be forgotten again.
           </P>
           <P>
             Click one and it fills the right, exactly like the meeting screen:

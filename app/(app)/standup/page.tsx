@@ -32,6 +32,7 @@ import { StatusSelect } from '@/components/status-select'
 import {
   Prose,
   Rule,
+  StatusMark,
   formatDate,
   formatDateLong,
   relativeDays,
@@ -40,6 +41,7 @@ import {
   COST_BUDGET_LABEL,
   COST_STATE_LABEL,
   DECISION_TOPIC_LABEL,
+  STATUS_LABEL,
   TYPE_LABEL,
   type BlockerDays,
   type Cost,
@@ -102,7 +104,13 @@ export default async function StandupPage({
   }>
 }) {
   const {
-    part = '1',
+    /*
+     * Chapter two by default, not one. The meeting is walked 1, 2, 3 and the
+     * numbers say so, but the page you want open when you arrive is the one
+     * holding the work: chapter one is a read of what already happened, and
+     * landing on it meant the portfolio was always one click away.
+     */
+    part = '2',
     task: taskId,
     edit: editId,
     bnew: newBlocker,
@@ -210,10 +218,65 @@ export default async function StandupPage({
     }
   }
 
-  const selected = (taskId ? byId.get(taskId) : undefined) ?? byId.get(rows[0]?.nodeId ?? '')
-  const index = selected ? rows.findIndex((r) => r.nodeId === selected.id) : -1
-  const prev = index > 0 ? rows[index - 1] : undefined
-  const next = index >= 0 && index < rows.length - 1 ? rows[index + 1] : undefined
+  /*
+   * EVERYTHING ELSE THAT IS ALIVE, and this is the correction that mattered.
+   *
+   * The agenda ranks what needs action, and on the real portfolio that came to
+   * four pieces out of thirty five: twenty five of them carry no date at all
+   * and sit at status «idea», so not one of the dated rules could see them. A
+   * stand-up screen that shows a ninth of the work is not a stand-up screen,
+   * however well the ninth is chosen.
+   *
+   * So the rail carries both. What needs action stays at the top, ranked; the
+   * rest follows underneath, by project, in tree order. Nothing is behind a
+   * toggle, because a toggle is where the twenty five would go to be forgotten
+   * again.
+   */
+  const onAgenda = new Set(rows.map((r) => r.nodeId))
+  const OVER = new Set(['done', 'cancelled'])
+
+  const depthOf = new Map<string, number>()
+  const childrenOf = new Map<string, Node[]>()
+  for (const n of nodes) {
+    if (n.parent_id !== null) {
+      childrenOf.set(n.parent_id, [...(childrenOf.get(n.parent_id) ?? []), n])
+    }
+  }
+  const walk = (nodeId: string, depth: number, into: Node[]) => {
+    for (const kid of childrenOf.get(nodeId) ?? []) {
+      depthOf.set(kid.id, depth)
+      if (!OVER.has(kid.status)) into.push(kid)
+      walk(kid.id, depth + 1, into)
+    }
+  }
+
+  /** Every live project, with everything alive underneath it in tree order. */
+  const portfolio = nodes
+    .filter((n) => n.parent_id === null && !OVER.has(n.status))
+    .map((project) => {
+      const pieces: Node[] = []
+      walk(project.id, 1, pieces)
+      return { project, pieces }
+    })
+
+  const liveCount = portfolio.reduce((n, p) => n + p.pieces.length, 0)
+
+  /** The order Prev and Next walk: the agenda first, then the rest. */
+  const order = [
+    ...rows.map((r) => r.nodeId),
+    ...portfolio.flatMap((p) => [p.project.id, ...p.pieces.map((n) => n.id)]),
+  ].filter((id, i, all) => all.indexOf(id) === i)
+
+  const selected = (taskId ? byId.get(taskId) : undefined) ?? byId.get(order[0] ?? '')
+  const index = selected ? order.indexOf(selected.id) : -1
+  const prev = index > 0 ? byId.get(order[index - 1]) : undefined
+  const next = index >= 0 && index < order.length - 1 ? byId.get(order[index + 1]) : undefined
+  const reasons = selected
+    ? (() => {
+        const row = rows.find((r) => r.nodeId === selected.id)
+        return row ? [row.lead, ...row.also] : []
+      })()
+    : []
 
   const closing = resolveBlocker
     ? blockers.find((b) => b.id === resolveBlocker && b.is_active)
@@ -300,7 +363,7 @@ export default async function StandupPage({
         {(
           [
             ['1', 'Since last time', moved.completed.length + moved.resolved.length + moved.opened.length],
-            ['2', 'Until next time', rows.length],
+            ['2', 'Until next time', liveCount],
             ['3', 'From spark to idea', weighed.length],
           ] as [Part, string, number][]
         ).map(([n, label, count]) => (
@@ -319,7 +382,9 @@ export default async function StandupPage({
             >
               {label}
             </span>
-            <span className="lbl-tight tabular-nums text-rule-strong">{count}</span>
+            <span className="lbl-tight tabular-nums text-rule-strong">
+              {n === '2' && rows.length > 0 ? `${rows.length} / ${count}` : count}
+            </span>
           </Link>
         ))}
       </nav>
@@ -404,11 +469,13 @@ export default async function StandupPage({
           <aside className="border-b border-rule lg:border-b-0 lg:border-r">
             <div className="border-b border-rule-strong px-5 lg:px-7 py-5">
               <h1 className="font-display text-[24px] font-medium leading-tight">
-                Until {formatDate(nextOn)}
+                The whole portfolio
               </h1>
               <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-                Hardest first, across every project. Nothing is ticked off: an
-                item leaves by being answered.
+                <span className="num text-ink">{rows.length}</span> of{' '}
+                <span className="num text-ink">{liveCount}</span> live pieces need
+                something before {formatDate(nextOn)}. Those come first; the rest
+                follows by project, so nothing is out of sight.
               </p>
             </div>
 
@@ -481,6 +548,84 @@ export default async function StandupPage({
               </nav>
             )}
 
+            {/*
+              Everything else that is alive. Not a second screen and not behind a
+              toggle: the agenda saw four of thirty five pieces, and the other
+              thirty one are the ones a toggle would hide again.
+            */}
+            {portfolio.map(({ project, pieces }) => {
+              const rest = pieces.filter((n) => !onAgenda.has(n.id))
+              return (
+                <div key={project.id}>
+                  <Link
+                    href={at(project.id)}
+                    className={`flex items-baseline gap-3 border-y border-rule-strong px-5 lg:px-7 py-2 ${
+                      selected?.id === project.id ? 'bg-sheet' : 'hover:bg-sheet'
+                    }`}
+                  >
+                    <StatusMark
+                      status={project.status}
+                      blocked={state.get(project.id)?.is_blocked ?? false}
+                    />
+                    <span className="lbl min-w-0 flex-1 truncate text-ink">
+                      {project.title}
+                    </span>
+                    <span className="lbl-tight tabular-nums text-rule-strong">
+                      {pieces.length}
+                    </span>
+                  </Link>
+
+                  {rest.length === 0 ? (
+                    <p className="px-5 lg:px-7 py-2.5 text-[11px] text-rule-strong">
+                      Everything alive here is already on the agenda above.
+                    </p>
+                  ) : (
+                    rest.map((n) => {
+                      const isOn = selected?.id === n.id
+                      const late = n.due_date !== null && n.due_date < today
+                      return (
+                        <Link
+                          key={n.id}
+                          href={at(n.id)}
+                          className={`flex items-baseline gap-2.5 border-b border-rule py-2 pr-5 lg:pr-7 ${
+                            isOn ? 'bg-sheet' : 'hover:bg-sheet'
+                          }`}
+                          style={{
+                            paddingLeft: `${20 + (depthOf.get(n.id) ?? 1) * 11}px`,
+                          }}
+                        >
+                          <StatusMark
+                            status={n.status}
+                            blocked={state.get(n.id)?.is_blocked ?? false}
+                          />
+                          <span
+                            className={`min-w-0 flex-1 truncate text-[12.5px] ${
+                              isOn ? 'font-medium text-ink' : 'text-muted'
+                            }`}
+                          >
+                            {n.title}
+                          </span>
+                          {n.due_date ? (
+                            <span
+                              className={`shrink-0 text-[10px] tabular-nums ${
+                                late ? 'text-oxblood' : 'text-rule-strong'
+                              }`}
+                            >
+                              {formatDate(n.due_date)}
+                            </span>
+                          ) : (
+                            <span className="lbl-tight shrink-0 text-rule-strong">
+                              {STATUS_LABEL[n.status]}
+                            </span>
+                          )}
+                        </Link>
+                      )
+                    })
+                  )}
+                </div>
+              )
+            })}
+
             <div className="px-5 lg:px-7 py-6">
               <Room room={room} />
             </div>
@@ -512,12 +657,12 @@ export default async function StandupPage({
 
                   <div className="flex shrink-0 items-center gap-5">
                     {prev && (
-                      <Link href={at(prev.nodeId)} className="lbl-tight text-muted hover:text-ink">
+                      <Link href={at(prev.id)} className="lbl-tight text-muted hover:text-ink">
                         &larr; Prev
                       </Link>
                     )}
                     {next && (
-                      <Link href={at(next.nodeId)} className="lbl-tight text-muted hover:text-ink">
+                      <Link href={at(next.id)} className="lbl-tight text-muted hover:text-ink">
                         Next &rarr;
                       </Link>
                     )}
@@ -539,17 +684,19 @@ export default async function StandupPage({
                 </div>
 
                 {/* Why it is on the agenda at all */}
-                <div className="mt-4 flex flex-col gap-1.5 border-l-2 border-rule-strong pl-3">
-                  {[rows[index]?.lead, ...(rows[index]?.also ?? [])]
-                    .filter(Boolean)
-                    .map((i, n) => (
-                      <p key={n} className="text-[12.5px] leading-snug text-muted">
-                        <span className="lbl-tight text-rule-strong">
-                          {AGENDA_LABEL[i.kind]}
-                        </span>{' '}
-                        {i.why}
-                      </p>
-                    ))}
+                <div
+                  className={`mt-4 flex flex-col gap-1.5 pl-3 ${
+                    reasons.length > 0 ? 'border-l-2 border-rule-strong' : ''
+                  }`}
+                >
+                  {reasons.map((i, n) => (
+                    <p key={n} className="text-[12.5px] leading-snug text-muted">
+                      <span className="lbl-tight text-rule-strong">
+                        {AGENDA_LABEL[i.kind]}
+                      </span>{' '}
+                      {i.why}
+                    </p>
+                  ))}
                 </div>
 
                 {editId === selected.id ? (

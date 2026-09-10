@@ -1075,6 +1075,15 @@ the one under discussion filling the right - with the one difference that
 matters here: the left is the ranked agenda ACROSS EVERY PROJECT rather than the
 children of one node. A stand-up is not about a project.
 
+**The rail carries the whole portfolio, not just what the rules flagged**, and
+that correction came from measuring rather than reasoning. On the real data the
+agenda came to FOUR pieces out of thirty five alive: twenty five carry no date
+and sit at status `idea`, so not one of the dated rules could see them. The
+ranking was fine; the surface was hiding the work. So what needs action stays at
+the top, ranked, and everything else follows by project in tree order. Not
+behind a toggle - a toggle is where those thirty one would go to be forgotten
+again.
+
 One row per NODE, not one per reason. A task with two blockers and a missed date
 is one conversation, and three rows for it would push the next person's item off
 the screen; the other reasons are listed once you open it.
