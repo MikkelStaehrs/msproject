@@ -229,6 +229,30 @@ export async function setNodeStatus(fd: FormData) {
   revalidatePath('/', 'layout')
 }
 
+/**
+ * Moving a date, on its own.
+ *
+ * `updateNode` can already do this, but it needs the whole form, and the one
+ * place a date actually gets moved is a meeting, where the whole form is four
+ * seconds and a lost thread. The agenda says «its date was the 1st: either it
+ * moves or it is finished» and this is the half of that sentence a button can
+ * answer.
+ *
+ * An empty value clears the date rather than being ignored. A task with no date
+ * is a real answer - it says «not scheduled» - and refusing to express it would
+ * leave the only way out being to invent one.
+ */
+export async function setDueDate(fd: FormData) {
+  const supabase = await createClient()
+  const id = required(fd, 'id')
+  const due = text(fd, 'due_date')
+
+  const { error } = await supabase.from('node').update({ due_date: due }).eq('id', id)
+  if (error) throw new Error(`Could not move the date: ${error.message}`)
+
+  revalidatePath('/', 'layout')
+}
+
 export async function deleteNode(fd: FormData) {
   const supabase = await createClient()
   const id = required(fd, 'id')

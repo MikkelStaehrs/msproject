@@ -680,7 +680,7 @@ itself, so the overlay can never promise one thing and write another.
 | `/p/[id]/brief` | The brief: the identity laid out to be read by someone who was not in the room. Carries the money in full, priced against planned, how much has a document behind it, the yearly running cost and the payback after it, because «paid back in 3.5 years» without saying what it costs is half an answer. Read only, and an actual A4 page: 794 px wide at 96 dpi with the same 14 mm margin the printer gets, so the screen and the paper are the same shape |
 | `/p/[id]/meeting` | The working surface for a meeting. You bring up a project or a part and walk its pieces one at a time: the list stays on the left, the piece under discussion fills the right, with its description, status, dates, estimate, blockers, decisions, log and cost lines. The tree is the wrong shape for this, being built to show a hundred rows at once, which is what nobody can read together. Status changes inline, blockers and decisions open without leaving the screen, and `Ctrl+K` writes on whatever is selected: a meeting is when those surface, and a record is worth nothing if capturing it costs you the room. Navigation is the tree, not a flat list: a breadcrumb climbs, «Go into it» descends, and a piece can be edited or added in place with the same form the tree uses. Two things were wrong first time round: it was a presentation rather than a workspace, and the subject picker was every container in the project dumped in a row, unordered and saying nothing about what holds what |
 | `/p/[id]/map` | The project map: the tree drawn as a diagram, landscape and printable. Hierarchy as elbows in grey, sequence as dashed oxblood arrows leaving the boxes sideways, so «under» and «before» cannot be confused. `?depth=` stops the drawing at a level and marks each cut branch with how much it holds, because five levels of tasks on one sheet is a wall rather than an explanation; cutting is not hiding. `?zoom=` scales the finished drawing rather than laying it out again, so the connectors keep meeting the box centres, and «Fit» means fits on one printed sheet. A dependency pointing outside the project has no box to reach, so the box carries «waits N» instead |
-| `/standup` | The weekly stand-up, in three parts, none of it written in advance. **Since last time**: what was finished, what came unstuck, what got stuck, and how many log lines were written, because Friday assembles the report from those and a week with none has nothing to say. **Until next time**: the agenda, ranked by `lib/standup.ts` as late answer, waiting, past its date, due before next time, ready with nobody on it, unwritten. Waiting outranks lateness because a wait needs a person and a late task needs a decision, and the person is the one who might leave the room. **From spark to idea**: assessed sparks ranked by share of the year's target. The right column is the room, derived from whoever the agenda is waiting on, ordered by how much of the meeting is about them. Nothing is ticked off, and the only thing stored is the day it was held |
+| `/standup` | The weekly stand-up, in three chapters, none of it written in advance. **1 Since last time**: what finished, came unstuck, got stuck, and how many log lines were written, because Friday assembles the report from those. **2 Until next time**: THE WORKING HALF. The ranked agenda across every project runs down the left; clicking one fills the right with the meeting screen's shape - description, why it is on the agenda, status, a date you can move in one gesture, blockers, decisions, log and cost, all editable in place. It was a list to read out first, and that was the mistake: it picked the right things to talk about and then made you leave the page to do anything about them. **3 From spark to idea**: assessed sparks ranked by share of the year's target. The room is derived from whoever the agenda waits on. Nothing is ticked off; the only thing stored is the day it was held |
 | `/friday` | Weekly report: the four fields per running project, each with a copy button, plus the basis and the previous report |
 | `/blockers` | Every blocker, waiting days per `waiting_on`, a lifetime chart and key figures |
 | `/templates` | Template library: derive from a project, deploy on a new start date |
@@ -1065,6 +1065,19 @@ Everything on this one is already in the database: what is waiting, what is
 late, what is ready with nobody on it, what happened that nobody wrote a line
 about. So `lib/standup.ts` derives it, and the only thing anyone does is hold
 the meeting.
+
+**The middle chapter is a working surface, and it was a list first.** That was
+the mistake worth recording: the agenda picked exactly the right things to talk
+about and then made you leave the page to do anything about them. In a meeting
+that is one click too many, and the practical result is that the thing does not
+get done. So chapter two is the meeting screen's shape - the pieces on the left,
+the one under discussion filling the right - with the one difference that
+matters here: the left is the ranked agenda ACROSS EVERY PROJECT rather than the
+children of one node. A stand-up is not about a project.
+
+One row per NODE, not one per reason. A task with two blockers and a missed date
+is one conversation, and three rows for it would push the next person's item off
+the screen; the other reasons are listed once you open it.
 
 **Nothing is ticked off**, and that is the mechanism rather than an omission. An
 item leaves the agenda by being answered: the blocker is resolved, the task is

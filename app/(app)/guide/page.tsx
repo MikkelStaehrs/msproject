@@ -1244,53 +1244,78 @@ export default function GuidePage() {
 
           <H id="standup">The stand-up</H>
           <P>
-            The weekly meeting, in three parts, and none of it is written in advance.
-            <Code>Standup</Code> reads what is already in here and works out what the
-            room has to talk about.
+            The weekly meeting, in three chapters, and none of it is written in
+            advance. <Code>Standup</Code> reads what is already in here and works
+            out what the room has to talk about. The numbered links at the top
+            walk them in the order the meeting runs.
           </P>
           <P>
             <strong className="font-medium">1. Since last time.</strong> What was
-            finished, what came unstuck, what got stuck. It also says how many log
-            lines were written, because the weekly report is assembled from those and
-            a week with none has nothing to report.
+            finished, what came unstuck, what got stuck. It also counts the log
+            lines written, because the weekly report is assembled from those and
+            a week with none has nothing to report. Measured from the day the
+            room last met, not from a week ago, so skipping a week still tells
+            the truth.
           </P>
           <P>
-            <strong className="font-medium">2. Until next time.</strong> The agenda,
-            hardest first: a late answer, then anything anyone is waiting on, then work
-            whose date has passed, then work due before the next stand-up, then anything
-            ready with nobody on it, then what happened that nobody wrote a line about.
-            Waiting comes before lateness on purpose. A wait needs a person, a late task
-            needs a decision, and the person is the one who might leave the room.
+            <strong className="font-medium">2. Until next time, and this is the
+            working half.</strong> The agenda runs down the left, across every
+            project, hardest first: a late answer, then anything anyone is
+            waiting on, then work whose date has passed, then work due before the
+            next stand-up, then anything ready with nobody on it, then what
+            happened that nobody wrote a line about. Waiting comes before
+            lateness on purpose. A wait needs a person, a late task needs a
+            decision, and the person is the one who might leave the room.
           </P>
           <P>
-            <strong className="font-medium">3. From spark to idea.</strong> Assessed
-            ideas ranked by what they take out of the year&rsquo;s target, so the room
-            spends its last five minutes on the biggest one rather than the newest one.
-            An idea with no figure on it cannot be ranked and is only counted.
+            Click one and it fills the right, exactly like the meeting screen:
+            the description, why it is on the agenda, and everything you might
+            change about it. <span className="text-ink">Status</span> saves
+            itself, <span className="text-ink">Due</span> is a date you can move
+            in one gesture, a blocker opens or closes in place, a decision gets
+            recorded, and <Code>write a line</Code> puts an entry on that piece
+            without leaving. <Code>Prev</Code> and <Code>Next</Code> walk the
+            agenda. It was a list to read out first, and that was wrong: it
+            picked the right things to talk about and then made you leave the
+            page to do anything about them.
           </P>
           <P>
-            <strong className="font-medium">Nothing is ticked off.</strong> There is no
-            handled button, and that is the mechanism rather than an omission. An item
-            leaves the agenda by being answered: the blocker is resolved, the task is
-            done, the line is written. A list you tick becomes a second copy of the
-            work, and the second copy is the one that goes stale.
+            One row per piece, not one per reason. A task with two blockers and a
+            missed date is one conversation, and three rows for it would push
+            somebody else&rsquo;s item off the screen. The other reasons are
+            listed on the right when you open it.
           </P>
           <P>
-            <strong className="font-medium">The room is derived too.</strong> On the
-            right is whoever something is actually waiting on, with their longest wait
-            beside them, ordered by how much of the meeting is about them. A standing
-            invitation list invites the same six people every week whether or not
-            anything needs them, and then the one person who could unblock the oldest
-            item is not there.
+            <strong className="font-medium">3. From spark to idea.</strong>{' '}
+            Assessed ideas ranked by what they take out of the year&rsquo;s
+            target, so the last five minutes go on the biggest one rather than
+            the newest one. An idea with no figure cannot be ranked and is only
+            counted: an empty assessment is not zero, it is not worked out.
+          </P>
+          <P>
+            <strong className="font-medium">Nothing is ticked off.</strong> There
+            is no handled button, and that is the mechanism rather than an
+            omission. An item leaves the agenda by being answered: the blocker is
+            resolved, the task is done, the date moves, the line is written.
+            Which is why all four of those are on the page. A list you tick
+            becomes a second copy of the work, and the second copy is the one
+            that goes stale.
+          </P>
+          <P>
+            <strong className="font-medium">The room is derived too.</strong>{' '}
+            Whoever something is actually waiting on, with their longest wait
+            beside them, ordered by how much of the meeting is about them. A
+            standing invitation list invites the same six people every week
+            whether or not anything needs them, and then the one person who could
+            unblock the oldest item is not there.
           </P>
           <P>
             The only thing a stand-up stores is the day it was held, and the only
-            gesture is the <Code>We held it</Code> button. It is there because
-            &laquo;since last time&raquo; needs a last time: taking it from the calendar
-            looks like a derivation and is a guess, and a skipped week would then report
-            a fortnight of movement as a week&rsquo;s. If you close the wrong day,{' '}
-            <Code>Undo</Code> puts the boundary back. Nothing else was stored, so
-            nothing else can be lost.
+            gesture is <Code>We held it</Code> in the band at the top. It is
+            there because &laquo;since last time&raquo; needs a last time: taking
+            it from the calendar looks like a derivation and is a guess. If you
+            close the wrong day, <Code>Undo</Code> puts the boundary back.
+            Nothing else was stored, so nothing else can be lost.
           </P>
 
           <H id="meeting">The meeting screen</H>
