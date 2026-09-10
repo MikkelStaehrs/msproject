@@ -189,6 +189,29 @@ export default function GuidePage() {
             nothing in the interface would explain where it went.
           </P>
           <P>
+            <strong className="font-medium">A new colleague is asked for two
+            things before they can use anything.</strong> A name, because a
+            project says who owns it and an email address is not an answer to
+            that; and a password of their own, because an account created in the
+            dashboard carries one that somebody else typed and still knows.
+            Until that is replaced, two people can sign in as one, and every
+            line written under that name was written by an account two people
+            can open.
+          </P>
+          <P>
+            There is no skipping it and there is no &laquo;seen it&raquo; flag
+            behind it. Both are facts about the account rather than about a
+            dialog, so the screen goes away by being answered rather than by
+            being closed. Somebody who has landed on the wrong account can sign
+            out from it.
+          </P>
+          <P>
+            Until they give a name they still appear in the role picker, as
+            their email address. That reads as unfinished, which it is, and it
+            beats the alternative: the one moment you have just added a
+            colleague is not the moment for them to be invisible.
+          </P>
+          <P>
             <strong className="font-medium">
               Roles and access are different lists.
             </strong>{' '}

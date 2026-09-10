@@ -3,7 +3,9 @@ import { Nav } from '@/components/nav'
 import { QuickAdd, type QuickTarget } from '@/components/quick-add'
 import { createClient } from '@/lib/supabase/server'
 import { readRecipients } from '@/lib/recipient-data'
+import { redirect } from 'next/navigation'
 import { knownPeople } from '@/lib/people'
+import type { Profile } from '@/lib/types'
 import { PeopleList } from '@/components/people-list'
 import { logout } from '../login/actions'
 
@@ -44,11 +46,38 @@ export default async function AppLayout({
 }) {
   const supabase = await createClient()
 
-  const [treeRes, peopleRes, profileRes] = await Promise.all([
+  const [treeRes, peopleRes, profileRes, authRes] = await Promise.all([
     supabase.from('node').select('id, parent_id, title, sort_order').order('sort_order'),
     supabase.from('node').select('reporting'),
-    supabase.from('profile').select('full_name, email'),
+    supabase.from('profile').select('id, full_name, email, password_set_at'),
+    supabase.auth.getUser(),
   ])
+
+  /*
+   * The first-run gate.
+   *
+   * An account created in the Supabase dashboard arrives with two things
+   * missing, and one of them matters more than it looks: the password was typed
+   * by whoever created the account, so until it is replaced two people can sign
+   * in as one, and every line written under that name was written by an account
+   * two people can open. The other is the name colleagues see on a role.
+   *
+   * There is no skip, and no "seen it" flag behind this. Both conditions are
+   * facts about the account rather than about a dialog, so the gate disappears
+   * by being answered: give a name, choose a password, and it is gone for good.
+   * A dismissible version of this would be dismissed on day one by exactly the
+   * people it exists for.
+   *
+   * It sits in the layout because the layout already reads `profile` and
+   * already runs on every page in the app. /auth/password is outside this
+   * layout, so there is no loop.
+   */
+  const me = ((profileRes.data ?? []) as Profile[]).find(
+    (p) => p.id === authRes.data.user?.id,
+  )
+  if (me && (me.full_name === null || me.password_set_at === null)) {
+    redirect('/auth/password')
+  }
 
   const targets = buildTargets((treeRes.data ?? []) as Flat[])
 
@@ -67,7 +96,7 @@ export default async function AppLayout({
    * oversight.
    */
   const people = knownPeople({
-    accounts: (profileRes.data ?? []) as { full_name: string | null; email: string }[],
+    accounts: (profileRes.data ?? []) as Profile[],
     roles: ((peopleRes.data ?? []) as { reporting: Record<string, unknown> }[]).map(
       (n) => (n.reporting?.people ?? {}) as Record<string, unknown>,
     ),

@@ -44,16 +44,25 @@ export async function setPassword(_prev: string | null, fd: FormData) {
   /*
    * The name is what a role field on a project shows, so it is asked for here
    * and nowhere else: this is the one moment a new colleague is already filling
-   * in a form about themselves. Left blank they simply do not appear in the
-   * picker, which is a smaller problem than putting a chopped up email address
-   * on a report as if it were a person.
+   * in a form about themselves. Left blank they appear in the picker as their
+   * email address, which reads as unfinished because it is.
+   *
+   * `password_set_at` is stamped whatever else happens, because the password
+   * has just been changed and by definition it was changed by the person
+   * holding the account. It is the whole of what the first-run gate asks: an
+   * account created in the dashboard carries a password somebody else typed,
+   * and until this line runs, two people can sign in as one.
    */
   const name = String(fd.get('full_name') ?? '').trim().replace(/\s+/g, ' ')
   // Blank leaves whatever is there. Someone changing only their password must
   // not lose the name colleagues already see them by.
-  if (name !== '') {
-    await supabase.from('profile').update({ full_name: name }).eq('id', data.user.id)
-  }
+  await supabase
+    .from('profile')
+    .update({
+      password_set_at: new Date().toISOString(),
+      ...(name !== '' ? { full_name: name } : {}),
+    })
+    .eq('id', data.user.id)
 
   revalidatePath('/', 'layout')
   redirect('/')

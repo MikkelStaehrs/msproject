@@ -258,6 +258,25 @@ export interface StageVolume {
 }
 
 /**
+ * The public half of a user. `auth.users` itself stays unexposed, holding
+ * password hashes and recovery tokens; this is what the interface needs to
+ * name somebody.
+ */
+export interface Profile {
+  id: string
+  email: string
+  /** What colleagues see on a role. Null until they say, never derived. */
+  full_name: string | null
+  /**
+   * When they last chose their own password. Null means the one they hold was
+   * typed by whoever created the account, which is what the first-run gate is
+   * about: until it is replaced, two people can sign in as one.
+   */
+  password_set_at: string | null
+  created_at: string
+}
+
+/**
  * One stand-up, held.
  *
  * The only thing a stand-up stores. The agenda, who was needed and what moved

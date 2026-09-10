@@ -980,6 +980,36 @@ spark became must not erase the record that the thought was had and acted on.
 `source` exists to tell you which capture route you actually use, and which one
 was a nice idea nobody touched.
 
+## The first-run gate, and why it is not a flag
+
+An account created in the Supabase dashboard arrives with two things missing,
+and one of them is a security problem rather than an inconvenience: somebody
+else typed the password, and still knows it. Until it is replaced, two people
+can sign in as one, and every line written under that name was written by an
+account two people can open.
+
+So the `(app)` layout refuses to render while either condition holds and sends
+the person to `/auth/password`, which reads as a welcome rather than as a
+settings screen while it is the first visit.
+
+**Neither condition is a "has seen the welcome" flag**, and that is the whole
+design. `profile.full_name is null` is derived - it is the same fact the role
+picker reads. `profile.password_set_at is null` cannot be derived (`auth.users`
+is unexposed and holds a hash and a timestamp, not who typed it), so
+`setPassword` stamps it as a side effect of the act itself, exactly as
+`standup.held_on` records a meeting by being pressed. A flag cleared by
+clicking would make the gate a thing you get past rather than a thing you
+answer, and it would be clicked past on day one by precisely the people it
+exists for.
+
+**The backfill in the migration is a derivation, not a guess.** `full_name` is
+written in exactly one place, and that same function is the only caller of
+`updateUser({ password })` in the codebase. An account with a name is therefore
+an account whose holder chose their own password, necessarily.
+
+The gate carries a sign out, because otherwise signing in as the wrong person
+is a trap: the layout sends you there and there has no front door.
+
 ## The stand-up, and the one thing it stores
 
 An agenda is normally a document somebody prepares, which means it is stale by

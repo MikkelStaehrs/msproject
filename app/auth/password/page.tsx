@@ -22,7 +22,11 @@ export default async function PasswordPage() {
   const { data: auth } = await supabase.auth.getUser()
 
   const { data: profile } = auth.user
-    ? await supabase.from('profile').select('full_name').eq('id', auth.user.id).maybeSingle()
+    ? await supabase
+        .from('profile')
+        .select('full_name, password_set_at')
+        .eq('id', auth.user.id)
+        .maybeSingle()
     : { data: null }
 
   const { data: tokens } = auth.user
@@ -37,6 +41,18 @@ export default async function PasswordPage() {
    * rather than configured, so it is right on the deployment, right in
    * development, and cannot drift from whatever the site is actually served on.
    */
+  /*
+   * A first arrival, and it is a fact about the account rather than a flag:
+   * no name yet, or a password nobody has replaced since the account was
+   * created for them. The app layout sends people here while either holds, so
+   * this page has to read as a welcome rather than as a settings screen.
+   */
+  const first =
+    auth.user !== null &&
+    (profile === null ||
+      profile.full_name === null ||
+      profile.password_set_at === null)
+
   const host = (await headers()).get('host') ?? ''
   const origin = host === '' ? '' : `${host.startsWith('localhost') ? 'http' : 'https'}://${host}`
 
@@ -45,13 +61,19 @@ export default async function PasswordPage() {
       {auth.user && (
         <div className="lbl mb-8 text-muted">{auth.user.email}</div>
       )}
-      <PasswordForm name={profile?.full_name ?? ''} />
+
+      <PasswordForm
+        name={profile?.full_name ?? ''}
+        first={first}
+      />
+
       {/*
-        Only for somebody already signed in. Arriving here from an invitation
-        link, the job is to choose a password; a connector to set up as well
-        would be two errands at the worst moment.
+        Only for somebody already set up. On a first arrival the job is a name
+        and a password; a connector to configure as well would be a second
+        errand at the worst possible moment, and the one thing on this page that
+        can wait.
       */}
-      {auth.user && <Connector url={origin} tokens={tokens ?? []} />}
+      {auth.user && !first && <Connector url={origin} tokens={tokens ?? []} />}
     </main>
   )
 }
