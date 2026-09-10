@@ -48,11 +48,11 @@ alter table spark
   add column complexity_score smallint check (complexity_score between 1 and 5),
 
   -- A per_unit saving without a stage cannot be turned into kroner at all.
-  constraint spark_stage_needed check (
+  add constraint spark_stage_needed check (
     saving_kind is distinct from 'per_unit' or saving_stage is not null
   ),
   -- A kind without a figure, or a figure without a kind, is half an answer.
-  constraint spark_saving_complete check (
+  add constraint spark_saving_complete check (
     (saving_kind is null and saving_value is null)
     or (saving_kind is not null and saving_value is not null)
   );
