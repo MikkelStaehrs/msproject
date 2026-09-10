@@ -1038,6 +1038,23 @@ differs from the current yardstick: a saving is a share of a target, the target
 moves with the volume, and silently recomputing a FY25 claim against FY26 would
 invent a promise nobody made.
 
+## The audit's blind spot, and the side that closed it
+
+Section 1 reads the SELECT lists, so it sees only the columns the code names.
+`select('*')` names none, and the fields are then picked off the result in
+TypeScript where nothing checks them. That is how `entry.standup_id` came to be
+read on the stand-up screen for an afternoon while the column did not exist:
+the audit reported 67 selects fine, and it was right about all sixty seven.
+
+So the check runs from the other side. Every interface in `lib/types.ts` whose
+name maps to a relation - camel case to snake, then `v_` for a view - must have
+every one of its fields on that relation. Shapes that name no relation, the ones
+`lib/cogs` and `lib/identity` pass around, are skipped: they are not claims
+about the database.
+
+Both sweeps in section 5 exist for the same reason. A hand-maintained list
+reports what it was told; a question asked of the schema reports what is there.
+
 ## Measuring isolation instead of reading it
 
 Sections 1 to 5 of `npm run audit` would all pass with the access model

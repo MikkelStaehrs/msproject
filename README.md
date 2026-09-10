@@ -47,7 +47,8 @@ npm run audit        # the running database against the code that talks to it
 ```
 
 `npm test` proves the arithmetic. `npm run audit` proves the other half: that
-every column the code asks for exists, that nothing at all is readable without
+every column the code asks for exists, that every field `lib/types.ts` says a
+row has is really there, that nothing at all is readable without
 logging in, that no row points at something deleted, and that every derived view
 still agrees with an independent recomputation from the raw tables. It only
 reads.

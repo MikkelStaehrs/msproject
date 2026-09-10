@@ -419,6 +419,44 @@ unwatched.length === 0
   ? ok('and no enum in the schema is going unwatched')
   : bad('enums the database has and this audit was never told about', unwatched)
 
+/*
+ * And every field lib/types.ts says a row has.
+ *
+ * Section 1 reads the SELECT lists, so it only sees columns the code names.
+ * `select('*')` names none, and the fields are then picked off the result in
+ * TypeScript where nothing checks them - which is exactly how `entry.standup_id`
+ * came to be read on the stand-up screen for an afternoon while the column did
+ * not exist. The audit said 67 selects were fine, and it was right about all
+ * sixty seven.
+ *
+ * So take the other side: every interface here that names a relation must have
+ * every one of its fields in that relation. Interfaces that name nothing - the
+ * shapes lib/cogs and lib/identity pass around - are skipped, because they are
+ * not claims about the database.
+ */
+const relationOf = (name: string) => {
+  const snake = name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
+  if (COLS.has(snake)) return snake
+  if (COLS.has(`v_${snake}`)) return `v_${snake}`
+  return null
+}
+
+const missing: string[] = []
+let checked = 0
+for (const m of types.matchAll(/export interface (\w+)[^{]*\{([\s\S]*?)\n\}/g)) {
+  const rel = relationOf(m[1])
+  if (!rel) continue
+  checked++
+  const known = COLS.get(rel)!
+  for (const line of m[2].split('\n')) {
+    const field = line.match(/^\s{2}(\w+)[?]?:/)
+    if (field && !known.has(field[1])) missing.push(`${m[1]}.${field[1]} is not a column on ${rel}`)
+  }
+}
+missing.length === 0
+  ? ok(`and every field on ${checked} row types exists on its relation`)
+  : bad('fields lib/types.ts claims a row has and the database does not', missing)
+
 // --- 6. Membership, measured rather than read --------------------------------
 
 /*
