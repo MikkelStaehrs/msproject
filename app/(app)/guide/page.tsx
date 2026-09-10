@@ -1348,6 +1348,15 @@ export default function GuidePage() {
             page to do anything about them.
           </P>
           <P>
+            The rail scrolls on its own, so walking down the list never takes
+            the piece under discussion off the screen. A project can be rolled up
+            with the small triangle on its heading, and the fold travels in the
+            address: send somebody the link and it arrives folded the way you
+            folded it. The triangle folds and the title opens, deliberately two
+            targets, because a row that did both would make it impossible to look
+            at a project without also collapsing it.
+          </P>
+          <P>
             One row per piece, not one per reason. A task with two blockers and a
             missed date is one conversation, and three rows for it would push
             somebody else&rsquo;s item off the screen. The other reasons are

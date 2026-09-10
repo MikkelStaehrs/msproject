@@ -104,6 +104,7 @@ export default async function StandupPage({
     bresolve?: string
     dnew?: string
     agree?: string
+    shut?: string
   }>
 }) {
   const {
@@ -120,6 +121,7 @@ export default async function StandupPage({
     bresolve: resolveBlocker,
     dnew: newDecision,
     agree: agreeing,
+    shut,
   } = await searchParams
 
   const supabase = await createClient()
@@ -303,10 +305,38 @@ export default async function StandupPage({
     ? blockers.find((b) => b.id === resolveBlocker && b.is_active)
     : undefined
 
+  /*
+   * Which projects are rolled up, in the URL rather than in a component.
+   *
+   * Same shape as the tree's `open=`: short ids joined by dots. It means a
+   * stand-up view can be sent to somebody and arrive folded the way you folded
+   * it, and it survives every form on this page submitting and coming back.
+   *
+   * Rolled up rather than rolled down: nothing starts hidden. The whole reason
+   * the portfolio is on this rail is that a ninth of it was invisible.
+   */
+  const short = (id: string) => id.slice(0, 8)
+  const shutSet = new Set((shut ?? '').split('.').filter(Boolean))
+  const isShut = (id: string) => shutSet.has(short(id))
+
   const here = (p: Part, extra = '') =>
-    `/standup?part=${p}${extra ? `&${extra}` : ''}`
+    `/standup?part=${p}${shutSet.size > 0 ? `&shut=${[...shutSet].join('.')}` : ''}${
+      extra ? `&${extra}` : ''
+    }`
   const at = (nodeId: string, extra = '') =>
     here('2', `task=${nodeId}${extra ? `&${extra}` : ''}`)
+
+  const rollHref = (projectId: string) => {
+    const next = new Set(shutSet)
+    if (next.has(short(projectId))) next.delete(short(projectId))
+    else next.add(short(projectId))
+    const carry = [
+      `part=2`,
+      next.size > 0 ? `shut=${[...next].join('.')}` : '',
+      taskId ? `task=${taskId}` : '',
+    ].filter(Boolean)
+    return `/standup?${carry.join('&')}`
+  }
 
   // --- Chapter three: which idea is worth becoming work ---------------------
   const yard = yardstickRes.data as Yardstick | null
@@ -592,12 +622,25 @@ export default async function StandupPage({
         </div>
       )}
 
-      {/* ================= 2. Until next time ================= */}
+      {/*
+        ================= 2. Until next time =================
+
+        The rail scrolls on its own rather than taking the page with it. A
+        stand-up is walked from a list, and a list you have to scroll the whole
+        page to reach the bottom of stops being a list: the piece under
+        discussion goes off screen the moment you look for the next one. So the
+        rail sticks and carries its own overflow, and the grid keeps a viewport
+        of height so there is always the scroll needed to seat it.
+
+        Below the breakpoint the two stack, which is the right answer there: a
+        340px column with its own scrollbar on a phone is two scrollbars
+        fighting.
+      */}
       {part === '2' && (
-        <div className="grid min-h-[76vh] grid-cols-1 lg:grid-cols-[340px_1fr]">
+        <div className="grid min-h-[76vh] grid-cols-1 lg:min-h-svh lg:grid-cols-[340px_1fr]">
           {/* The agenda, always in view */}
-          <aside className="border-b border-rule lg:border-b-0 lg:border-r">
-            <div className="border-b border-rule-strong px-5 lg:px-7 py-5">
+          <aside className="border-b border-rule lg:sticky lg:top-0 lg:h-svh lg:overflow-y-auto lg:border-b-0 lg:border-r">
+            <div className="sticky top-0 z-10 border-b border-rule-strong bg-paper px-5 lg:px-7 py-5">
               <h1 className="font-display text-[24px] font-medium leading-tight">
                 The whole portfolio
               </h1>
@@ -685,27 +728,42 @@ export default async function StandupPage({
             */}
             {portfolio.map(({ project, pieces }) => {
               const rest = pieces.filter((n) => !onAgenda.has(n.id))
+              const rolled = isShut(project.id)
               return (
                 <div key={project.id}>
-                  <Link
-                    href={at(project.id)}
-                    className={`flex items-baseline gap-3 border-y border-rule-strong px-5 lg:px-7 py-2 ${
-                      selected?.id === project.id ? 'bg-sheet' : 'hover:bg-sheet'
+                  <div
+                    className={`flex items-baseline gap-2.5 border-y border-rule-strong px-5 lg:px-7 py-2 ${
+                      selected?.id === project.id ? 'bg-sheet' : ''
                     }`}
                   >
+                    {/*
+                      Two targets on one row on purpose: the triangle folds, the
+                      title opens. A row that did both would make it impossible
+                      to look at a project without also collapsing it.
+                    */}
+                    <Link
+                      href={rollHref(project.id)}
+                      aria-label={rolled ? 'Unroll this project' : 'Roll this project up'}
+                      className="shrink-0 text-[9px] leading-none text-rule-strong hover:text-ink"
+                    >
+                      {rolled ? '▸' : '▾'}
+                    </Link>
                     <StatusMark
                       status={project.status}
                       blocked={state.get(project.id)?.is_blocked ?? false}
                     />
-                    <span className="lbl min-w-0 flex-1 truncate text-ink">
+                    <Link
+                      href={at(project.id)}
+                      className="lbl min-w-0 flex-1 truncate text-ink hover:text-green"
+                    >
                       {project.title}
-                    </span>
+                    </Link>
                     <span className="lbl-tight tabular-nums text-rule-strong">
-                      {pieces.length}
+                      {rolled ? `${rest.length} hidden` : pieces.length}
                     </span>
-                  </Link>
+                  </div>
 
-                  {rest.length === 0 ? (
+                  {rolled ? null : rest.length === 0 ? (
                     <p className="px-5 lg:px-7 py-2.5 text-[11px] text-rule-strong">
                       Everything alive here is already on the agenda above.
                     </p>
@@ -753,7 +811,7 @@ export default async function StandupPage({
                     })
                   )}
                 </div>
-              )
+                )
             })}
 
             <div className="px-5 lg:px-7 py-6">
