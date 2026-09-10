@@ -365,6 +365,8 @@ const PAIRS: [string, string, string][] = [
   ['decision', 'topic', 'DECISION_TOPICS'],
   ['spark', 'source', 'SPARK_SOURCES'],
   ['spark', 'state', 'SPARK_STATES'],
+  ['spark', 'saving_kind', 'SAVING_KINDS'],
+  ['template', 'category', 'NodeCategory'],
 ]
 const loose: string[] = []
 for (const [rel, col, name] of PAIRS) {
@@ -380,6 +382,26 @@ for (const [rel, col, name] of PAIRS) {
 }
 if (loose.length === 0) ok(`all ${PAIRS.length} closed sets are enums and match TypeScript`)
 else bad('closed sets that drifted or were never constrained', loose)
+
+/*
+ * The list above is written by hand, so the count it reports is a number I
+ * chose rather than a fact about the database. A new enum would slip past it
+ * in silence, which is exactly how the last one did. So ask the schema what
+ * enums it actually has and complain about any the list forgot. Views are left
+ * out: they re-expose their base table's columns, and checking the same enum
+ * twice under a second name proves nothing.
+ */
+const covered = new Set(PAIRS.map(([r, c]) => `${r}.${c}`))
+const unwatched: string[] = []
+for (const [rel, def] of Object.entries(spec.definitions)) {
+  if (rel.startsWith('v_')) continue
+  for (const [col, prop] of Object.entries((def as any).properties ?? {})) {
+    if ((prop as any).enum && !covered.has(`${rel}.${col}`)) unwatched.push(`${rel}.${col}`)
+  }
+}
+unwatched.length === 0
+  ? ok('and no enum in the schema is going unwatched')
+  : bad('enums the database has and this audit was never told about', unwatched)
 
 // --- Verdict ----------------------------------------------------------------
 
