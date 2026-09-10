@@ -212,6 +212,14 @@ export default function GuidePage() {
             colleague is not the moment for them to be invisible.
           </P>
           <P>
+            The single-person role fields carry a small arrow. Typing filters the
+            names; the arrow shows all of them whatever is already in the field,
+            which is the case that matters, because the field you are about to
+            correct is a full one. The field still takes anything typed into it
+            on purpose: most people named on a project will never sign in here,
+            and a picker that refused them would be worse than no picker.
+          </P>
+          <P>
             <strong className="font-medium">
               Roles and access are different lists.
             </strong>{' '}

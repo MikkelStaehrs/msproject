@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/server'
 import { addMember, removeMember } from '@/lib/member-actions'
 import { knownPeople, namedButLockedOut } from '@/lib/people'
 import { PeopleHint } from '@/components/people-list'
+import { PersonField } from '@/components/person-field'
 import { subtreeSet } from '@/lib/subtree'
 import { saveIdentity } from '@/lib/identity-actions'
 import { addDependency, removeDependency } from '@/lib/dependency-actions'
@@ -374,13 +375,21 @@ export default async function IdentityPage({
                 hint={f.hint}
                 span={f.key === 'steering' || f.key === 'members' || f.key === 'stakeholders' ? 4 : 1}
               >
-                <input
-                  name={`people_${f.key}`}
-                  defaultValue={identity.people[f.key] ?? ''}
-                  list={f.one ? 'known-people' : undefined}
-                  className="field"
-                />
-                {!f.one && <PeopleHint names={knownHere} />}
+                {f.one ? (
+                  <PersonField
+                    name={`people_${f.key}`}
+                    defaultValue={identity.people[f.key] ?? ''}
+                  />
+                ) : (
+                  <>
+                    <input
+                      name={`people_${f.key}`}
+                      defaultValue={identity.people[f.key] ?? ''}
+                      className="field"
+                    />
+                    <PeopleHint names={knownHere} />
+                  </>
+                )}
               </Field>
             ))}
           </div>

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createNode, updateNode } from '@/lib/node-actions'
 import { DeleteNodeButton } from '@/components/delete-node-button'
+import { PersonField } from '@/components/person-field'
 import { PEOPLE_FIELDS } from '@/lib/identity'
 import { Hint } from '@/components/ui'
 import {
@@ -258,12 +259,19 @@ export function NodeForm({
                   <span className="lbl block text-muted">
                     {f.hint ? <Hint text={f.hint}>{f.label}</Hint> : f.label}
                   </span>
-                  <input
-                    name={`people_${f.key}`}
-                    defaultValue={people[f.key] ?? ''}
-                    list={f.one ? PEOPLE_LIST : undefined}
-                    className="field"
-                  />
+                  {f.one ? (
+                    <PersonField
+                      name={`people_${f.key}`}
+                      defaultValue={people[f.key] ?? ''}
+                      listId={PEOPLE_LIST}
+                    />
+                  ) : (
+                    <input
+                      name={`people_${f.key}`}
+                      defaultValue={people[f.key] ?? ''}
+                      className="field"
+                    />
+                  )}
                 </label>
               ))}
             </div>
