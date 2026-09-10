@@ -380,6 +380,9 @@ const PAIRS: [string, string, string][] = [
   ['spark', 'state', 'SPARK_STATES'],
   ['spark', 'saving_kind', 'SAVING_KINDS'],
   ['template', 'category', 'NodeCategory'],
+  // Same enum as on `spark`, and it has to be: node_origin is a copy of what a
+  // spark claimed, read back by the same functions.
+  ['node_origin', 'saving_kind', 'SAVING_KINDS'],
 ]
 const loose: string[] = []
 for (const [rel, col, name] of PAIRS) {
