@@ -380,6 +380,10 @@ const PAIRS: [string, string, string][] = [
   ['spark', 'source', 'SPARK_SOURCES'],
   ['spark', 'state', 'SPARK_STATES'],
   ['spark', 'saving_kind', 'SAVING_KINDS'],
+  ['spark', 'worth_basis', 'WORTH_BASES'],
+  // The copy carries the same answer, and has to agree with it for the same
+  // reason node_origin.saving_kind does.
+  ['node_origin', 'worth_basis', 'WORTH_BASES'],
   ['template', 'category', 'NodeCategory'],
   // Same enum as on `spark`, and it has to be: node_origin is a copy of what a
   // spark claimed, read back by the same functions.

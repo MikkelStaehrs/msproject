@@ -12,10 +12,10 @@ import { ProgressScale, Rule, formatDate, formatDateLong } from '@/components/ui
 export const dynamic = 'force-dynamic'
 
 const KIND_LABEL: Record<string, string> = {
-  work: 'Arbejde',
+  work: 'Work',
   note: 'Note',
   meeting: 'Meeting',
-  risk: 'Risiko',
+  risk: 'Risk',
 }
 
 export default async function FridayPage() {
@@ -41,10 +41,11 @@ export default async function FridayPage() {
       {/* Context band */}
       <div className="frame">
         <div className="lbl pl-5 lg:pl-16 py-3 pr-5 text-muted">
-          {week ? `Uge ${week.number}` : 'Weekly report'}
+          {week ? `Week ${week.number}` : 'Weekly report'}
         </div>
         <div className="lbl border-l border-rule px-5 lg:px-10 py-3 text-muted">
-          {reports.length} running projects ·{' '}
+          {reports.length} running{' '}
+          {reports.length === 1 ? 'project' : 'projects'} ·{' '}
           {reports.filter((r) => r.saved?.submitted).length} reported
         </div>
         <div className="flex items-center justify-end gap-6 border-l border-rule py-3 pl-5 lg:pl-8 pr-5 lg:pr-16">
@@ -92,7 +93,7 @@ export default async function FridayPage() {
                 <span className="num text-[20px] text-ink">{r.context.progressPct} %</span>
                 <br />
                 <span className="tabular-nums">
-                  {r.context.leafDone} of {r.context.leafTotal} leaves
+                  {r.context.leafDone} of {r.context.leafTotal} tasks
                 </span>
               </div>
 

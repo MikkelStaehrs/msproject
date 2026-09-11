@@ -331,6 +331,9 @@ export interface NodeOrigin {
   complexity_score: number | null
   /** The yardstick the figure was weighed against. A saving needs its year. */
   fiscal_year: string | null
+  /** What the claim rested on at promotion. Frozen with the rest of this row. */
+  worth_basis: WorthBasis | null
+  worth_note: string | null
   promised_at: string
   promised_by: string | null
 }
@@ -406,6 +409,33 @@ export const TOKEN_SCOPE_HINT: Record<TokenScope, string> = {
   analyse: 'may also read the structure of your projects and the COGS reference',
 }
 
+/**
+ * What a claim rests on, answered when a thought becomes work.
+ *
+ * Three answers, and only silence is refused. A required AMOUNT would be worse
+ * than an empty field: not everything has a saving, and forcing one produces a
+ * fiction that outlives whoever typed it. `sold_units` is the house example of
+ * a reasonable inference written down as a fact and believed by everyone after.
+ *
+ * Null is not a fourth answer. It means the question has not been put, which is
+ * what every spark captured before this existed looks like.
+ */
+export const WORTH_BASES = ['saving', 'enabling', 'unknown'] as const
+export type WorthBasis = (typeof WORTH_BASES)[number]
+
+export const WORTH_BASIS_LABEL: Record<WorthBasis, string> = {
+  saving: 'It saves something',
+  enabling: 'No direct saving',
+  unknown: 'Not worked out yet',
+}
+
+/** Said inside the option, because the picker is server rendered. */
+export const WORTH_BASIS_HINT: Record<WorthBasis, string> = {
+  saving: 'hours, kroner per unit, or kroner a year',
+  enabling: 'it lets other work happen, or removes a risk. Say which',
+  unknown: 'and that is a real answer, not a blank',
+}
+
 export const SPARK_STATES = ['new', 'kept', 'dropped'] as const
 export type SparkState = (typeof SPARK_STATES)[number]
 
@@ -451,6 +481,12 @@ export interface Spark {
   complexity_score: number | null
   /** Why it was dropped. The reason dropped sparks are kept, not deleted. */
   verdict: string | null
+  /** What the claim rests on. Null means the question has not been put. */
+  worth_basis: WorthBasis | null
+  /** Why it is worth doing with no direct saving. Only for 'enabling'. */
+  worth_note: string | null
+  /** The log line it became, where it was an observation rather than new work. */
+  became_entry_id: string | null
   captured_at: string
   created_at: string
   updated_at: string

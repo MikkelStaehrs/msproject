@@ -4,7 +4,13 @@ import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { back, number, required, text } from '@/lib/form'
-import type { NodeType, SavingKind, SparkSource } from '@/lib/types'
+import {
+  WORTH_BASES,
+  type NodeType,
+  type SavingKind,
+  type SparkSource,
+  type WorthBasis,
+} from '@/lib/types'
 
 /**
  * Capturing a thought, and deciding about it later.
@@ -141,6 +147,92 @@ export async function deleteSpark(fd: FormData) {
 }
 
 /**
+ * What a thought claims, refused rather than half stored.
+ *
+ * Three answers and only silence rejected. The reasoning is in
+ * 20260911000003: a required AMOUNT is worse than an empty field, because not
+ * everything has a saving and forcing one produces a fiction that outlives
+ * whoever typed it.
+ *
+ * The three scores are required together or not at all. `priorityScore` returns
+ * null unless all three are set, deliberately, so two out of three buy nothing:
+ * either the candidate has a place in the benefit-against-complexity matrix or
+ * it does not.
+ *
+ * Read here and checked again by the database. The constraint is what a second
+ * caller cannot forget.
+ */
+function claimFrom(fd: FormData): {
+  worth_basis: WorthBasis
+  worth_note: string | null
+  saving_kind: SavingKind | null
+  saving_value: number | null
+  saving_stage: string | null
+  cost_score: number
+  benefit_score: number
+  complexity_score: number
+} {
+  const asked = text(fd, 'worth_basis')
+  if (asked === null) {
+    throw new Error(
+      'Say what this is worth before it becomes work. A saving, or no direct ' +
+        'saving with a reason, or not worked out yet. Any of the three is a ' +
+        'real answer; leaving it blank is not.',
+    )
+  }
+  if (!(WORTH_BASES as readonly string[]).includes(asked)) {
+    throw new Error(`Unknown basis: ${asked}`)
+  }
+  const basis = asked as WorthBasis
+
+  const kind = text(fd, 'saving_kind') as SavingKind | null
+  const value = number(fd, 'saving_value')
+  const note = text(fd, 'worth_note')
+
+  if (basis === 'saving') {
+    if (kind === null || value === null) {
+      throw new Error('A saving needs both a way of describing it and a figure.')
+    }
+    if (kind === 'per_unit' && text(fd, 'saving_stage') === null) {
+      throw new Error(
+        'A saving per unit needs the stage those units pass through: the ' +
+          'stages do not run the same quantities.',
+      )
+    }
+  }
+  if (basis === 'enabling' && note === null) {
+    throw new Error(
+      'Say in a sentence why it is worth doing. That sentence is the whole ' +
+        'answer when there is no figure, and it is what somebody reads in six ' +
+        'months.',
+    )
+  }
+
+  const score = (key: string, human: string) => {
+    const n = number(fd, key)
+    if (n === null) {
+      throw new Error(
+        `${human} is missing. All three are needed or none of them count: two ` +
+          'out of three make a score that looks comparable to a complete one ' +
+          'and is not.',
+      )
+    }
+    return Math.min(5, Math.max(1, Math.round(n)))
+  }
+
+  return {
+    worth_basis: basis,
+    worth_note: basis === 'enabling' ? note : null,
+    saving_kind: basis === 'saving' ? kind : null,
+    saving_value: basis === 'saving' ? value : null,
+    saving_stage: basis === 'saving' && kind === 'per_unit' ? text(fd, 'saving_stage') : null,
+    cost_score: score('cost_score', 'Cost'),
+    benefit_score: score('benefit_score', 'Benefit'),
+    complexity_score: score('complexity_score', 'Complexity'),
+  }
+}
+
+/**
  * It becomes work.
  *
  * The node is created where you say, with the spark's own words as its
@@ -172,9 +264,29 @@ export async function promoteSpark(fd: FormData) {
     throw new Error(`A ${type} needs somewhere to sit. Pick a parent.`)
   }
 
+  /*
+   * The claim is settled BEFORE the node exists.
+   *
+   * It is written onto the spark rather than only into node_origin, because the
+   * spark is what a person goes back and edits, and an origin holding a figure
+   * the thought itself never carried would be a claim with no author. The copy
+   * into node_origin below then freezes what was true at this moment, which is
+   * the whole point of that table.
+   */
+  const claim = claimFrom(fd)
+
+  const { error: claimError } = await supabase
+    .from('spark')
+    .update(claim)
+    .eq('id', id)
+
+  if (claimError) {
+    throw new Error(`Could not record what it is worth: ${claimError.message}`)
+  }
+
   const { data: spark, error: readError } = await supabase
     .from('spark')
-    .select('body, note, saving_kind, saving_value, saving_stage, cost_score, benefit_score, complexity_score')
+    .select('body, note, saving_kind, saving_value, saving_stage, cost_score, benefit_score, complexity_score, worth_basis, worth_note')
     .eq('id', id)
     .single()
 
@@ -261,6 +373,8 @@ ${spark.note}` : spark.body,
     cost_score: spark.cost_score,
     benefit_score: spark.benefit_score,
     complexity_score: spark.complexity_score,
+    worth_basis: spark.worth_basis,
+    worth_note: spark.worth_note,
     fiscal_year: yard?.fiscal_year ?? null,
   })
 
@@ -276,6 +390,78 @@ ${spark.note}` : spark.body,
     .eq('id', id)
 
   if (error) throw new Error(`The node was created but the spark did not close: ${error.message}`)
+
+  revalidatePath('/', 'layout')
+  back(fd)
+}
+
+/**
+ * The third way out: it was never work.
+ *
+ * Some thoughts are an observation about work that is ALREADY running. «The CT
+ * scan has been moved out of the analytics room» is not a task, and until now
+ * the only thing a spark could become was a node, so it had to be forced into
+ * being one or thrown away. Both are wrong, and the second is worse, because
+ * the thought was true.
+ *
+ * So it becomes a line in the log on the node it concerns. That is also the
+ * only route this application has ever had from «I thought of something» to
+ * `entry`, which is the table the entire weekly report is assembled from and
+ * which held two rows when this was written.
+ *
+ * NO GATE HERE, and that is deliberate rather than an omission. The claim is
+ * demanded of a thought that becomes WORK, because work is what gets ranked,
+ * funded and reported. An observation about work already underway owes nobody a
+ * business case, and asking for one is how you teach somebody not to write the
+ * line at all.
+ *
+ * The kind is `work` rather than `note`, matching quick entry: the kind follows
+ * from WHERE a line was written, and this is the same act as typing it into the
+ * overlay, arriving by a different door.
+ */
+export async function logSpark(fd: FormData) {
+  const supabase = await createClient()
+
+  const id = required(fd, 'id')
+  const nodeId = required(fd, 'node_id')
+
+  const { data: spark, error: readError } = await supabase
+    .from('spark')
+    .select('body, note')
+    .eq('id', id)
+    .single()
+
+  if (readError) throw new Error(`Could not read it: ${readError.message}`)
+
+  /*
+   * Both halves travel, as they do on promotion. The sentence is what was said;
+   * the note is what made it make sense, and a log line is exactly where that
+   * context is worth having. Two paragraphs, because prose renders them as such.
+   */
+  const body = spark.note ? `${spark.body}\n\n${spark.note}` : spark.body
+
+  const entryId = randomUUID()
+
+  const { error: entryError } = await supabase
+    .from('entry')
+    .insert({ id: entryId, node_id: nodeId, body, kind: 'work' })
+
+  if (entryError) throw new Error(`Could not write the log line: ${entryError.message}`)
+
+  /*
+   * `became_entry_id` beside `became_node_id`, never instead of it. «Became this
+   * node» and «was written onto this node» are different facts, and six months
+   * later nobody should have to work out which happened from the shape of the
+   * data.
+   */
+  const { error } = await supabase
+    .from('spark')
+    .update({ state: 'kept', became_node_id: nodeId, became_entry_id: entryId })
+    .eq('id', id)
+
+  if (error) {
+    throw new Error(`The line was written but the spark did not close: ${error.message}`)
+  }
 
   revalidatePath('/', 'layout')
   back(fd)

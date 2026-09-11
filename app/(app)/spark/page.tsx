@@ -7,6 +7,7 @@ import {
   deleteSpark,
   dropSpark,
   editSpark,
+  logSpark,
   promoteSpark,
   reopenSpark,
 } from '@/lib/spark-actions'
@@ -14,7 +15,13 @@ import { Hint, Prose, ProseFolded, Rule, formatDate } from '@/components/ui'
 import { Assessment } from '@/components/assessment'
 import { referenceFrom, stagesFrom } from '@/lib/cogs'
 import {
+  SAVING_KINDS,
+  SAVING_KIND_HINT,
+  SAVING_KIND_LABEL,
   SPARK_SOURCE_LABEL,
+  WORTH_BASES,
+  WORTH_BASIS_HINT,
+  WORTH_BASIS_LABEL,
   TYPE_HINT,
   TYPE_LABEL,
   type Node,
@@ -44,13 +51,14 @@ export default async function SparkPage({
 }: {
   searchParams: Promise<{
     keep?: string
+    log?: string
     drop?: string
     edit?: string
     assess?: string
     show?: string
   }>
 }) {
-  const { keep, drop, edit, assess, show = 'new' } = await searchParams
+  const { keep, log, drop, edit, assess, show = 'new' } = await searchParams
   const supabase = await createClient()
 
   const [sparkRes, nodeRes, yardstickRes, stageRes] = await Promise.all([
@@ -102,6 +110,7 @@ export default async function SparkPage({
   }
   const shown = sparks.filter((s) => s.state === show)
   const keeping = keep ? sparks.find((s) => s.id === keep) : undefined
+  const logging = log ? sparks.find((s) => s.id === log) : undefined
   const dropping = drop ? sparks.find((s) => s.id === drop) : undefined
   const editing = edit ? sparks.find((s) => s.id === edit) : undefined
   const here = `/spark?show=${show}`
@@ -301,6 +310,19 @@ export default async function SparkPage({
                           >
                             Make it work
                           </Link>
+                          {/*
+                            The third way out, and the common one nobody had a
+                            button for. A thought about work ALREADY running is
+                            not a task: forced through «Make it work» it becomes
+                            a task that is not a task, and dropped it is thrown
+                            away while being true.
+                          */}
+                          <Link
+                            href={`/spark?show=${show}&log=${s.id}`}
+                            className="lbl-tight text-rule-strong hover:text-green"
+                          >
+                            Log it on existing work
+                          </Link>
                           <Link
                             href={`/spark?show=${show}&drop=${s.id}`}
                             className="lbl-tight text-rule-strong hover:text-oxblood"
@@ -406,8 +428,173 @@ export default async function SparkPage({
                         </select>
                       </label>
                     </div>
+
+                    {/*
+                      THE GATE, and the reason it is here rather than optional
+                      on a page of its own.
+
+                      Seven thoughts were captured and none assessed, because
+                      assessing was a separate act you could always do later.
+                      Optional means never, and that is not a claim about
+                      discipline, it is what the table said after a fortnight.
+
+                      It asks for an ANSWER and never for an amount. A required
+                      budget on a thought that has none produces a 0 or a
+                      fiction, and a fiction in a column outlives whoever typed
+                      it: `sold_units` is the house example. So three answers are
+                      accepted and only silence is refused.
+                    */}
+                    <div className="mt-6 border-t border-rule pt-4">
+                      <div className="lbl text-muted">Before it becomes work</div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-x-5 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <label className="col-span-1 block sm:col-span-2">
+                          <span className="lbl text-muted">
+                            <Hint text="Any of the three is a real answer. Leaving it blank is not, which is the only thing this refuses.">
+                              What is it worth
+                            </Hint>
+                          </span>
+                          <select name="worth_basis" defaultValue="unknown" className="field">
+                            {WORTH_BASES.map((w) => (
+                              <option key={w} value={w}>
+                                {WORTH_BASIS_LABEL[w]} · {WORTH_BASIS_HINT[w]}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        {/*
+                          Both of the conditional fields are always rendered.
+                          This is a server component with no client state, so
+                          hiding one would need the page to know the answer
+                          before it is given. The server refuses the combinations
+                          that do not hold together, and says which.
+                        */}
+                        <label className="block">
+                          <span className="lbl text-muted">If it saves</span>
+                          <select name="saving_kind" defaultValue="" className="field">
+                            <option value="">not a saving</option>
+                            {SAVING_KINDS.map((k) => (
+                              <option key={k} value={k}>
+                                {SAVING_KIND_LABEL[k]} · {SAVING_KIND_HINT[k]}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="block">
+                          <span className="lbl text-muted">How much</span>
+                          <input name="saving_value" inputMode="decimal" className="field" />
+                        </label>
+
+                        <label className="col-span-1 block sm:col-span-2">
+                          <span className="lbl text-muted">
+                            <Hint text="Only for a saving per unit: the stages do not run the same quantities, so the same figure is worth more on one line than another.">
+                              Through which stage
+                            </Hint>
+                          </span>
+                          <select name="saving_stage" defaultValue="" className="field">
+                            <option value="">not per unit</option>
+                            {stages.map((v) => (
+                              <option key={v.stage} value={v.stage}>
+                                {v.stage} ·{' '}
+                                {new Intl.NumberFormat('en-GB').format(v.units)} units
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="col-span-1 block sm:col-span-2">
+                          <span className="lbl text-muted">
+                            <Hint text="Required when there is no direct saving. It is the whole answer in that case, and the thing somebody reads in six months.">
+                              Why it is worth doing anyway
+                            </Hint>
+                          </span>
+                          <input
+                            name="worth_note"
+                            placeholder="it lets the data platform start, and removes the manual step"
+                            className="field"
+                          />
+                        </label>
+                      </div>
+
+                      {/*
+                        All three or none. priorityScore returns null unless
+                        every one is set, because two out of three make a number
+                        that looks comparable to a complete one and is not. The
+                        matrix is the whole reason they exist.
+                      */}
+                      <div className="mt-4 grid grid-cols-1 gap-x-5 gap-y-3 sm:grid-cols-3">
+                        {[
+                          ['benefit_score', 'Benefit', '1 marginal, 5 large'],
+                          ['cost_score', 'Cost', '1 cheap, 5 expensive'],
+                          ['complexity_score', 'Complexity', '1 simple, 5 hairy'],
+                        ].map(([name, label_, hint]) => (
+                          <label key={name} className="block">
+                            <span className="lbl text-muted">
+                              <Hint text={hint}>{label_}</Hint>
+                            </span>
+                            <select name={name} defaultValue="3" className="field">
+                              {[1, 2, 3, 4, 5].map((n) => (
+                                <option key={n} value={n}>
+                                  {n}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="mt-4 flex items-center gap-3">
                       <button className="btn">Create it</button>
+                      <Link href={here} className="btn btn-ghost">
+                        Cancel
+                      </Link>
+                    </div>
+                  </form>
+                )}
+
+                {/*
+                  It was never work: a line in the log on work already running.
+
+                  No gate here, deliberately. The claim is demanded of a thought
+                  that becomes WORK, because work is what gets ranked, funded and
+                  reported upwards. An observation about something already
+                  underway owes nobody a business case, and asking for one is how
+                  you teach somebody not to write the line at all.
+                */}
+                {logging?.id === s.id && (
+                  <form
+                    action={logSpark}
+                    className="mt-4 ml-[82px] max-w-3xl border-l-2 border-rule-strong pl-4"
+                  >
+                    <input type="hidden" name="id" value={s.id} />
+                    <input type="hidden" name="redirectTo" value={`/spark?show=new`} />
+                    <label className="block">
+                      <span className="lbl text-muted">
+                        <Hint text="Every node, tasks included. A line belongs on the work it happened on, not on the box above it.">
+                          Which work is this about
+                        </Hint>
+                      </span>
+                      <select name="node_id" required defaultValue="" className="field">
+                        <option value="" disabled>
+                          Choose the node
+                        </option>
+                        {nodes.map((n) => (
+                          <option key={n.id} value={n.id}>
+                            {label(n.id)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="mt-2 max-w-prose text-[11px] leading-relaxed text-rule-strong">
+                      The thought becomes a log entry, word for word, with whatever
+                      was noted around it. No task is created, and the spark closes
+                      pointing at the line it became.
+                    </p>
+                    <div className="mt-4 flex items-center gap-3">
+                      <button className="btn">Write it in the log</button>
                       <Link href={here} className="btn btn-ghost">
                         Cancel
                       </Link>
