@@ -269,12 +269,33 @@ export default async function StandupPage({
   const walk = (nodeId: string, depth: number, into: Node[]) => {
     for (const kid of childrenOf.get(nodeId) ?? []) {
       depthOf.set(kid.id, depth)
-      if (!OVER.has(kid.status)) into.push(kid)
+      /*
+       * ACTIVE WORK, at the finest level it is described.
+       *
+       * This carried everything alive: every project with every piece under it
+       * that was not done or cancelled. On the real tree that is thirty five
+       * rows of which nineteen sit at «idea», and the room has decided it does
+       * not discuss work nobody has begun.
+       *
+       * «Active tasks» was the instruction and a literal reading of it was
+       * wrong. Eight nodes are active and only two are typed `task`; five of the
+       * rest are containers with active work underneath, which the work itself
+       * represents. But ONE is a subproject that is active with nothing active
+       * under it, and a filter on the type would have hidden a real piece of
+       * work with nothing below it to stand in.
+       *
+       * So the cut is the same one `v_node_progress` makes: the finest level at
+       * which the work is described. Active, with nothing active underneath.
+       */
+      const activeUnder = (childrenOf.get(kid.id) ?? []).some(
+        (g) => g.status === 'active',
+      )
+      if (kid.status === 'active' && !activeUnder) into.push(kid)
       walk(kid.id, depth + 1, into)
     }
   }
 
-  /** Every live project, with everything alive underneath it in tree order. */
+  /** Every project with active work under it, and that work. */
   const portfolio = nodes
     .filter((n) => n.parent_id === null && !OVER.has(n.status))
     .map((project) => {
@@ -282,6 +303,8 @@ export default async function StandupPage({
       walk(project.id, 1, pieces)
       return { project, pieces }
     })
+    // A project with nothing active under it is not on the agenda either.
+    .filter((p) => p.pieces.length > 0)
 
   const liveCount = portfolio.reduce((n, p) => n + p.pieces.length, 0)
 
@@ -369,13 +392,21 @@ export default async function StandupPage({
         where: quadrant(judgement),
       }
     })
-    .filter((w) => w.impact !== null || w.score !== null)
     .sort(
       (a, b) =>
         (b.impact?.shareOfTarget ?? -1) - (a.impact?.shareOfTarget ?? -1) ||
         (b.score ?? -99) - (a.score ?? -99),
     )
-  const unweighed = sparks.length - weighed.length
+  /*
+   * Everything in the inbox, not only what has been weighed.
+   *
+   * This chapter used to show the assessed ones and count the rest in a
+   * footnote, which produced an empty chapter: nothing gets assessed until
+   * somebody sits down and does it, and sitting down and doing it is what this
+   * chapter IS. The ones with a figure sort to the top, so the ranking still
+   * pays off where it exists without hiding what has none.
+   */
+  const unweighed = weighed.filter((w) => w.impact === null && w.score === null).length
 
   const needsAction = items.filter((i) => i.kind !== 'loose_end').length
 

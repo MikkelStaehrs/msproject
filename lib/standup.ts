@@ -33,7 +33,6 @@ export const CADENCE_DAYS = 7
  *   someone is waiting                                they may be in the room
  *   work whose date has passed                        it did not happen
  *   work due before the next stand-up                 it is about to
- *   nothing in its way and nobody has started it      the cheapest thing to fix
  *   something happened and nobody wrote a line        the record, not the work
  *
  * Waiting outranks lateness because a wait needs a person and a late task needs
@@ -44,7 +43,6 @@ export const AGENDA_ORDER = [
   'blocker',
   'overdue',
   'due_soon',
-  'ready',
   'loose_end',
 ] as const
 export type AgendaKind = (typeof AGENDA_ORDER)[number]
@@ -54,7 +52,6 @@ export const AGENDA_LABEL: Record<AgendaKind, string> = {
   blocker: 'Waiting',
   overdue: 'Past its date',
   due_soon: 'Before next time',
-  ready: 'Nothing in its way',
   loose_end: 'Unwritten',
 }
 
@@ -108,6 +105,21 @@ const day = (timestamp: string) => timestamp.slice(0, 10)
 const OVER = new Set(['done', 'cancelled'])
 
 /**
+ * What a stand-up is about: work somebody is actually doing.
+ *
+ * Not `idea`, not `planned`, not `paused`. The room is not interested in
+ * discussing a project nobody has begun, and a list that carries them is a list
+ * where the eight things in flight are outnumbered by the nineteen that are not.
+ *
+ * This is narrower than it was and narrower on a DIFFERENT axis than the version
+ * MASTER argued against. That one filtered by RULE, showing only what a dated
+ * rule had flagged, and it came to four pieces out of thirty five: the ranking
+ * was fine and the surface was hiding the work. This filters by STATUS, which
+ * hides nothing that anybody has started.
+ */
+const ACTIVE = 'active'
+
+/**
  * The agenda, in the order it should be walked.
  *
  * Projects themselves are left out of the dated kinds on purpose. A project is
@@ -123,6 +135,11 @@ export function agenda(input: AgendaInput): AgendaItem[] {
 
   for (const b of input.blockers) {
     if (b.resolved_at !== null) continue
+    /*
+     * On active work only. A blocker on something nobody has started is a note
+     * about a future problem, and the meeting is for the ones in the way now.
+     */
+    if (byId.get(b.node_id)?.status !== ACTIVE) continue
     const waited = daysBetween(day(b.opened_at), today)
     const late = b.expected_by !== null && b.expected_by < today
     items.push({
@@ -139,7 +156,7 @@ export function agenda(input: AgendaInput): AgendaItem[] {
   }
 
   for (const n of input.nodes) {
-    if (OVER.has(n.status) || n.completed_at !== null) continue
+    if (n.status !== ACTIVE || n.completed_at !== null) continue
 
     // A project is late because its parts are. Only the parts go on the list.
     const isProject = n.parent_id === null
@@ -173,25 +190,30 @@ export function agenda(input: AgendaInput): AgendaItem[] {
     }
 
     /*
-     * Ready and untouched. The cheapest item on the whole agenda: nothing is in
-     * the way and no decision is needed, somebody simply has not picked it up.
-     * Last of the work kinds because it is nobody else's emergency, and on the
-     * list at all because it is invisible everywhere else.
+     * «Ready and untouched» used to live here: planned or idea, nothing in its
+     * way, nobody has picked it up. It was the cheapest item on the agenda and
+     * it is gone, because it is the one rule that could only ever fire on work
+     * nobody had started, which is what this meeting has decided not to discuss.
+     *
+     * Losing it costs something real and it is worth naming rather than
+     * pretending otherwise: that work is now invisible on this page, and it was
+     * invisible everywhere else, which is why the rule existed. Bring it back by
+     * putting the status filter behind a choice rather than by reinstating the
+     * rule underneath one.
      */
-    if ((n.status === 'planned' || n.status === 'idea') && input.ready.get(n.id) === true) {
-      items.push({
-        kind: 'ready',
-        nodeId: n.id,
-        title: n.title,
-        who: null,
-        days: 0,
-        on: n.due_date,
-        why: 'Nothing is in its way and it has not been started. Who takes it?',
-      })
-    }
   }
 
   for (const l of input.looseEnds) {
+    /*
+     * The same cut, through the last door it could come in by.
+     *
+     * lib/loose-ends has its own rule and reports silence on `planned` work as
+     * well as active, which is right there: a scheduled task nobody has written
+     * about is worth a nudge. It is wrong HERE, and it slipped through on the
+     * first run: «Retrofit: CT Scan» arrived on an agenda that had just been
+     * narrowed to active work, wearing the one label that was not filtered.
+     */
+    if (byId.get(l.nodeId)?.status !== ACTIVE) continue
     items.push({
       kind: 'loose_end',
       nodeId: l.nodeId,

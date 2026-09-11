@@ -52,15 +52,14 @@ const blocker = (over: Partial<AgendaInput['blockers'][number]> = {}) => ({
 const oneOfEach = agenda({
   ...blank,
   nodes: [
+    node({ id: 'n1', title: 'The blocked one' }),
     node({ id: 'late', title: 'Late one', due_date: '2026-09-01' }),
     node({ id: 'soon', title: 'Soon one', due_date: '2026-09-12' }),
-    node({ id: 'idle', title: 'Idle one', status: 'planned' }),
   ],
   blockers: [
     blocker({ id: 'b-late', title: 'Overdue answer', expected_by: '2026-09-05' }),
     blocker({ id: 'b-open', title: 'Ordinary wait' }),
   ],
-  ready: new Map([['idle', true]]),
   looseEnds: [{ nodeId: 'late', what: 'Finished without a word', on: '2026-09-08' }],
 })
 check(
@@ -72,6 +71,7 @@ check(
 // --- Within a kind, the longest wait goes first ------------------------------
 const twoWaits = agenda({
   ...blank,
+  nodes: [node()],
   blockers: [
     blocker({ id: 'short', title: 'Short', opened_at: '2026-09-08T09:00:00Z' }),
     blocker({ id: 'long', title: 'Long', opened_at: '2026-07-01T09:00:00Z' }),
@@ -119,6 +119,7 @@ check(
   'a resolved blocker is over',
   agenda({
     ...blank,
+    nodes: [node()],
     blockers: [blocker({ resolved_at: '2026-09-02T10:00:00Z' })],
   }).length,
   0,
@@ -160,6 +161,7 @@ check(
 // --- Who the agenda needs ---------------------------------------------------
 const many = agenda({
   ...blank,
+  nodes: [node()],
   blockers: [
     blocker({ id: '1', title: 'One', waiting_on: 'Internal IT', opened_at: '2026-09-01T09:00:00Z' }),
     blocker({ id: '2', title: 'Two', waiting_on: 'Internal IT', opened_at: '2026-06-01T09:00:00Z' }),
@@ -205,6 +207,68 @@ check('and how much was written down', week.written, 2)
 const ever = movement(history, null)
 check('the first stand-up counts everything', ever.completed.length, 2)
 check('including every blocker ever opened', ever.opened.length, 2)
+
+// --- Only work somebody is actually doing ------------------------------------
+
+/*
+ * The room is not interested in a project nobody has begun. Every rule now
+ * looks at the status first, and these four cases are the whole of it: a
+ * blocker hanging on work that has not started is a note about a future
+ * problem, not something in the way today.
+ */
+for (const state of ['idea', 'planned', 'paused'] as const) {
+  check(
+    `a blocker on ${state} work is not on the agenda`,
+    agenda({ ...blank, nodes: [node({ status: state })], blockers: [blocker()] }).length,
+    0,
+  )
+  check(
+    `nor is a missed date on ${state} work`,
+    agenda({ ...blank, nodes: [node({ status: state, due_date: '2026-08-01' })] }).length,
+    0,
+  )
+}
+check(
+  'and the same blocker on active work is',
+  agenda({ ...blank, nodes: [node()], blockers: [blocker()] }).length,
+  1,
+)
+
+/*
+ * A blocker whose node is not in the set at all is dropped rather than shown
+ * without one. It cannot be placed, and an item on the agenda that nobody can
+ * open is worse than one that is missing.
+ */
+check(
+  'a blocker with no node to hang on is not shown',
+  agenda({ ...blank, nodes: [], blockers: [blocker()] }).length,
+  0,
+)
+
+/*
+ * The last door. lib/loose-ends reports silence on planned work as well, which
+ * is right there and wrong here, and it slipped through the first time: a
+ * planned task arrived on an agenda that had just been narrowed to active work,
+ * wearing the one label nobody had filtered.
+ */
+check(
+  'a loose end on planned work is not on the agenda',
+  agenda({
+    ...blank,
+    nodes: [node({ status: 'planned' })],
+    looseEnds: [{ nodeId: 'n1', what: 'Nothing written', on: '2026-09-08' }],
+  }).length,
+  0,
+)
+check(
+  'and the same loose end on active work is',
+  agenda({
+    ...blank,
+    nodes: [node()],
+    looseEnds: [{ nodeId: 'n1', what: 'Nothing written', on: '2026-09-08' }],
+  }).length,
+  1,
+)
 
 console.log(failed === 0 ? '\nAll tests passed.' : `\n${failed} test(s) failed.`)
 process.exitCode = failed === 0 ? 0 : 1
