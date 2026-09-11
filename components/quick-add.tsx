@@ -9,7 +9,19 @@ import {
 import { isKnownRecipient } from '@/lib/recipient'
 import type { EntryKind } from '@/lib/types'
 
-export type QuickTarget = { id: string; title: string; path: string }
+export type QuickTarget = {
+  id: string
+  title: string
+  path: string
+  /**
+   * The project this node sits under, so the picker can open it.
+   *
+   * Carried rather than looked up: the overlay has no tree of its own, only
+   * this flat list, and a node's address is /p/<project>?focus=<node>. Without
+   * it the search could find a node and not say where it lives.
+   */
+  projectId: string
+}
 
 const LAST_TARGET_KEY = 'msp:last-target'
 
@@ -165,6 +177,25 @@ export function QuickAdd({
     }
   }
 
+  /**
+   * Go to the node instead of writing on it.
+   *
+   * The search was already here and could only be used one way: find the right
+   * node, then write a line on it. There was no way to simply GO there, so the
+   * one place in the application that can find anything across every project
+   * could not be used to look at anything.
+   *
+   * Reusing this picker rather than building a second search is the point. Two
+   * searches over the same tree would eventually rank differently, and the one
+   * you were not looking at would be the one that was right.
+   */
+  function goTo(t: QuickTarget) {
+    close()
+    router.push(
+      t.id === t.projectId ? `/p/${t.projectId}` : `/p/${t.projectId}?focus=${t.id}`,
+    )
+  }
+
   function onPickKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Escape' || e.key === 'Tab') {
       e.preventDefault()
@@ -178,7 +209,15 @@ export function QuickAdd({
     } else if (e.key === 'Enter') {
       e.preventDefault()
       const chosen = filtered[pickIndex]
-      if (chosen) {
+      if (!chosen) return
+      /*
+       * Enter still does what it always did. Opening is the modifier, because
+       * the overlay's whole reason for existing is writing a line in five
+       * seconds, and the habit that already exists must not become the one that
+       * needs a second thought.
+       */
+      if (e.ctrlKey || e.metaKey) goTo(chosen)
+      else {
         setTargetId(chosen.id)
         setMode('write')
       }
@@ -353,25 +392,45 @@ export function QuickAdd({
                     <div className="px-6 py-4 text-[12px] text-muted">No nodes match.</div>
                   ) : (
                     filtered.map((t, i) => (
-                      <button
+                      <div
                         key={t.id}
-                        type="button"
                         onMouseEnter={() => setPickIndex(i)}
-                        onClick={() => {
-                          setTargetId(t.id)
-                          setMode('write')
-                        }}
-                        className={`block w-full px-6 py-2 text-left text-[12.5px] ${
+                        className={`flex w-full items-baseline gap-3 px-6 text-[12.5px] ${
                           i === pickIndex ? 'bg-paper text-ink' : 'text-muted'
                         }`}
                       >
-                        {t.path}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTargetId(t.id)
+                            setMode('write')
+                          }}
+                          className="min-w-0 flex-1 py-2 text-left"
+                        >
+                          {t.path}
+                        </button>
+                        {/*
+                          Only on the row under the cursor. A link on all forty
+                          rows is a column of noise, and the keyboard has this on
+                          Ctrl+Enter anyway: this is here so somebody who never
+                          reads the hint line can still find out the picker goes
+                          somewhere.
+                        */}
+                        {i === pickIndex && (
+                          <button
+                            type="button"
+                            onClick={() => goTo(t)}
+                            className="shrink-0 py-2 text-[10px] uppercase tracking-[0.14em] text-rule-strong hover:text-green"
+                          >
+                            Open
+                          </button>
+                        )}
+                      </div>
                     ))
                   )}
                 </div>
                 <div className="border-t border-rule px-6 py-2.5 text-[10px] tracking-[0.14em] text-rule-strong uppercase">
-                  Arrow keys select, Enter confirms, Esc goes back
+                  Arrow keys select, Enter writes on it, Ctrl+Enter opens it, Esc goes back
                 </div>
               </>
             )}

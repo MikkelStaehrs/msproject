@@ -567,6 +567,19 @@ export default function GuidePage() {
             platform. The grey line above the buttons always says what will be written
             before you press Enter. Read it if you are unsure.
           </P>
+          <P>
+            <strong className="font-medium">
+              That picker is also how you find anything across every project.
+            </strong>{' '}
+            It searches every node you can see, in any order of words, so it
+            answers &laquo;where was that task&raquo; as well as &laquo;where
+            shall I write this&raquo;. <Code>Enter</Code> picks it to write on,{' '}
+            <Code>Ctrl+Enter</Code> opens it instead, and the highlighted row
+            carries an Open for the mouse. Deliberately the same search rather
+            than a second one: two searches over the same tree would eventually
+            rank differently, and the one you were not looking at would be the
+            one that was right.
+          </P>
 
           <H id="tree">The tree</H>
           <P>
@@ -1839,7 +1852,8 @@ export default function GuidePage() {
                 <span className="text-muted">for the reason</span>
               </div>
               <div>
-                <Code>Tab</Code> <span className="text-muted">change target</span>
+                <Code>Tab</Code> <span className="text-muted">find a node,</span>{' '}
+                <Code>Ctrl+Enter</Code> <span className="text-muted">to open it</span>
               </div>
             </div>
 

@@ -29,14 +29,21 @@ function buildTargets(nodes: Flat[]): QuickTarget[] {
   }
 
   const out: QuickTarget[] = []
-  const walk = (key: string, prefix: string) => {
+  /*
+   * The project travels down with the walk, because the picker can now open a
+   * node as well as write on it and a node's address is its project plus
+   * itself. Worked out here, where the descent already knows which root it came
+   * from, rather than climbing back up per row later.
+   */
+  const walk = (key: string, prefix: string, projectId: string | null) => {
     for (const n of children.get(key) ?? []) {
       const path = prefix === '' ? n.title : `${prefix} › ${n.title}`
-      out.push({ id: n.id, title: n.title, path })
-      walk(n.id, path)
+      const root = projectId ?? n.id
+      out.push({ id: n.id, title: n.title, path, projectId: root })
+      walk(n.id, path, root)
     }
   }
-  walk('__root__', '')
+  walk('__root__', '', null)
   return out
 }
 
