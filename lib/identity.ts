@@ -144,6 +144,21 @@ export const PID_FIELDS: FieldDef[] = [
 ]
 
 /**
+ * The goal, pulled out of the PID by key rather than by position.
+ *
+ * It is the one field in that list with a consequence: an ordinary project
+ * cannot be created from an idea without it, because a project nobody can state
+ * the point of is one nobody can ever close. The rest of the PID is narrative
+ * for the company's own document and drives nothing here.
+ *
+ * Derived from PID_FIELDS rather than written out again, so the list stays the
+ * one place the fields are declared, and reordering it cannot silently move
+ * which field the page treats as the goal.
+ */
+export const GOAL_FIELD = PID_FIELDS.find((f) => f.key === 'goal')!
+export const NARRATIVE_FIELDS = PID_FIELDS.filter((f) => f.key !== 'goal')
+
+/**
  * Approval is the gate that separates an idea from a funded project. Without
  * it you cannot tell whether `cost` is an estimate or a granted amount.
  */

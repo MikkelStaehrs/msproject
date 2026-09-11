@@ -21,7 +21,8 @@ import {
   EDITABLE_ADMIN_FIELDS,
   approvalVariance,
   PEOPLE_FIELDS,
-  PID_FIELDS,
+  GOAL_FIELD,
+  NARRATIVE_FIELDS,
   formatAmount,
   formatYears,
   readIdentity,
@@ -316,6 +317,21 @@ export default async function IdentityPage({
               follow the source when the source changes, and this one contradicted
               it in the reader's face on the same screen.
             */}
+            {/*
+              The goal sits with the description rather than at the bottom of
+              the narrative, because it is the one field down there with a
+              consequence: an ordinary project cannot be created from an idea
+              without it. It was the first of eight paragraphs nobody had filled
+              in, which is a good way to lose the one that matters.
+            */}
+            <Field label={GOAL_FIELD.label} hint={GOAL_FIELD.hint} span={4}>
+              <textarea
+                name={`pid_${GOAL_FIELD.key}`}
+                rows={2}
+                defaultValue={identity.pid[GOAL_FIELD.key] ?? ''}
+                className="field resize-y"
+              />
+            </Field>
             {EDITABLE_ADMIN_FIELDS.map((f) => (
               <Field key={f.key} label={f.label} hint={f.hint}>
                 <input
@@ -328,83 +344,10 @@ export default async function IdentityPage({
           </div>
         </Section>
 
-        <Section title="Framing" note="This deadline belongs to the parent project and controls nothing in the tree">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-            <Field label="Start">
-              <input
-                type="date"
-                name="start_date"
-                defaultValue={project.start_date ?? ''}
-                className="field"
-              />
-            </Field>
-            <Field label="Deadline">
-              <input
-                type="date"
-                name="due_date"
-                defaultValue={project.due_date ?? ''}
-                className="field"
-              />
-            </Field>
-            {/*
-              «Priority» was a typed High/Medium/Low that fed nothing. It sat
-              beside priorityScore, which is 2 x benefit - cost - complexity and
-              is what the stand-up actually ranks by, what the assessment shows
-              and what the origin keeps. Two words for one meaning, and the inert
-              one was the one that looked official on the brief.
-              
-              A project's priority now comes from the judgement made when the
-              idea became work, which is a figure somebody can argue with rather
-              than a label somebody chose.
-            */}
-            <Field label="Responsible" hint="Who is responsible for the project. The same field as owner on the nodes in the tree, so it is also used when a task is waiting on someone.">
-              <input
-                name="owner"
-                defaultValue={project.owner ?? ''}
-                className="field"
-              />
-            </Field>
-            <Field label="Location" hint="Where it physically happens: hall, line or plant. It decides who is affected and which shutdown window you need." span={4}>
-              <input
-                name="location"
-                defaultValue={identity.location ?? ''}
-                placeholder="Hall 3, packing line 2"
-                className="field"
-              />
-            </Field>
-          </div>
-        </Section>
-
-        <Section title="People" note="The roles the company system notifies">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-            {PEOPLE_FIELDS.map((f) => (
-              <Field
-                key={f.key}
-                label={f.label}
-                hint={f.hint}
-                span={f.key === 'steering' || f.key === 'members' || f.key === 'stakeholders' ? 4 : 1}
-              >
-                {f.one ? (
-                  <PersonField
-                    name={`people_${f.key}`}
-                    defaultValue={identity.people[f.key] ?? ''}
-                  />
-                ) : (
-                  <>
-                    <input
-                      name={`people_${f.key}`}
-                      defaultValue={identity.people[f.key] ?? ''}
-                      className="field"
-                    />
-                    <PeopleHint names={knownHere} />
-                  </>
-                )}
-              </Field>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="Economics" note="One amount, one unit, one place">
+        <Section
+          title="Economics"
+          note="The annual benefit is what a strategy adds up, and the grant is what committed money is measured against"
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <Field label="Benefit per year">
               <input
@@ -578,9 +521,91 @@ export default async function IdentityPage({
           </div>
         </Section>
 
-        <Section title="Project basis" note="PID'ens fortalte felter">
+        <Section
+          title="People"
+          note="Also set on any node in the tree. A role naming somebody with no access is flagged below"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+            {PEOPLE_FIELDS.map((f) => (
+              <Field
+                key={f.key}
+                label={f.label}
+                hint={f.hint}
+                span={f.key === 'steering' || f.key === 'members' || f.key === 'stakeholders' ? 4 : 1}
+              >
+                {f.one ? (
+                  <PersonField
+                    name={`people_${f.key}`}
+                    defaultValue={identity.people[f.key] ?? ''}
+                  />
+                ) : (
+                  <>
+                    <input
+                      name={`people_${f.key}`}
+                      defaultValue={identity.people[f.key] ?? ''}
+                      className="field"
+                    />
+                    <PeopleHint names={knownHere} />
+                  </>
+                )}
+              </Field>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Framing" note="This deadline belongs to the parent project and controls nothing in the tree">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+            <Field label="Start">
+              <input
+                type="date"
+                name="start_date"
+                defaultValue={project.start_date ?? ''}
+                className="field"
+              />
+            </Field>
+            <Field label="Deadline">
+              <input
+                type="date"
+                name="due_date"
+                defaultValue={project.due_date ?? ''}
+                className="field"
+              />
+            </Field>
+            {/*
+              «Priority» was a typed High/Medium/Low that fed nothing. It sat
+              beside priorityScore, which is 2 x benefit - cost - complexity and
+              is what the stand-up actually ranks by, what the assessment shows
+              and what the origin keeps. Two words for one meaning, and the inert
+              one was the one that looked official on the brief.
+              
+              A project's priority now comes from the judgement made when the
+              idea became work, which is a figure somebody can argue with rather
+              than a label somebody chose.
+            */}
+            <Field label="Responsible" hint="Who is responsible for the project. The same field as owner on the nodes in the tree, so it is also used when a task is waiting on someone.">
+              <input
+                name="owner"
+                defaultValue={project.owner ?? ''}
+                className="field"
+              />
+            </Field>
+            <Field label="Location" hint="Where it physically happens: hall, line or plant. It decides who is affected and which shutdown window you need." span={4}>
+              <input
+                name="location"
+                defaultValue={identity.location ?? ''}
+                placeholder="Hall 3, packing line 2"
+                className="field"
+              />
+            </Field>
+          </div>
+        </Section>
+
+        <Section
+          title="For the company document"
+          note="Narrative the PID asks for. Nothing here is read by anything in this tool"
+        >
           <div className="flex flex-col gap-4">
-            {PID_FIELDS.map((f) => (
+            {NARRATIVE_FIELDS.map((f) => (
               <Field key={f.key} label={f.label} hint={f.hint}>
                 <textarea
                   name={`pid_${f.key}`}
