@@ -12,7 +12,7 @@ import {
   type AgendaItem,
 } from '@/lib/standup'
 import { holdStandup, reopenStandup } from '@/lib/standup-actions'
-import { setNodeStatus } from '@/lib/node-actions'
+import { moveInStandupQueue, setNodeStatus } from '@/lib/node-actions'
 import {
   basisCoversTarget,
   impactOf,
@@ -104,7 +104,6 @@ export default async function StandupPage({
     bresolve?: string
     dnew?: string
     agree?: string
-    shut?: string
   }>
 }) {
   const {
@@ -121,7 +120,6 @@ export default async function StandupPage({
     bresolve: resolveBlocker,
     dnew: newDecision,
     agree: agreeing,
-    shut,
   } = await searchParams
 
   const supabase = await createClient()
@@ -257,7 +255,6 @@ export default async function StandupPage({
    */
   const OVER = new Set(['done', 'cancelled'])
 
-  const depthOf = new Map<string, number>()
   const childrenOf = new Map<string, Node[]>()
   for (const n of nodes) {
     if (n.parent_id !== null) {
@@ -266,7 +263,6 @@ export default async function StandupPage({
   }
   const walk = (nodeId: string, depth: number, into: Node[]) => {
     for (const kid of childrenOf.get(nodeId) ?? []) {
-      depthOf.set(kid.id, depth)
       /*
        * ACTIVE WORK, at the finest level it is described.
        *
@@ -312,12 +308,33 @@ export default async function StandupPage({
     // A project with nothing active under it is not on the agenda either.
     .filter((p) => p.pieces.length > 0)
 
-  const liveCount = portfolio.reduce((n, p) => n + p.pieces.length, 0)
+  /*
+   * ONE QUEUE, ACROSS EVERY PROJECT.
+   *
+   * The rail grouped by project, which fights the thing this chapter is for: a
+   * stand-up asks «what do we take first», and that is answered over all the
+   * work at once or not at all. Grouping by project answers it once per
+   * project, which is a different and less useful question.
+   *
+   * `standup_order` decides, null last, and among the unranked the tree's own
+   * order. So an untouched list looks exactly as it did before anybody ranked
+   * anything, and the first move ranks it in the order it was already shown.
+   */
+  const queue = portfolio
+    .flatMap((p) => p.pieces.map((n) => ({ node: n, project: p.project })))
+    .sort(
+      (a, b) =>
+        (a.node.standup_order ?? Number.MAX_SAFE_INTEGER) -
+          (b.node.standup_order ?? Number.MAX_SAFE_INTEGER) ||
+        a.node.sort_order - b.node.sort_order ||
+        a.node.id.localeCompare(b.node.id),
+    )
 
-  /** The order Prev and Next walk: the agenda first, then the rest. */
+  const liveCount = queue.length
+
+  /** The order Prev and Next walk: the queue, as shown. */
   const order = [
-    ...rows.map((r) => r.nodeId),
-    ...portfolio.flatMap((p) => [p.project.id, ...p.pieces.map((n) => n.id)]),
+    ...queue.map((q) => q.node.id),
   ].filter((id, i, all) => all.indexOf(id) === i)
 
   const selected = (taskId ? byId.get(taskId) : undefined) ?? byId.get(order[0] ?? '')
@@ -335,38 +352,10 @@ export default async function StandupPage({
     ? blockers.find((b) => b.id === resolveBlocker && b.is_active)
     : undefined
 
-  /*
-   * Which projects are rolled up, in the URL rather than in a component.
-   *
-   * Same shape as the tree's `open=`: short ids joined by dots. It means a
-   * stand-up view can be sent to somebody and arrive folded the way you folded
-   * it, and it survives every form on this page submitting and coming back.
-   *
-   * Rolled up rather than rolled down: nothing starts hidden. The whole reason
-   * the portfolio is on this rail is that a ninth of it was invisible.
-   */
-  const short = (id: string) => id.slice(0, 8)
-  const shutSet = new Set((shut ?? '').split('.').filter(Boolean))
-  const isShut = (id: string) => shutSet.has(short(id))
-
   const here = (p: Part, extra = '') =>
-    `/standup?part=${p}${shutSet.size > 0 ? `&shut=${[...shutSet].join('.')}` : ''}${
-      extra ? `&${extra}` : ''
-    }`
+    `/standup?part=${p}${extra ? `&${extra}` : ''}`
   const at = (nodeId: string, extra = '') =>
     here('2', `task=${nodeId}${extra ? `&${extra}` : ''}`)
-
-  const rollHref = (projectId: string) => {
-    const next = new Set(shutSet)
-    if (next.has(short(projectId))) next.delete(short(projectId))
-    else next.add(short(projectId))
-    const carry = [
-      `part=2`,
-      next.size > 0 ? `shut=${[...next].join('.')}` : '',
-      taskId ? `task=${taskId}` : '',
-    ].filter(Boolean)
-    return `/standup?${carry.join('&')}`
-  }
 
   // --- Chapter three: which idea is worth becoming work ---------------------
   const yard = yardstickRes.data as Yardstick | null
@@ -739,118 +728,106 @@ export default async function StandupPage({
               thirty one are the ones a toggle would hide again.
             */}
             {/*
-              Just the work, by project.
+              One queue, in the order the room decided, across every project.
               
-              The ranked agenda used to sit above this, and on chapter two it was
-              a second telling of chapter one: the same blocked pieces, listed
-              again, under a heading that said «Waiting». Chapter one is where
-              those are discussed. This chapter is for walking the work and
-              deciding what happens before next time.
+              It was grouped by project, which answers «what do we take first»
+              once per project. A stand-up asks it once, over all the work, so
+              the grouping had to go and the project becomes a line under the
+              title instead.
             */}
-            {portfolio.map(({ project, pieces }) => {
-              const rest = pieces
-              const rolled = isShut(project.id)
-              return (
-                <div key={project.id}>
+            {queue.length === 0 ? (
+              <p className="px-5 lg:pl-16 lg:pr-7 py-6 text-[13px] text-muted">
+                Nothing is under way. Everything is either finished or has not
+                been started.
+              </p>
+            ) : (
+              queue.map(({ node: n, project }, i) => {
+                const isOn = selected?.id === n.id
+                const late = n.due_date !== null && n.due_date < today
+                const held = n.status === 'paused'
+                return (
                   <div
-                    className={`flex items-baseline gap-2.5 border-y border-rule-strong px-5 lg:pl-16 lg:pr-7 py-2 ${
-                      selected?.id === project.id ? 'bg-sheet' : ''
+                    key={n.id}
+                    className={`border-b border-rule px-5 lg:pl-16 lg:pr-7 py-2.5 ${
+                      isOn ? 'bg-sheet' : 'hover:bg-sheet'
                     }`}
                   >
-                    {/*
-                      Two targets on one row on purpose: the triangle folds, the
-                      title opens. A row that did both would make it impossible
-                      to look at a project without also collapsing it.
-                    */}
-                    <Link
-                      href={rollHref(project.id)}
-                      aria-label={rolled ? 'Unroll this project' : 'Roll this project up'}
-                      className="shrink-0 text-[9px] leading-none text-rule-strong hover:text-ink"
-                    >
-                      {rolled ? '▸' : '▾'}
-                    </Link>
-                    <StatusMark
-                      status={project.status}
-                      blocked={state.get(project.id)?.is_blocked ?? false}
-                    />
-                    <Link
-                      href={at(project.id)}
-                      className="lbl min-w-0 flex-1 truncate text-ink hover:text-green"
-                    >
-                      {project.title}
-                    </Link>
-                    <span className="lbl-tight tabular-nums text-rule-strong">
-                      {rolled ? `${rest.length} hidden` : pieces.length}
-                    </span>
-                  </div>
-
-                  {rolled ? null : (
-                    rest.map((n) => {
-                      const isOn = selected?.id === n.id
-                      const late = n.due_date !== null && n.due_date < today
-                      const held = n.status === 'paused'
-                      return (
-                        <div
-                          key={n.id}
-                          className={`flex items-baseline gap-2.5 border-b border-rule py-2 pr-5 lg:pr-7 ${
-                            isOn ? 'bg-sheet' : 'hover:bg-sheet'
+                    <div className="flex items-baseline gap-2.5">
+                      <StatusMark
+                        status={n.status}
+                        blocked={state.get(n.id)?.is_blocked ?? false}
+                      />
+                      <Link
+                        href={at(n.id)}
+                        className={`min-w-0 flex-1 truncate text-[13px] ${
+                          isOn ? 'font-medium text-ink' : 'text-ink'
+                        } ${held ? 'line-through decoration-rule-strong' : ''}`}
+                      >
+                        {n.title}
+                      </Link>
+                      {n.due_date && (
+                        <span
+                          className={`shrink-0 text-[10px] tabular-nums ${
+                            late ? 'text-oxblood' : 'text-rule-strong'
                           }`}
-                          style={{
-                            paddingLeft: `${20 + (depthOf.get(n.id) ?? 1) * 11}px`,
-                          }}
                         >
-                          <StatusMark
-                            status={n.status}
-                            blocked={state.get(n.id)?.is_blocked ?? false}
-                          />
-                          <Link
-                            href={at(n.id)}
-                            className={`min-w-0 flex-1 truncate text-[12.5px] ${
-                              isOn ? 'font-medium text-ink' : 'text-muted'
-                            } ${held ? 'line-through decoration-rule-strong' : ''}`}
-                          >
-                            {n.title}
-                          </Link>
-                          {/*
-                            Park it, or pick it up again, without leaving the row.
-                            
-                            The meeting's own verb: something is either being
-                            worked on before next time or it is not, and deciding
-                            that is most of what chapter two is for. The full
-                            status picker is still on the piece itself, for the
-                            other four states that are not a weekly decision.
-                          */}
-                          <form action={setNodeStatus} className="shrink-0">
-                            <input type="hidden" name="id" value={n.id} />
-                            <input
-                              type="hidden"
-                              name="status"
-                              value={held ? 'active' : 'paused'}
-                            />
-                            <input type="hidden" name="redirectTo" value={at(n.id)} />
-                            <button
-                              className="text-[10px] text-rule-strong hover:text-green"
-                              title={held ? 'Pick it up again' : 'Park it until it matters'}
-                            >
-                              {held ? 'resume' : 'hold'}
-                            </button>
-                          </form>
-                          {n.due_date && (
-                            <span
-                              className={`shrink-0 text-[10px] tabular-nums ${
-                                late ? 'text-oxblood' : 'text-rule-strong'
-                              }`}
-                            >
-                              {formatDate(n.due_date)}
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
+                          {formatDate(n.due_date)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 flex items-baseline gap-3">
+                      <span className="min-w-0 flex-1 truncate text-[10.5px] text-muted">
+                        {project.title}
+                      </span>
+                      {/*
+                        Ranking and parking, the two things this chapter decides,
+                        on the row rather than on the piece. Both are one press,
+                        because a meeting does not wait while somebody navigates.
+                      */}
+                      <form action={moveInStandupQueue} className="shrink-0">
+                        <input type="hidden" name="id" value={n.id} />
+                        <input type="hidden" name="direction" value="up" />
+                        <input type="hidden" name="redirectTo" value={at(n.id)} />
+                        <button
+                          disabled={i === 0}
+                          className="px-0.5 text-[10px] text-rule-strong hover:text-ink disabled:opacity-25"
+                          title="Take it earlier"
+                        >
+                          ▲
+                        </button>
+                      </form>
+                      <form action={moveInStandupQueue} className="shrink-0">
+                        <input type="hidden" name="id" value={n.id} />
+                        <input type="hidden" name="direction" value="down" />
+                        <input type="hidden" name="redirectTo" value={at(n.id)} />
+                        <button
+                          disabled={i === queue.length - 1}
+                          className="px-0.5 text-[10px] text-rule-strong hover:text-ink disabled:opacity-25"
+                          title="Take it later"
+                        >
+                          ▼
+                        </button>
+                      </form>
+                      <form action={setNodeStatus} className="shrink-0">
+                        <input type="hidden" name="id" value={n.id} />
+                        <input
+                          type="hidden"
+                          name="status"
+                          value={held ? 'active' : 'paused'}
+                        />
+                        <input type="hidden" name="redirectTo" value={at(n.id)} />
+                        <button
+                          className="text-[10px] text-rule-strong hover:text-green"
+                          title={held ? 'Pick it up again' : 'Park it until it matters'}
+                        >
+                          {held ? 'resume' : 'hold'}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
                 )
-            })}
+              })
+            )}
 
           </aside>
 

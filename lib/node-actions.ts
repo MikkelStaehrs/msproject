@@ -305,3 +305,64 @@ export async function moveNodeInOrder(fd: FormData) {
   revalidatePath('/', 'layout')
   redirect(String(fd.get('redirectTo') ?? '/'))
 }
+
+/**
+ * Move one piece of work up or down the stand-up's queue.
+ *
+ * The same helper the tree uses, over a different set: everything in flight
+ * across every project, rather than one node's siblings. `sort_order` could not
+ * do this even in principle, because siblings are a per-parent set and this
+ * queue crosses them, and because that column drives the WBS codes: ranking a
+ * task first this week must not renumber it in the work breakdown.
+ *
+ * Unranked rows are pulled into the numbering the first time anybody moves
+ * anything. Until then they are null and sort last, which is honest: nobody has
+ * said what order they go in.
+ */
+export async function moveInStandupQueue(fd: FormData) {
+  const supabase = await createClient()
+  const id = required(fd, 'id')
+  const direction = required(fd, 'direction') === 'up' ? 'up' : 'down'
+
+  /*
+   * The queue is what the stand-up walks: started, and not finished. The same
+   * cut the page makes, made again here rather than passed in, because an
+   * action that reorders a set the caller describes can be pointed at any set
+   * at all.
+   */
+  const { data: inFlight } = await supabase
+    .from('node')
+    .select('id, standup_order, sort_order')
+    .in('status', ['active', 'paused'])
+    .is('completed_at', null)
+    .order('sort_order')
+
+  const rows = (inFlight ?? []) as {
+    id: string
+    standup_order: number | null
+    sort_order: number
+  }[]
+
+  /*
+   * Null sorts last, and among the nulls the tree's own order decides. So the
+   * first move on an untouched list ranks everything in the order it was
+   * already being shown, which is the only order anybody has agreed to.
+   */
+  const queue: Sortable[] = rows
+    .map((r, i) => ({
+      id: r.id,
+      sort_order: r.standup_order ?? 1_000_000 + i,
+    }))
+    .sort((a, b) => a.sort_order - b.sort_order)
+
+  for (const change of reorder(queue, id, direction)) {
+    const { error } = await supabase
+      .from('node')
+      .update({ standup_order: change.sort_order })
+      .eq('id', change.id)
+    if (error) throw new Error(`Could not reorder: ${error.message}`)
+  }
+
+  revalidatePath('/', 'layout')
+  redirect(String(fd.get('redirectTo') ?? '/'))
+}

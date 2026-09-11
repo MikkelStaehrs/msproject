@@ -61,6 +61,14 @@ export interface Node {
   standup_id: string | null
   created_at: string
   updated_at: string
+  /**
+   * The order work in flight is taken in, decided at the stand-up.
+   *
+   * Not `sort_order`: that is position among siblings and drives the WBS codes,
+   * so a task ranked first this week must not renumber in the work breakdown.
+   * Null is unranked and sorts last.
+   */
+  standup_order: number | null
 }
 
 export interface Blocker {
