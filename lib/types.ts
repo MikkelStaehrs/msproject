@@ -379,6 +379,33 @@ export const SAVING_KIND_HINT: Record<SavingKind, string> = {
   annual: 'already there',
 }
 
+/**
+ * What a credential handed to the Claude app may do.
+ *
+ * `capture` is what a token has always meant: create a spark, read its owner's
+ * own inbox, add a paragraph to a thought already in it. `analyse` is that plus
+ * reading the structure of the projects its owner is a member of and the COGS
+ * reference, so an idea can be argued with before it becomes work.
+ *
+ * Two things about this are deliberate. Existing tokens stay `capture`, because
+ * a capability granted by a migration rather than by a person is one nobody
+ * knows they handed out. And neither scope writes anything but a spark: the
+ * model may argue, it may never be the source of a stored number.
+ */
+export const TOKEN_SCOPES = ['capture', 'analyse'] as const
+export type TokenScope = (typeof TOKEN_SCOPES)[number]
+
+export const TOKEN_SCOPE_LABEL: Record<TokenScope, string> = {
+  capture: 'Capture only',
+  analyse: 'Capture and read',
+}
+
+/** What choosing it hands over, said where the choice is made. */
+export const TOKEN_SCOPE_HINT: Record<TokenScope, string> = {
+  capture: 'may add to your inbox, and read nothing',
+  analyse: 'may also read the structure of your projects and the COGS reference',
+}
+
 export const SPARK_STATES = ['new', 'kept', 'dropped'] as const
 export type SparkState = (typeof SPARK_STATES)[number]
 

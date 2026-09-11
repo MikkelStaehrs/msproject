@@ -3,8 +3,20 @@
 import { useActionState } from 'react'
 import { createToken, revokeToken } from '@/lib/token-actions'
 import { formatDate } from '@/components/ui'
+import {
+  TOKEN_SCOPES,
+  TOKEN_SCOPE_HINT,
+  TOKEN_SCOPE_LABEL,
+  type TokenScope,
+} from '@/lib/types'
 
-type Token = { id: string; name: string; created_at: string; last_used_at: string | null }
+type Token = {
+  id: string
+  name: string
+  created_at: string
+  last_used_at: string | null
+  scope: TokenScope
+}
 
 /**
  * Connecting the Claude app.
@@ -13,10 +25,16 @@ type Token = { id: string; name: string; created_at: string; last_used_at: strin
  * go and look it up later because only its hash is stored, which is the whole
  * reason a stolen database row is not a working credential.
  *
- * What the copy has to get across is small and specific: this thing can put
- * text in your inbox and it can do nothing else. People are right to be wary of
- * pasting a credential into another application, and the honest answer to that
- * wariness is the size of what it opens.
+ * What the copy has to get across is small and specific: the size of what this
+ * thing opens. People are right to be wary of pasting a credential into another
+ * application, and the honest answer to that wariness is a plain sentence about
+ * the blast radius rather than reassurance.
+ *
+ * Which is why the scope is a choice made here rather than a default applied
+ * quietly. A capture token puts text in your inbox and reads nothing. An
+ * analyse token also reads the shape of your projects and the COGS reference,
+ * so Claude can argue with an idea before it becomes work, and that is strictly
+ * more to lose. Neither can change anything but a spark, at any scope.
  */
 export function Connector({ url, tokens }: { url: string; tokens: Token[] }) {
   const [made, action, pending] = useActionState(createToken, null)
@@ -47,14 +65,30 @@ export function Connector({ url, tokens }: { url: string; tokens: Token[] }) {
         <p className="mt-4 text-[13px] text-oxblood">{made.error}</p>
       )}
 
-      <form action={action} className="mt-5 flex items-end gap-3">
-        <label className="block flex-1">
+      {/*
+        The hint sits inside each option rather than under the select, for the
+        same reason it does on the node type picker: this is a plain
+        uncontrolled select, and a line beneath it can only ever describe one of
+        the two.
+      */}
+      <form action={action} className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end lg:grid-cols-[1fr_1fr_auto]">
+        <label className="block">
           <span className="lbl text-muted">What will hold it</span>
           <input
             name="name"
             placeholder="Claude on my phone"
             className="field"
           />
+        </label>
+        <label className="block">
+          <span className="lbl text-muted">What it may do</span>
+          <select name="scope" defaultValue="capture" className="field">
+            {TOKEN_SCOPES.map((sc) => (
+              <option key={sc} value={sc}>
+                {TOKEN_SCOPE_LABEL[sc]} · {TOKEN_SCOPE_HINT[sc]}
+              </option>
+            ))}
+          </select>
         </label>
         <button disabled={pending} className="btn">
           {pending ? 'Making' : 'Make a token'}
@@ -65,7 +99,18 @@ export function Connector({ url, tokens }: { url: string; tokens: Token[] }) {
         <div className="mt-6 divide-y divide-rule border-y border-rule">
           {tokens.map((t) => (
             <div key={t.id} className="flex items-baseline gap-4 py-2.5">
-              <span className="min-w-0 flex-1 text-[13px]">{t.name}</span>
+              <span className="min-w-0 flex-1 text-[13px]">
+                {t.name}
+                {/*
+                  Said on every row, not only the ones that can read. A list
+                  where the wider capability is the one with a mark on it reads
+                  as an exception; both stated, the difference is a fact about
+                  each credential and revoking the right one needs no guesswork.
+                */}
+                <span className="lbl-tight ml-2 text-rule-strong">
+                  {TOKEN_SCOPE_LABEL[t.scope]}
+                </span>
+              </span>
               <span className="lbl-tight shrink-0 text-rule-strong">
                 {t.last_used_at
                   ? `used ${formatDate(t.last_used_at.slice(0, 10))}`

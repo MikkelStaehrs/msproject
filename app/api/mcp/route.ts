@@ -143,6 +143,60 @@ const APPEND = {
   },
 } as const
 
+/**
+ * READING, and the line that makes it safe.
+ *
+ * A spark is a thought that has not been tested against the COGS strategy yet.
+ * That test is already arithmetic in the application - a saving becomes a share
+ * of the year's target, and a benefit against a complexity places it in the
+ * matrix - and what has never existed is help producing the numbers the test
+ * takes in. That part is a conversation: is this already a task somewhere, is
+ * the saving real, should the idea be stretched, what does this sort of thing
+ * cost.
+ *
+ * So these two READ. Nothing here writes, and there is no path from this
+ * endpoint to a score: the three judgements are typed by a person into the form
+ * on /spark, exactly as before. What a conversation produces that is worth
+ * keeping goes back through `add_to_idea`, which appends and cannot replace.
+ *
+ * The model may argue. It may never be the source of a stored number.
+ *
+ * Both need a token made with the «Capture and read» scope. A capture token
+ * gets the same refusal as an invalid one, deliberately: the database cannot
+ * tell a caller which of the two was wrong without that being a way of probing
+ * for both.
+ */
+const WORK = {
+  name: 'list_work',
+  title: 'The work already in Task Studio',
+  description:
+    'The projects and tasks in Task Studio that the token owner is a member ' +
+    'of: what it is called, where it sits in the tree, what type it is and ' +
+    'what state it is in. ' +
+    'Call it BEFORE arguing that an idea is worth doing, for one specific ' +
+    'reason: an idea that is already a task somewhere is not a new idea, and ' +
+    'saying so is more useful than assessing it a second time. ' +
+    'It is structure only. There are no descriptions, no prices and no ' +
+    'documents here, so do not report on what a piece of work contains or ' +
+    'costs from this, and do not guess at it.',
+  inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+} as const
+
+const TARGET = {
+  name: 'read_target',
+  title: 'What a saving is measured against',
+  description:
+    'The COGS reference: the yardstick for the year, the volumes each process ' +
+    'stage actually ran, and the strategy headings. ' +
+    'Call it before putting a number on what an idea is worth. The strategy ' +
+    'is to take one euro of cost out of every unit, every year, and a saving ' +
+    'only means something against the unit the target is per: use the figures ' +
+    'this returns rather than any you remember or can derive from elsewhere. ' +
+    'Where a figure is missing, say it is not known. An invented denominator ' +
+    'is how a saving comes to be reported as a share of a target nobody set.',
+  inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+} as const
+
 type Rpc = { jsonrpc?: string; id?: unknown; method?: string; params?: Record<string, unknown> }
 
 const reply = (id: unknown, result: unknown) =>
@@ -150,6 +204,24 @@ const reply = (id: unknown, result: unknown) =>
 
 const fail = (id: unknown, code: number, message: string) =>
   NextResponse.json({ jsonrpc: '2.0', id, error: { code, message } })
+
+/**
+ * Why a read was refused, without saying which of the two it was.
+ *
+ * The function raises the same sentence for an unknown token and for a token
+ * that is real but capture only, because a reply that told them apart would be
+ * a way of probing for both. The endpoint knows something the database does
+ * not, though: that the tool just called is one of the reading ones. So it can
+ * name the likely fix without naming the cause, which is the useful half.
+ */
+const scopeHint = (message: string) =>
+  /not valid here/i.test(message)
+    ? message +
+      ' Reading needs a token made with the «Capture and read» scope. A ' +
+      'capture only token can add to the inbox and nothing else. Make one on ' +
+      'the Account page in Task Studio and replace the value in this ' +
+      "connector's authorization header."
+    : message
 
 /** A tool that failed is reported inside the result, not as a protocol error. */
 const toolError = (id: unknown, message: string) =>
@@ -208,7 +280,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (method === 'tools/list') {
-    return reply(id, { tools: [CAPTURE, LIST, APPEND] })
+    return reply(id, { tools: [CAPTURE, LIST, APPEND, WORK, TARGET] })
   }
 
   if (method !== 'tools/call') {
@@ -373,6 +445,76 @@ export async function POST(request: NextRequest) {
           text: 'Added it to that thought. Nothing that was already there was changed.',
         },
       ],
+    })
+  }
+
+  if (params.name === WORK.name) {
+    const { data, error } = await supabase.rpc('list_work', { token })
+
+    if (error) return toolError(id, scopeHint(error.message))
+
+    const rows = (data ?? []) as {
+      id: string
+      parent_id: string | null
+      project_id: string
+      title: string
+      type: string
+      status: string
+    }[]
+
+    if (rows.length === 0) {
+      return toolError(
+        id,
+        'No work is visible to this token. Either nothing has been created ' +
+          'yet, or its owner is not a member of any project.',
+      )
+    }
+
+    /*
+     * The path is built by walking UP from each row rather than descending.
+     * The rows arrive ordered for reading, not for building, so a parent is
+     * not guaranteed to have been seen before its child; walking up needs only
+     * the map and is right whatever order they came in.
+     */
+    const titleOf = new Map(rows.map((r) => [r.id, r.title]))
+    const parentOf = new Map(rows.map((r) => [r.id, r.parent_id]))
+    const pathOf = (rowId: string) => {
+      const parts: string[] = []
+      let at: string | null = rowId
+      // Bounded by the row count, so a parent_id that somehow points into a
+      // cycle cannot hang the request.
+      for (let step = 0; at !== null && step <= rows.length; step += 1) {
+        parts.unshift(titleOf.get(at) ?? '?')
+        at = parentOf.get(at) ?? null
+      }
+      return parts.join(' › ')
+    }
+
+    const listed = rows
+      .map((r) => `${pathOf(r.id)}  [${r.type}, ${r.status}]`)
+      .join('\n')
+
+    return reply(id, {
+      content: [{ type: 'text', text: `${rows.length} pieces of work:\n${listed}` }],
+      structuredContent: { work: rows.map((r) => ({ ...r, path: pathOf(r.id) })) },
+    })
+  }
+
+  if (params.name === TARGET.name) {
+    const { data, error } = await supabase.rpc('read_reference', { token })
+
+    if (error) return toolError(id, scopeHint(error.message))
+
+    return reply(id, {
+      content: [
+        {
+          type: 'text',
+          text:
+            'The reference a saving is weighed against:\n' +
+            JSON.stringify(data, null, 2),
+        },
+      ],
+      structuredContent: data as Record<string, unknown>,
     })
   }
 

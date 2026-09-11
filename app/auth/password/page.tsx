@@ -32,7 +32,7 @@ export default async function PasswordPage() {
   const { data: tokens } = auth.user
     ? await supabase
         .from('spark_token')
-        .select('id, name, created_at, last_used_at')
+        .select('id, name, created_at, last_used_at, scope')
         .order('created_at', { ascending: false })
     : { data: null }
 

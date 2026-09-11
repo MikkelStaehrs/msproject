@@ -1491,6 +1491,96 @@ sentence mentioning an A|B splitter is not turned into a table.
 `/api/mcp` is open in middleware and closed one layer down. Sending a JSON-RPC
 call to a login redirect would be the wrong answer to the wrong question.
 
+## Arguing with an idea, before it is work
+
+A spark is a thought that has not been tested against the strategy yet. The test
+itself already exists and is arithmetic: `lib/cogs.ts` turns a saving into a
+share of the year's target, `lib/priority.ts` places a benefit against a
+complexity in the matrix the company already ranks candidates with. Neither has
+ever been the hard part.
+
+The hard part is producing the two numbers the test takes in, and that is a
+conversation rather than a calculation. Is this already a task somewhere. Is the
+saving real or is it the same hour counted twice. Should the idea be stretched,
+because the version worth doing is bigger than the one that was said out loud.
+What does this sort of equipment actually cost. None of those is derivable from
+anything in this database, and all of them are things a person is better at
+answering with something to argue against.
+
+**The model may argue. It may never be the source of a stored number.**
+
+That is the whole line, and everything below follows from it. It is not a
+softening of «no language model in the app», which was always about the weekly
+report: the status text is assembled from log entries and never rewritten, so
+the report cannot invent a week that did not happen. That still holds and is
+untouched. What is new is a different category: **advice on a judgement a person
+then makes.** `lib/priority.ts` says of the three scores that only a person can
+make them, and that stays true, because nothing here can write one.
+
+**So the reach is read only, and the write path already existed.** `add_to_idea`
+appends to a spark's note and cannot replace what is there, and `lib/prose.ts`
+already renders bold and pipe tables wherever written text appears. An analysis
+worth keeping is therefore a paragraph on the thought it is about, in the words
+it was argued in, with no new table, no new entity and no new write surface. The
+one property that made the note tool safe to hand to a model, that it only ever
+adds, is what makes it the right place to put the answer as well.
+
+**Claude reads, the deployment holds no keys.** The alternative was for the
+application to call a model itself, and it was refused for two reasons rather
+than one. It would have given this deployment its first real secret, ahead of
+the Power Automate signature. And it would have sent project data to a third
+party as a side effect of a feature, which is a decision about data before it is
+a decision about software.
+
+**Reading is a separate scope on the token, and that is the part worth
+defending.** A token has meant exactly one thing since it was introduced: may
+create a spark, and nothing else. Hang reading off the same credential and every
+token ever minted silently gains it, including ones handed out while that
+sentence was true and believed. A capability granted by a migration rather than
+by a person is one nobody knows they are holding, and therefore one nobody
+revokes. So `spark_token.scope` defaults to `capture`, existing tokens keep
+exactly what they had, and reading requires a token deliberately made for it on
+the Account page.
+
+**What an `analyse` token buys if it is stolen**, stated plainly because the
+capture token's version of this sentence is in the section above and this one is
+wider: the shape of the portfolio its owner can already see, titles, where they
+sit, type and status, and the company's COGS reference. Not descriptions, not
+cost lines, not vendors, not documents, not a project its owner is not on, and
+nothing at all that can be changed. Descriptions are left out on purpose: a
+description is substance, and substance is what the note is for.
+
+**Identity comes from the token, and the membership join is written a second
+time.** `can_see_node` answers the same question for the application and reads
+`auth.uid()`, which is null here and always will be: there is no session behind
+an MCP call. So `token_owner` is the token's equivalent of `auth.uid()`, and
+`list_work` descends from the roots its owner is a member of, applying
+membership once at the top and inheriting it, which is the cut the rest of the
+application already uses. Two spellings of one rule is a thing this project
+otherwise refuses, so they sit beside each other deliberately and the reason is
+written at both: same join, same inheritance, different source of identity.
+
+`token_owner` also folded four copies of «who is this» into one. Each of the
+three original functions inlined the hash, the lookup, the null check and the
+`last_used_at` stamp, which was fine while there was one shape of credential and
+stopped being fine the moment there were two. A scope checked in one place and
+not the others is a scope that is not checked.
+
+**A refusal says the same sentence whatever was wrong.** An unknown token and a
+capture-only token get one message, because a reply that told them apart would
+be a way of probing for both. The endpoint adds the likely fix without naming
+the cause, which it can do honestly: it knows the tool just called was one of
+the reading ones, which the database does not.
+
+**What is deliberately still not built.** Writing onto a project, which was
+refused before and is refused again for the same reason. Reading cost lines and
+vendors, because the price sparring that would justify it needs the outside
+world rather than what this company has already paid. And a general «analyse
+this node» button in the application, because a surface that is not attached to
+a moment where somebody is already stuck is one that gets used twice.
+
+---
+
 ## Two limits that only exist in production
 
 **A server action's request body is capped at 4.5 MB on Vercel.** Documents
@@ -1565,7 +1655,11 @@ actions that cast whatever arrived. `20260904000002` makes them enums.
 
 ## Deliberately not built
 
-- **No language model in the app.** The status text is assembled from log entries,
-  never rewritten. The tool changes the collection and the phrasing, not the substance
+- **No language model writing anything this application computes.** The status
+  text is assembled from log entries, never rewritten; the tool changes the
+  collection and the phrasing, not the substance. Claude may ARGUE with an idea
+  through the read tools on `/api/mcp`, and the answer lands as a paragraph on
+  the spark's note, but no model is the source of a stored number. See «Arguing
+  with an idea, before it is work»
 - **No mail.** The Status Update form notifies four roles; we do not. No integrations
   in v1

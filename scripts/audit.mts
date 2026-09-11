@@ -376,6 +376,7 @@ const PAIRS: [string, string, string][] = [
   ['cost', 'recurrence', 'COST_RECURRENCES'], ['cost', 'budget', 'COST_BUDGETS'],
   ['cost', 'currency', 'COST_CURRENCIES'], ['cost', 'kind', 'COST_KINDS'],
   ['decision', 'topic', 'DECISION_TOPICS'],
+  ['spark_token', 'scope', 'TOKEN_SCOPES'],
   ['spark', 'source', 'SPARK_SOURCES'],
   ['spark', 'state', 'SPARK_STATES'],
   ['spark', 'saving_kind', 'SAVING_KINDS'],
