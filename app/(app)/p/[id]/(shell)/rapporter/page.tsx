@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ProjectFrame } from '@/components/project-frame'
 import { createClient } from '@/lib/supabase/server'
+import { QueryFailure, firstError } from '@/lib/failure'
 import { formatDate, formatDateLong } from '@/components/ui'
 import type { Report } from '@/lib/types'
 
@@ -14,13 +15,21 @@ export default async function ReportsPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data } = await supabase
+  const res = await supabase
     .from('report')
     .select('*')
     .eq('node_id', id)
     .order('period_end', { ascending: false })
 
-  const reports = (data ?? []) as Report[]
+  /*
+   * An archive that cannot be read renders as «no saved reports yet», which is
+   * the same sentence a project genuinely gets in its first week. One of those
+   * invites you to go and write one; the other is a fault.
+   */
+  const failure = firstError([res])
+  if (failure) return <QueryFailure message={failure} />
+
+  const reports = (res.data ?? []) as Report[]
 
   return (
     <ProjectFrame projectId={id} frameNodeId={id}>

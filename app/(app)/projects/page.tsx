@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { QueryFailure, firstError } from '@/lib/failure'
 import { formatMoney } from '@/lib/cost'
 import { readIdentity } from '@/lib/identity'
 import { NodeForm } from '@/components/node-form'
@@ -43,6 +44,17 @@ export default async function ProjectsPage({
     supabase.from('v_node_state').select('*'),
     supabase.from('v_node_cost').select('*'),
   ])
+
+  const failure = firstError([
+    nodeRes,
+    progressRes,
+    nextRes,
+    blockerRes,
+    descRes,
+    stateRes,
+    costRes,
+  ])
+  if (failure) return <QueryFailure message={failure} />
 
   const nodes = (nodeRes.data ?? []) as Node[]
   const state = new Map(((stateRes.data ?? []) as NodeState[]).map((s) => [s.node_id, s]))

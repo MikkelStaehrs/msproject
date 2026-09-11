@@ -12,6 +12,7 @@ import {
   type StatusUpdate,
   type Week,
 } from '@/lib/report'
+import { firstError } from '@/lib/failure'
 import type {
   ActiveBlocker,
   Entry,
@@ -49,8 +50,35 @@ export type ProjectReport = {
 }
 
 /**
+ * Named so a caller can tell a database that is behind the code from a genuine
+ * fault in the assembly. The page catches this one and shows the message; it
+ * does not catch anything else.
+ */
+export class ReportDataError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ReportDataError'
+  }
+}
+
+/**
  * Collects the weekly report for every running project. Both the page and the
  * server action use this one, so what is stored is what was shown.
+ *
+ * THROWS ON A FAILED QUERY, rather than reporting an empty week.
+ *
+ * This is the one read in the application where `data ?? []` is not merely
+ * unhelpful but actively dangerous, because the caller is not only a page. A
+ * failed `entry` read yields no lines, `buildStatusComment` assembles a status
+ * out of nothing, and a quiet week and a broken query produce the same
+ * sentence. On the page that text is copied into the company system by hand;
+ * through `saveReport` it is written to `report` with `submitted` set and a
+ * context snapshot of zeroes, and that snapshot exists precisely because it
+ * cannot be recomputed once the tree has moved on.
+ *
+ * So the failure is raised rather than returned. A caller that renders can
+ * catch it and say so; a caller that WRITES must not be able to ignore it, and
+ * an exception is the only shape both of those read the same way.
  */
 export async function collectReports(
   supabase: SupabaseClient,
@@ -69,6 +97,18 @@ export async function collectReports(
       supabase.from('v_node_descendant').select('root_id, node_id'),
       supabase.from('v_node_cost').select('*'),
     ])
+
+  const failure = firstError([
+    nodeRes,
+    progressRes,
+    nextRes,
+    blockerRes,
+    entryRes,
+    reportRes,
+    descRes,
+    costRes,
+  ])
+  if (failure) throw new ReportDataError(failure)
 
   const nodes = (nodeRes.data ?? []) as Node[]
   const progress = new Map(

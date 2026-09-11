@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { addDays, today, today as todayIso } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
+import { QueryFailure, firstError } from '@/lib/failure'
 import { QuickAddTrigger } from '@/components/quick-add-trigger'
 import { Prose, Rule, formatDate } from '@/components/ui'
 import {
@@ -72,6 +73,9 @@ export default async function TemplatesPage({
     supabase.from('template').select('*').order('name'),
     supabase.from('node').select('*').order('sort_order'),
   ])
+
+  const failure = firstError([templateRes, nodeRes])
+  if (failure) return <QueryFailure message={failure} />
 
   const templates = (templateRes.data ?? []).map((t) => ({
     ...t,

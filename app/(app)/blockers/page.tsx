@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { QueryFailure, firstError } from '@/lib/failure'
 import { addDays, daysBetween, today as todayIso } from '@/lib/date'
 import { medianWait } from '@/lib/recipient'
 import { readRecipients } from '@/lib/recipient-data'
@@ -30,6 +31,15 @@ export default async function BlockersPage({
     supabase.from('node').select('id, parent_id, title'),
     supabase.from('v_node_descendant').select('root_id, node_id'),
   ])
+
+  /*
+   * Every figure on this page is a count of waiting days, and a count assembled
+   * from an empty list is a number rather than a blank: «0 days waited» reads
+   * as nobody holding anything up, which is the one thing this page exists to
+   * refuse to say.
+   */
+  const failure = firstError([blockerRes, nodeRes, descendantRes])
+  if (failure) return <QueryFailure message={failure} />
 
   const all = (blockerRes.data ?? []) as BlockerDays[]
   const nodes = (nodeRes.data ?? []) as {

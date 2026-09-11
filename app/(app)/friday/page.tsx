@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { today as todayIso } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
-import { collectReports } from '@/lib/report-data'
+import { ReportDataError, collectReports } from '@/lib/report-data'
+import { QueryFailure } from '@/lib/failure'
 import { saveReport, unsubmitReport } from '@/lib/report-actions'
 import { CopyField } from '@/components/copy-field'
 import { StageSelect } from '@/components/stage-select'
@@ -20,7 +21,19 @@ const KIND_LABEL: Record<string, string> = {
 export default async function FridayPage() {
   const supabase = await createClient()
   const today = todayIso()
-  const reports = await collectReports(supabase, today)
+  /*
+   * collectReports throws rather than reporting an empty week, because the
+   * same function is what `saveReport` writes from. Here that is caught and
+   * shown; the action deliberately does not catch it, so nothing is stored.
+   */
+  let reports
+  try {
+    reports = await collectReports(supabase, today)
+  } catch (error) {
+    if (error instanceof ReportDataError) return <QueryFailure message={error.message} />
+    throw error
+  }
+
   const week = reports[0]?.week ?? null
 
   return (

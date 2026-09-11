@@ -8,6 +8,7 @@ import {
 import { ProjectFrame } from '@/components/project-frame'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { QueryFailure, firstError } from '@/lib/failure'
 import { addMember, removeMember } from '@/lib/member-actions'
 import { knownPeople, namedButLockedOut } from '@/lib/people'
 import { PeopleHint } from '@/components/people-list'
@@ -141,6 +142,27 @@ export default async function IdentityPage({
     supabase.from('profile').select('id, email, full_name'),
     supabase.from('node').select('reporting'),
   ])
+
+  /*
+   * The project is left to notFound() below: `.single()` reports an absent row
+   * as an error, and a project you are not a member of is absent rather than
+   * broken. Everything else here is load bearing, and the costliest one is
+   * silent: a failed member or profile read renders «nobody has access» on a
+   * project that has a team.
+   */
+  const failure = firstError([
+    milestoneRes,
+    blockerRes,
+    decisionRes,
+    projectsRes,
+    dependsRes,
+    dependedRes,
+    treeRes,
+    memberRes,
+    profileRes,
+    reportingRes,
+  ])
+  if (failure) return <QueryFailure message={failure} />
 
   const project = projectRes.data as Node | null
   if (!project) notFound()

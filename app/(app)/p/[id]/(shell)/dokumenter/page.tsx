@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { ProjectFrame } from '@/components/project-frame'
 import { createClient } from '@/lib/supabase/server'
+import { QueryFailure, firstError } from '@/lib/failure'
 import { subtreeSet } from '@/lib/subtree'
 import { DocumentPanel } from '@/components/document-panel'
 import type { Document, Node } from '@/lib/types'
@@ -29,6 +30,19 @@ export default async function DocumentsPage({
       
       .order('created_at', { ascending: false }),
   ])
+
+  /*
+   * The project itself is left to notFound() below rather than checked here.
+   * `.single()` reports a row that is not there as an error, and a project you
+   * are not a member of is exactly that, so folding it in would answer «the
+   * database is not answering as expected» to what is really a 404.
+   *
+   * The other two are the hole worth closing: a failed read of either renders
+   * an empty folder list, and a project with no files looks identical to a
+   * project whose files could not be read.
+   */
+  const failure = firstError([titlesRes, docRes])
+  if (failure) return <QueryFailure message={failure} />
 
   const project = projectRes.data as Node | null
   if (!project) notFound()

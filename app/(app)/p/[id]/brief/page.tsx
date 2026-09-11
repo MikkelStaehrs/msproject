@@ -8,6 +8,7 @@ import {
 import { today } from '@/lib/date'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { QueryFailure, firstError } from '@/lib/failure'
 import { subtreeSet } from '@/lib/subtree'
 import {
   PEOPLE_FIELDS,
@@ -117,6 +118,23 @@ export default async function BriefPage({
       supabase.from('v_node_cost').select('*').eq('node_id', id).maybeSingle(),
       supabase.from('node').select('id, parent_id'),
     ])
+
+  /*
+   * The brief is the copy handed to somebody who was not in the room, and it is
+   * printed. A section that silently comes out empty is not caught by the
+   * reader, who has no way of knowing it should have said anything.
+   */
+  const failure = firstError([
+    milestoneRes,
+    blockerRes,
+    decisionRes,
+    depsRes,
+    projectsRes,
+    partsRes,
+    stateRes,
+    treeRes,
+  ])
+  if (failure) return <QueryFailure message={failure} />
 
   const project = projectRes.data as Node | null
   if (!project) notFound()

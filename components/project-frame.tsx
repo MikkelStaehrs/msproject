@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { daysBetween, today as todayIso } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
+import { QueryFailure, firstError } from '@/lib/failure'
 import { ProjectNav } from '@/components/project-nav'
 import { StatusSelect } from '@/components/status-select'
 import { PEOPLE_FIELDS, readIdentity } from '@/lib/identity'
@@ -98,6 +99,32 @@ export async function ProjectFrame({
       supabase.from('node_dependency').select('*').eq('node_id', frameNodeId),
       supabase.from('node_dependency').select('*').eq('depends_on_id', frameNodeId),
     ])
+
+  /*
+   * The frame is the pulse, and it stands on every sub page, so a failure here
+   * is a failure on all of them at once. It is also where a silent one costs
+   * most: the work log, the blockers and the decisions all render as «nothing
+   * yet», which is the reading you want on a quiet part and a lie on a broken
+   * query. v_node_ready went unnoticed for exactly this reason.
+   *
+   * `projectRes` is left out because it is not always a query: on a project the
+   * slot is filled with a resolved null rather than a round trip.
+   */
+  const failure = firstError([
+    nodeRes,
+    chainRes,
+    progressRes,
+    nextRes,
+    entryRes,
+    blockerRes,
+    decisionRes,
+    stateRes,
+    readyRes,
+    partsRes,
+    waitsRes,
+    blocksRes,
+  ])
+  if (failure) return <QueryFailure message={failure} />
 
   const node = nodeRes.data as Node
   const parent = projectRes.data as { id: string; title: string; reporting: unknown } | null

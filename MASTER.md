@@ -942,6 +942,42 @@ back, the tree drew no sequence marks, and nothing said why. Pages check
 `firstError` before using their results. A schema behind the code is an error,
 not an empty state.
 
+**And the rule was stated long before it was kept.** It held on nine surfaces
+and was missing from nine others, which is the worst possible distribution: a
+rule you can point at, and half a codebase that quietly does not follow it. The
+ones it was missing from were not the harmless ones either. `/blockers` is the
+page whose whole output is a count of waiting days, and a count of nothing reads
+as nobody holding anything up. `components/project-frame.tsx` renders on every
+sub page, so one failure there empties the work log, the blockers and the
+decisions on all of them at once. The brief is printed and handed to somebody
+who cannot tell that a section should have said anything.
+
+**Three of them are not pages, and those are the dangerous ones**, because the
+answer is read on the way IN rather than on the way out:
+
+- `collectReports` throws rather than returning an empty week. `saveReport`
+  calls the same function the page does, so a failed `entry` read would be
+  assembled into a status comment with no work in it, copied into the company
+  system by hand, and written to `report` with `submitted` set and a `context`
+  snapshot of zeroes. That snapshot exists precisely because it cannot be
+  recomputed once the tree has moved on. A caller that renders can catch the
+  throw; a caller that WRITES must not be able to ignore it.
+- `readRecipients` throws for the same reason one layer down. `settleRecipient`
+  canonicalises the spelling against that list on write, so an empty one does
+  not show a shorter datalist, it stores «project board» as a recipient nobody
+  has heard of beside the «Project Board» that already exists. Splitting a
+  recipient is the one thing `lib/recipient.ts` exists to prevent, and a failed
+  read would do it with nothing on screen changing.
+- The `(app)` layout checks `profile` before the first-run gate, not after. The
+  gate fires on a row; no rows means `me` is undefined, `me &&` is false, and an
+  account whose password was typed by somebody else is waved straight through.
+  Middleware already applies this reasoning one layer up, and it is the same
+  sentence: a session that could not be checked has not been checked.
+
+The one deliberate exception is a project fetched with `.single()`, which is
+left to `notFound()`. PostgREST reports an absent row as an error, and a project
+you are not a member of is absent rather than broken.
+
 **Migrations must survive being run twice, or half.** They are applied by hand,
 so `create table if not exists`, `create or replace view`, `drop ... if exists`
 and `on conflict do nothing` on the self-recording insert. The first failure of

@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { canonicalRecipient, medianWait, normaliseName } from '@/lib/recipient'
 import { addDays } from '@/lib/date'
 import { guessWaitingOnType } from '@/lib/quick-add'
+import { firstError } from '@/lib/failure'
 import type { WaitingOnType } from '@/lib/types'
 
 type Row = {
@@ -31,18 +32,42 @@ export type Recipient = {
 }
 
 /**
+ * Named for the same reason ReportDataError is: a caller that renders can say
+ * so, and a caller that writes must not be able to carry on.
+ */
+export class RecipientDataError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'RecipientDataError'
+  }
+}
+
+/**
  * The recipients, derived from the blockers themselves rather than kept in a
  * table of their own. The set is whatever has been written after an @, and the
  * expectation for each is the median of the waits they have already closed.
+ *
+ * THROWS ON A FAILED QUERY, because this one is read on the way IN.
+ *
+ * An empty list here is not a quiet page, it is a silent write: `settleRecipient`
+ * canonicalises against this set, so with nothing in it «project board» is a
+ * recipient nobody has heard of rather than the one already called «Project
+ * Board». The spelling is settled on write precisely so the two can never
+ * split, and a failed read would split them without anything on screen
+ * changing. The chart on /blockers is the whole reason the blocker is an entity,
+ * and a split number argues for less than the truth.
  */
 export async function readRecipients(
   supabase: SupabaseClient,
 ): Promise<Recipient[]> {
-  const { data } = await supabase
+  const res = await supabase
     .from('v_blocker_days')
     .select('waiting_on, waiting_on_type, days_blocked, is_active')
 
-  const rows = (data ?? []) as Row[]
+  const failure = firstError([res])
+  if (failure) throw new RecipientDataError(failure)
+
+  const rows = (res.data ?? []) as Row[]
   const byKey = new Map<
     string,
     { name: string; open: number; all: number[]; closed: number[]; types: WaitingOnType[] }

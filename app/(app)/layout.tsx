@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Nav } from '@/components/nav'
 import { QuickAdd, type QuickTarget } from '@/components/quick-add'
 import { createClient } from '@/lib/supabase/server'
+import { QueryFailure, firstError } from '@/lib/failure'
 import { readRecipients } from '@/lib/recipient-data'
 import { redirect } from 'next/navigation'
 import { knownPeople } from '@/lib/people'
@@ -52,6 +53,23 @@ export default async function AppLayout({
     supabase.from('profile').select('id, full_name, email, password_set_at'),
     supabase.auth.getUser(),
   ])
+
+  /*
+   * Read before anything is used, and on this page one of the three is not
+   * cosmetic: the gate below fires on a row from `profile`. A failed read gives
+   * no rows, `me` is then undefined, `me &&` is false, and the gate does not
+   * fire, so an account whose password was typed by somebody else is waved
+   * straight through with nothing anywhere saying why. Middleware already
+   * applies this reasoning one layer up: a session that could not be checked
+   * has not been checked, and neither has a first run.
+   *
+   * The other two are ordinary, and are checked here because this layout
+   * renders on every page in the app. A fault in either would otherwise show as
+   * quick entry and the name suggestions quietly offering nothing, everywhere
+   * at once.
+   */
+  const failure = firstError([treeRes, peopleRes, profileRes])
+  if (failure) return <QueryFailure message={failure} />
 
   /*
    * The first-run gate.
