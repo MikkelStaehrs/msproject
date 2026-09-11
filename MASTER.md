@@ -1293,6 +1293,26 @@ show a share say in oxblood when they disagree. Reported rather than corrected:
 correcting it needs a filtered stage volume nobody has, and inventing a ratio to
 scale by is exactly the class of guess that put «sold units» in the schema.
 
+**And nobody can have one.** That was written as a job nobody had done. On 11
+September 2026 both dashboards were looked at side by side, and it is a property
+of the sources: the COGS one carries three slicers, fiscal year, Brand Code and
+Type, and was read with In-house and Sugar selected. The process one carries a
+fiscal year picker and nothing else. There is no Brand Code there to click and no
+Type either, so a stage volume narrowed to the population the cost basis counts
+does not exist to be fetched.
+
+So `scopesAgree()` will be false for every per-unit saving through a stage, for
+as long as these are the two sources, and the oxblood line beside it is the
+permanent answer rather than a reminder to go and look. A saving described in
+hours or in kroner a year is unaffected: only the middle case multiplies by a
+stage volume at all.
+
+The figures themselves were checked at the same time and match: unit cost 577,70
+including an IPC of 140,24 over 266 253 units, and all fourteen stage volumes for
+FY25 and FY26 exactly as the process dashboard shows them. `yardstick.note`
+records what was seen, with the filter state, which is the part that was missing
+the first time and the whole reason `sold_units` went unchallenged.
+
 ## The one euro, and the frozen denominator
 
 The strategy is one sentence: take a euro of COGS out of every unit sold, every
