@@ -52,13 +52,13 @@ first kind.
 
 ## Still open
 
-- **Two public GitHub repos, and MASTER.md is in them.** Confirmed today:
-  `MikkelStaehrs/msproject` and `MikkelStaehrs/MSProjects` both answer 200
-  unauthenticated. `MASTER.md` on `origin/main` carries the FY26 COGS figures in
-  clear: 266 253 units, 577,70 kr a unit, the stage volumes, the In-house
-  against In-License split and the target in euro. That is company data, not the
-  invented seed. Making a repo private, or moving those figures out of a
-  tracked file, is a person's decision.
+- **Two public GitHub repos, and the FY26 figures are in one of them.** Counted
+  and located in its own entry, `2026-09-11-what-is-public-and-where.md`, which
+  refers to the figures rather than repeating them. Short version: only
+  `MikkelStaehrs/msproject` carries them, they are in nine files including the
+  migration that seeds them, and three of the commits are already pushed.
+  Making that repo private is a person's decision and the only step that
+  changes anything.
 - **The branch is still not pushed**, and now carries three commits. Same cause
   as yesterday: the stored credential is `MikkelStaehr`, the repo belongs to
   `MikkelStaehrs`.
