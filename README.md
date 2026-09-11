@@ -64,16 +64,24 @@ migration files are a record of intent, not proof of state.
 would still pass with the access model completely broken: proving a signed-OUT
 request gets nothing says nothing about whether one colleague can read another
 one's project. So set `AUDIT_PROBE_EMAIL` and `AUDIT_PROBE_PASSWORD` in
-`.env.local` to a real account that is deliberately NOT a member of at least one
-project, and the audit signs in as them and asks for what they must not have -
-every node in the subtree, every blocker, entry, decision, cost line, document
-and report hanging off it, and everyone else's sparks. It also checks the other
-direction, that they can still read the projects they are on, because an audit
-that only looks for leaks passes happily on a database nobody can read at all.
+`.env.local` to a real account, and the audit signs in as them and asks for what
+they must not have - every node in the subtree, every blocker, entry, decision,
+cost line, document and report hanging off it, and everyone else's sparks. It
+also checks the other direction, that they can still read the projects they are
+on, because an audit that only looks for leaks passes happily on a database
+nobody can read at all.
+
+**That account must be on at least one project and off at least one.** Both
+halves need something to measure, and the first real run got this wrong in a way
+worth repeating here: the probe was a member of nothing, so the leak half ran
+and the other half was skipped in silence, and the verdict then said the
+database and the code agree. It now prints `----` instead, but the account is
+what makes the check mean anything.
 
 Without those two variables the section prints `----` and the verdict says how
 many checks were not measured. A green line for a check that never ran is worse
-than a missing one.
+than a missing one, and that applies to the audit's own halves as much as to
+anything it inspects.
 
 ## The database
 

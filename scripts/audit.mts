@@ -602,7 +602,25 @@ if (!PROBE_EMAIL || !PROBE_PASSWORD) {
      * see what they ARE on. An audit that only checks for leaks passes happily
      * on a database nobody can read at all.
      */
-    if (allowed.size > 0) {
+    /*
+     * A probe on NO project cannot measure this half, and saying nothing about
+     * it was the bug. The first real run of section 6 used an account that was
+     * a member of nothing, so this block was skipped entirely: no ok, no bad,
+     * no `----`, and the verdict then read «the database and the code agree»
+     * with half of the only check that measures the access model never having
+     * run.
+     *
+     * That is the exact thing the third state was added for, applied to
+     * everything except itself. An unmeasured half now says so.
+     */
+    if (allowed.size === 0) {
+      skip(
+        'and that they can still read the projects they ARE on',
+        `${PROBE_EMAIL} is a member of no project, so only the leak half of this ` +
+          'section ran. Add them to exactly one project: a probe on none cannot ' +
+          'tell a working policy from one that refuses everybody.',
+      )
+    } else {
       const shouldSee = [...allowed].flatMap((r) => [...subtreeIds(node, r)])
       const missing: string[] = []
       for (const id of shouldSee.slice(0, 40)) {
