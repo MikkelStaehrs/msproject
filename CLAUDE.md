@@ -15,6 +15,7 @@ Three commands, and all three have to pass before work is called done:
 ```bash
 npm run build       # also type checks
 npm run typecheck
+npm test            # the pure functions
 npm run audit       # holds the live database up against the code
 ```
 
@@ -28,19 +29,33 @@ set is a real enum matching `lib/types.ts`. It only reads.
 `next/font/google has no exported member 'Archivo'`, because Next generates the
 font and route types into it. Run a build first, then believe it.
 
-## Migrations are applied by hand
+## Migrations
 
-There is no database password, only an anon key and a personal access token, so
-migrations are pasted into the Supabase SQL editor by a person. The files in
-`supabase/migrations/` are a record of intent, not proof of state.
+```bash
+npm run migrate           # what is pending, and nothing else
+npm run migrate -- --go   # apply it
+```
+
+`SUPABASE_TOKEN` in `.env.local` reaches the Management API, so this runs the
+DDL. Until 11 September 2026 there was no such credential and every file was
+pasted into the Supabase SQL editor by a person.
+
+**The runner removed the waiting, not the reading.** Two migrations failed review
+on the day it arrived, one where a variable collided with the real column
+`node.owner` and one where `create or replace` cannot change a return type, and
+both were caught by reading the file rather than by running it. The temptation a
+runner introduces is to run, patch, run, until it stops complaining, which
+produces migrations that apply and a schema nobody understands. Write it to be
+right, then run it.
 
 **Never assume a migration has been applied.** `schema_migration` records what has
 actually reached the database, and every migration ends by inserting its own
 version as its last statement. A missing table that exists in a migration file is
-almost always an unapplied migration rather than a bug in the code.
+almost always an unapplied migration rather than a bug in the code. `npm run
+migrate` reads that table rather than keeping a list of its own, so a file
+applied by hand in the editor is not applied twice.
 
-Write migrations so they survive being run twice, or half. They are applied by
-hand, and a hand slips.
+Write migrations so they survive being run twice, or half.
 
 ## The UI is mobile first
 

@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "node lib/quick-add.test.mts && node lib/report.test.mts && node lib/template.test.mts && node lib/identity.test.mts && node lib/wbs.test.mts && node lib/reorder.test.mts && node lib/recipient.test.mts && node lib/loose-ends.test.mts && node lib/cost.test.mts && node lib/subtree.test.mts && node lib/prose.test.mts && node lib/strategy.test.mts && node lib/people.test.mts && node lib/priority.test.mts && node lib/cogs.test.mts && node lib/standup.test.mts",
-    "audit": "node scripts/audit.mts"
+    "audit": "node scripts/audit.mts",
+    "migrate": "node scripts/migrate.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

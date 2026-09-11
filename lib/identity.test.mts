@@ -22,23 +22,16 @@ function check(name: string, got: unknown, expected: unknown) {
 const tom = readIdentity(null)
 check('empty reporting gives empty fields', tom.admin, {})
 check('empty reporting gives the default unit', tom.economics.currency, 'EUR')
-check('empty reporting has no priority', tom.priority, null)
-
+/*
+ * The typed priority was removed: there is one priority in this application and
+ * it is derived. What still has to hold is that a project carrying the old key
+ * in its jsonb reads back without it, rather than having it quietly surface
+ * again the next time somebody adds a field by that name.
+ */
 check(
-  'unknown keys are ignored',
-  readIdentity({ project_no: 'CX-2601', vrøvl: 42 }).admin,
-  { project_no: 'CX-2601' },
-)
-check(
-  'an invalid priority falls to null',
-  readIdentity({ priority: 'Kritisk' }).priority,
-  null,
-)
-check('a valid priority is read', readIdentity({ priority: 'High' }).priority, 'High')
-check(
-  'an invalid unit falls back to tDKK',
-  readIdentity({ economics: { currency: 'USD' } }).economics.currency,
-  'EUR',
+  'a leftover priority key is not read back',
+  Object.keys(readIdentity({ priority: 'High' })).includes('priority'),
+  false,
 )
 check(
   'numbers that are not numbers become null',

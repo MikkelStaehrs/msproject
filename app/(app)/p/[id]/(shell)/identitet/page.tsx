@@ -22,7 +22,6 @@ import {
   approvalVariance,
   PEOPLE_FIELDS,
   PID_FIELDS,
-  PRIORITIES,
   formatAmount,
   formatYears,
   readIdentity,
@@ -304,18 +303,21 @@ export default async function IdentityPage({
                 className="field resize-y"
               />
             </Field>
-            <div>
-              <span className="lbl block text-muted">
-                <Hint text="Assigned by the system from category and year. It cannot be edited and is frozen once given.">
-                  Project no.
-                </Hint>
-              </span>
-              <div className="border-b border-rule py-[7px] text-[13px] tabular-nums">
-                {identity.admin.project_no ?? (
-                  <span className="text-oxblood">not registered in UBS Projects</span>
-                )}
-              </div>
-            </div>
+            {/*
+              «Project no.» used to be rendered here a second time, above the
+              list, as a read-only line carrying its own hardcoded hint:
+              «assigned by the system from category and year, it cannot be
+              edited». Every word of that stopped being true when the number
+              moved to UBS Projects and `assign-project-no.ts` was deleted, and
+              the field below it had been editable all along. So the page showed
+              the same field twice, once correctly and once saying it could not
+              be changed.
+
+              That is what the rule «the field lists live in lib/identity.ts and
+              nowhere else» exists to stop. A copy made at the call site does not
+              follow the source when the source changes, and this one contradicted
+              it in the reader's face on the same screen.
+            */}
             {EDITABLE_ADMIN_FIELDS.map((f) => (
               <Field key={f.key} label={f.label} hint={f.hint}>
                 <input
@@ -360,16 +362,17 @@ export default async function IdentityPage({
                 className="field"
               />
             </Field>
-            <Field label="Priority">
-              <select name="priority" defaultValue={identity.priority ?? ''} className="field">
-                <option value="">-</option>
-                {PRIORITIES.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            {/*
+              «Priority» was a typed High/Medium/Low that fed nothing. It sat
+              beside priorityScore, which is 2 x benefit - cost - complexity and
+              is what the stand-up actually ranks by, what the assessment shows
+              and what the origin keeps. Two words for one meaning, and the inert
+              one was the one that looked official on the brief.
+              
+              A project's priority now comes from the judgement made when the
+              idea became work, which is a figure somebody can argue with rather
+              than a label somebody chose.
+            */}
             <Field label="Responsible" hint="Who is responsible for the project. The same field as owner on the nodes in the tree, so it is also used when a task is waiting on someone.">
               <input
                 name="owner"

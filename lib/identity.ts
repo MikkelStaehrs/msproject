@@ -56,8 +56,16 @@ export const ADMIN_FIELDS: FieldDef[] = [
 /** All of them now: nothing here is assigned by this application. */
 export const EDITABLE_ADMIN_FIELDS: FieldDef[] = ADMIN_FIELDS
 
-export const PRIORITIES = ['Low', 'Medium', 'High'] as const
-export type Priority = (typeof PRIORITIES)[number]
+/*
+ * PRIORITIES is gone. It was Low/Medium/High, typed on the identity page, shown
+ * once on the brief, and read by nothing: no sort, no filter, no calculation.
+ *
+ * `lib/priority.ts` is the priority in this application, derived from the three
+ * judgements as 2 x benefit - cost - complexity, and it is what the stand-up
+ * ranks by. Keeping a second word for the same idea was the rule this project
+ * breaks most often, and the copy that did no work was the one that looked
+ * authoritative in print.
+ */
 
 /**
  * The roles the company Status Update notifies. We send no mail, but the
@@ -168,7 +176,6 @@ export type Economics = {
 
 export type Identity = {
   admin: Record<string, string>
-  priority: Priority | null
   /** Hall, line or plant: where it physically happens. */
   location: string | null
   people: Record<string, string>
@@ -203,9 +210,6 @@ export function readIdentity(reporting: unknown): Identity {
 
   return {
     admin: readRecord(r, ADMIN_FIELDS),
-    priority: (PRIORITIES as readonly string[]).includes(String(r.priority))
-      ? (r.priority as Priority)
-      : null,
     location: readText(r.location),
     people: readRecord(r.people, PEOPLE_FIELDS),
     pid: readRecord(r.pid, PID_FIELDS),

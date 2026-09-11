@@ -9,7 +9,6 @@ import {
   CURRENCIES,
   PEOPLE_FIELDS,
   PID_FIELDS,
-  PRIORITIES,
   type Currency,
   type FieldDef,
 } from '@/lib/identity'
@@ -53,9 +52,13 @@ export async function saveIdentity(fd: FormData) {
 
   Object.assign(reporting, collect(fd, 'admin_', EDITABLE_ADMIN_FIELDS, reporting))
 
-  const priority = text(fd, 'priority')
-  if (priority === null) delete reporting.priority
-  else if ((PRIORITIES as readonly string[]).includes(priority)) reporting.priority = priority
+  /*
+   * The typed priority is not merely no longer written, it is cleared from any
+   * project still carrying one. A key left behind in the jsonb is a value that
+   * still reads back, and the next person to add a `priority` field would find
+   * it mysteriously pre-filled with a word nobody chose this year.
+   */
+  delete reporting.priority
 
   reporting.people = collect(
     fd,

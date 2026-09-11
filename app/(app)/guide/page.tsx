@@ -163,9 +163,9 @@ export default function GuidePage() {
           </P>
           <P>
             A new project starts on <Link href="/projects" className="text-green">Projects</Link>{' '}
-            with New project. Give it a category so it gets a number, then break it down
-            with New node and the <Code>+</Code> on each row. You do not have to plan the
-            whole tree up front. Add parts as they become real.
+            with New project. Break it down with New node and the <Code>+</Code> on each
+            row. You do not have to plan the whole tree up front. Add parts as they become
+            real.
           </P>
 
           <H id="access">Who sees what</H>
@@ -1613,9 +1613,12 @@ export default function GuidePage() {
 
           <H id="identity">Identity and numbers</H>
           <P>
-            The project number is assigned when you give a project a category, and frozen
-            after that. Two letters for the category, two for the year, a four digit serial:{' '}
-            <Code>PR-26-0001</Code>. Gaps are never reused.
+            The project number is the official one from UBS Projects, typed in here. This
+            tool does not invent one: it used to, and a second series of numbers for the
+            same projects is the sort of thing that has to explain itself the day somebody
+            compares the two systems. An empty number is not a gap in the form. It means
+            the work exists here and has not been registered over there, which is a real
+            thing to know.
           </P>
           <P>
             The dotted code on each row, <Code>.01.02</Code>, is a path and not an

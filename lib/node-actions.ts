@@ -17,7 +17,10 @@ import { required, text, number } from '@/lib/form'
  * to a project, not to a task, and the form only shows them at top level.
  * Values that are not submitted are left standing in the jsonb.
  *
- * project_no is not here: the system assigns it and it cannot be edited.
+ * project_no is not here because it belongs to the identity page, which is
+ * where the official number from UBS Projects is typed in. It is not derived
+ * from anything and nothing here assigns it: that function existed once and was
+ * deleted with the second series of numbers it produced.
  */
 const REPORTING_KEYS = ['account', 'portfolio', 'location'] as const
 

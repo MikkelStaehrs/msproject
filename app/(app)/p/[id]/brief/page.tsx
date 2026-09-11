@@ -290,9 +290,6 @@ export default async function BriefPage({
                 <>
                   {EFFECTIVE_STATUS_LABEL[state.get(project.id)?.status_effective ?? project.status]}
                   {stage && <span className="text-muted"> · {stage}</span>}
-                  {identity.priority && (
-                    <span className="text-muted"> · {identity.priority} priority</span>
-                  )}
                 </>
               }
             />
