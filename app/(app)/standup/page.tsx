@@ -408,6 +408,18 @@ export default async function StandupPage({
    */
   const unweighed = weighed.filter((w) => w.impact === null && w.score === null).length
 
+  /*
+   * Chapter one: what somebody is waiting on, worst first.
+   *
+   * Taken from the same agenda the rail is ranked by rather than from the
+   * blockers table, so the status rule and the ordering are applied once. A
+   * blocker that is late outranks one that is not, which AGENDA_ORDER already
+   * decides.
+   */
+  const waitingRows = rows.filter(
+    (r) => r.lead.kind === 'overdue_blocker' || r.lead.kind === 'blocker',
+  )
+
   const needsAction = items.filter((i) => i.kind !== 'loose_end').length
 
   return (
@@ -441,13 +453,40 @@ export default async function StandupPage({
       </div>
       <Rule strong />
 
+      {/*
+        The retrospective, in one line.
+        
+        It had the whole first chapter: what finished, what came unstuck, what
+        got stuck, and how much was written down. Useful to know and a READ
+        rather than a working surface, so it was a third of a meeting spent not
+        deciding anything.
+        
+        It stays here rather than going altogether, because `movement()` is the
+        only thing that reads the meeting boundary. Delete it and «We held it»
+        becomes a button that records a date nobody looks at, and standup.held_on
+        stops earning its place.
+      */}
+      <div className="px-5 lg:px-16 pt-3.5 text-[11.5px] leading-relaxed text-muted">
+        {since ? `Since ${formatDateLong(since)}: ` : 'Never held before, so this is everything: '}
+        <span className="text-ink">{moved.completed.length} finished</span>
+        {', '}
+        <span className="text-ink">{moved.resolved.length} came unstuck</span>
+        {', '}
+        <span className={moved.opened.length > 0 ? 'text-oxblood' : 'text-ink'}>
+          {moved.opened.length} got stuck
+        </span>
+        {', '}
+        <span className="text-ink">{moved.written} written down</span>
+        {'.'}
+      </div>
+
       {/* The three chapters, in the order the room walks them */}
       <nav className="flex flex-wrap items-baseline gap-x-9 gap-y-2 px-5 lg:px-16 py-3.5">
         {(
           [
-            ['1', 'Since last time', moved.completed.length + moved.resolved.length + moved.opened.length],
-            ['2', 'Until next time', liveCount],
-            ['3', 'From spark to idea', weighed.length],
+            ['1', 'What is in the way', waitingRows.length],
+            ['2', 'What we are doing', liveCount],
+            ['3', 'What is next', weighed.length],
           ] as [Part, string, number][]
         ).map(([n, label, count]) => (
           <Link
@@ -473,71 +512,75 @@ export default async function StandupPage({
       </nav>
       <Rule />
 
-      {/* ================= 1. Since last time ================= */}
+      {/* ================= 1. What is in the way ================= */}
       {part === '1' && (
         <div className="frame min-h-[60vh]">
           <div className="pl-5 lg:pl-16 py-8 pr-5">
             <h1 className="font-display text-[30px] font-medium leading-[1.06]">
-              Since last time
+              What is in the way
             </h1>
-            <dl className="mt-5 text-[11px] leading-relaxed text-muted">
-              <dt className="lbl-tight">Last held</dt>
-              <dd className="mb-3 text-ink">
-                {previous || heldToday ? (
-                  formatDateLong((heldToday ?? previous)!.held_on)
-                ) : (
-                  <span className="text-rule-strong">never</span>
-                )}
-              </dd>
-              <dt className="lbl-tight">Next</dt>
-              <dd className="text-ink">{formatDateLong(nextOn)}</dd>
-            </dl>
+            {/*
+              Blockers on work somebody is actually doing, and nothing else.
+              
+              This chapter used to be the retrospective: what finished, what came
+              unstuck, what got stuck. That is a read rather than a working
+              surface, and it had the whole first chapter of a meeting. It is now
+              the line above the chapters, which keeps the boundary meaning
+              something without spending a chapter on it.
+            */}
             <p className="mt-5 max-w-[24ch] text-[11px] leading-relaxed text-rule-strong">
-              {since
-                ? 'Measured from the day the room last met, not from a week ago. Skip a week and this still tells the truth.'
-                : 'No stand-up has been recorded, so this is the whole history rather than a week of it.'}
+              Only on work that has been started. A blocker on something nobody
+              has begun is a note about a future problem, not something standing
+              in the way today.
             </p>
           </div>
 
           <div className="border-l border-rule px-5 lg:px-10 py-8">
-            <div className="grid gap-x-8 gap-y-7 md:grid-cols-3">
-              <Moved
-                title="Finished"
-                empty="Nothing was completed."
-                rows={moved.completed.map((c) => ({
-                  key: c.nodeId + c.on,
-                  on: c.on,
-                  text: c.title,
-                  href: at(c.nodeId),
-                }))}
-              />
-              <Moved
-                title="Came unstuck"
-                empty="No blocker was resolved."
-                rows={moved.resolved.map((r, i) => ({
-                  key: r.title + i,
-                  on: r.on,
-                  text: `${r.title} · ${r.who}`,
-                }))}
-              />
-              <Moved
-                title="Got stuck"
-                empty="Nothing new is waiting."
-                tone="oxblood"
-                rows={moved.opened.map((o, i) => ({
-                  key: o.title + i,
-                  on: o.on,
-                  text: `${o.title} · ${o.who}`,
-                }))}
-              />
-            </div>
+            {waitingRows.length === 0 ? (
+              <p className="max-w-prose text-[13px] leading-relaxed text-muted">
+                Nothing is waiting on anybody. Every open blocker sits on work
+                that has not been started, or there are none at all.
+              </p>
+            ) : (
+              <div>
+                {waitingRows.map((r) => {
+                  const b = r.lead
+                  return (
+                    <Link
+                      key={r.nodeId + b.title}
+                      href={here('2', r.nodeId)}
+                      className="group grid grid-cols-1 items-baseline gap-x-5 gap-y-1 border-t border-rule py-3 last:border-b lg:grid-cols-[54px_1fr_auto]"
+                    >
+                      <span
+                        className={`num text-[19px] ${
+                          b.kind === 'overdue_blocker' ? 'text-oxblood' : 'text-ink'
+                        }`}
+                      >
+                        {b.days}
+                        <span className="lbl-tight text-rule-strong"> d</span>
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[13px] leading-snug group-hover:text-green">
+                          {b.title}
+                        </span>
+                        <span className="lbl-tight text-muted">
+                          {byId.get(r.nodeId)?.title} · {projectTitle(r.nodeId)}
+                        </span>
+                      </span>
+                      <span
+                        className={`lbl-tight shrink-0 ${
+                          b.kind === 'overdue_blocker' ? 'text-oxblood' : 'text-muted'
+                        }`}
+                      >
+                        {b.who}
+                        {b.kind === 'overdue_blocker' && ' · answer is late'}
+                      </span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
 
-            {/*
-              What the room asked for last time. The status beside each line is
-              the task's own, so something that got done reads as done without
-              anybody returning to a document to say so - which is the single
-              reason minutes stop being true by the second meeting.
-            */}
             {agreedLast && (
               <div className="mt-8 border-t border-rule-strong pt-5">
                 <div className="flex items-baseline gap-4">
