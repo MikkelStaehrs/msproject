@@ -206,21 +206,39 @@ const fail = (id: unknown, code: number, message: string) =>
   NextResponse.json({ jsonrpc: '2.0', id, error: { code, message } })
 
 /**
- * Why a read was refused, without saying which of the two it was.
+ * Why a read was refused. BOTH reasons, because it is genuinely one or the
+ * other and this endpoint cannot tell which.
  *
- * The function raises the same sentence for an unknown token and for a token
- * that is real but capture only, because a reply that told them apart would be
- * a way of probing for both. The endpoint knows something the database does
- * not, though: that the tool just called is one of the reading ones. So it can
- * name the likely fix without naming the cause, which is the useful half.
+ * The function raises the same sentence for a token it has never seen and for a
+ * real token that is only `capture`, deliberately: a reply that told them apart
+ * would be a way of probing for both. That is right, and the first version of
+ * this hint then threw the property away by guessing. It said «this is a
+ * capture only token», which is one of the two cases, and it said so with
+ * confidence.
+ *
+ * It cost two rounds of the wrong fix. A token had been revoked and the
+ * connector was still sending it, so the honest answer was «that token does not
+ * exist any more, look at the header». Instead the model was told the scope was
+ * wrong, so it asked for another token, which was made, and the header still
+ * held the dead one. A diagnostic that names one cause out of two is worse than
+ * one that names neither: it does not merely fail to help, it actively sends
+ * you somewhere.
+ *
+ * So both are stated, likeliest first, and the reader is pointed at the
+ * evidence that separates them: a capture token can still write.
  */
 const scopeHint = (message: string) =>
   /not valid here/i.test(message)
     ? message +
-      ' Reading needs a token made with the «Capture and read» scope. A ' +
-      'capture only token can add to the inbox and nothing else. Make one on ' +
-      'the Account page in Task Studio and replace the value in this ' +
-      "connector's authorization header."
+      ' That is one of two things, and this endpoint cannot tell which. ' +
+      'EITHER the token is not recognised at all, which is what a revoked or ' +
+      'part-copied one looks like, OR it is a real token made with the ' +
+      '«Capture only» scope. ' +
+      'To tell them apart, try saving an idea: a capture token can still do ' +
+      'that, and a token that is not recognised cannot do anything. ' +
+      'If saving also fails, the token in this connector no longer exists and ' +
+      'the fix is the authorization header rather than a new token. Otherwise ' +
+      'make one with «Capture and read» on the Account page in Task Studio.'
     : message
 
 /** A tool that failed is reported inside the result, not as a protocol error. */
