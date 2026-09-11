@@ -1,5 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import {
+  basisCoversTarget,
+  impactOf,
+  referenceFrom,
+  savingFrom,
+  scopesAgree,
+  stagesFrom,
+} from '@/lib/cogs'
+import { priorityScore, quadrant } from '@/lib/priority'
+import type { SavingKind } from '@/lib/types'
 
 /**
  * What the Claude app talks to.
@@ -197,6 +207,41 @@ const TARGET = {
   inputSchema: { type: 'object', properties: {}, additionalProperties: false },
 } as const
 
+const READ_IDEA = {
+  name: 'read_idea',
+  title: 'One thought in Task Studio, whole',
+  description:
+    'A single thought from the Sparks inbox, in full: everything that was ' +
+    'said, everything that was noted around it, and the assessment on it. ' +
+    'Call it when the summary in list_ideas is not enough, which is usually ' +
+    'when the note holds a table of equipment or prices. Also works on a ' +
+    'thought that was decided against, where it returns the verdict in full.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      id: { type: 'string', description: 'The id of the thought, from list_ideas or past_verdicts.' },
+    },
+    required: ['id'],
+    additionalProperties: false,
+  },
+} as const
+
+const VERDICTS = {
+  name: 'past_verdicts',
+  title: 'Ideas already decided against',
+  description:
+    'Thoughts the owner has looked at and turned down, with the reason. ' +
+    'Call it BEFORE arguing that an idea is worth doing, alongside list_work. ' +
+    'An idea that was rejected three months ago will sound just as reasonable ' +
+    'today, and assessing it a second time as though it were new is the exact ' +
+    'loop this record exists to stop. ' +
+    'If something close is here, say so and quote the reason rather than ' +
+    'reassessing it. The verdict may of course be out of date, and saying WHY ' +
+    'it might be, such as a price that has moved, is useful. Pretending it was ' +
+    'never made is not.',
+  inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+} as const
+
 type Rpc = { jsonrpc?: string; id?: unknown; method?: string; params?: Record<string, unknown> }
 
 const reply = (id: unknown, result: unknown) =>
@@ -268,6 +313,76 @@ function credential(request: NextRequest): string | null {
   return value === '' ? null : value
 }
 
+/**
+ * The derived figures, computed by the code the PAGE uses.
+ *
+ * This is the point of doing it here rather than describing the rule in a tool
+ * description and letting the model work it out. A rule explained to a model is
+ * a second spelling of it, and two spellings of «what is this idea worth»
+ * eventually disagree, at which point the screen and the conversation are both
+ * confident and one of them is wrong. `lib/cogs` and `lib/priority` are the
+ * only places that arithmetic happens, and this reads them like any page does.
+ *
+ * The two warnings travel with the figures for the same reason they do in the
+ * interface: a share of the target is flattered when the denominator counts
+ * less than the strategy covers, and meaningless when the saving is spread over
+ * a different population than the target is set for. A percentage nobody has
+ * been warned about is a percentage somebody will quote.
+ */
+type Assessed = {
+  saving_kind: SavingKind | null
+  saving_value: number | string | null
+  saving_stage: string | null
+  cost_score: number | null
+  benefit_score: number | null
+  complexity_score: number | null
+}
+
+function derive(row: Assessed, reference: ReturnType<typeof referenceFrom>, stages: ReturnType<typeof stagesFrom>) {
+  const stage = stages.find((v) => v.stage === row.saving_stage)
+  const saving = savingFrom(row.saving_kind, row.saving_value, stage?.units ?? null)
+  const impact = saving && reference ? impactOf(saving, reference) : null
+
+  const judgement = {
+    cost: row.cost_score,
+    benefit: row.benefit_score,
+    complexity: row.complexity_score,
+  }
+
+  return {
+    annualDkk: impact?.annualDkk ?? null,
+    eurPerUnit: impact?.eurPerUnit ?? null,
+    shareOfTarget: impact?.shareOfTarget ?? null,
+    priority: priorityScore(judgement),
+    quadrant: quadrant(judgement),
+    /** The saving counts a different population than the target. */
+    mixedPopulations:
+      reference !== null && stage !== undefined && !scopesAgree(reference, stage.scope),
+    /** The denominator is narrower than the strategy, so shares read too high. */
+    targetUnderstated: reference !== null && !basisCoversTarget(reference),
+  }
+}
+
+/**
+ * The reference, or null where this token may not read it.
+ *
+ * `list_ideas` has always worked at `capture` scope and must keep doing so, so
+ * a failure here is not an error: it means the figures cannot be worked out,
+ * which is a different thing from their being zero and is reported as such.
+ */
+type Caller = {
+  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>
+}
+
+async function referenceFor(supabase: Caller, token: string) {
+  const { data, error } = await supabase.rpc('read_reference', { token })
+  if (error || data === null) return { reference: null, stages: [] as ReturnType<typeof stagesFrom> }
+
+  const body = data as { yardstick: Parameters<typeof referenceFrom>[0]; stages: Parameters<typeof stagesFrom>[0] }
+  const reference = referenceFrom(body.yardstick ?? null)
+  return { reference, stages: stagesFrom(body.stages ?? [], reference?.fiscalYear ?? null) }
+}
+
 export async function POST(request: NextRequest) {
   let message: Rpc
   try {
@@ -298,7 +413,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (method === 'tools/list') {
-    return reply(id, { tools: [CAPTURE, LIST, APPEND, WORK, TARGET] })
+    return reply(id, { tools: [CAPTURE, LIST, APPEND, WORK, TARGET, READ_IDEA, VERDICTS] })
   }
 
   if (method !== 'tools/call') {
@@ -407,33 +522,56 @@ export async function POST(request: NextRequest) {
 
     if (error) return toolError(id, error.message)
 
-    const rows = (data ?? []) as {
+    const rows = (data ?? []) as ({
       id: string
       body: string
       note: string | null
       captured_on: string
-    }[]
+    } & Assessed)[]
 
     if (rows.length === 0) {
       return toolError(id, 'The inbox is empty. Nothing has been captured yet.')
     }
 
     /*
+     * The figures are worked out here, by the same code the page uses, rather
+     * than described in the tool text for the model to apply. See `derive`.
+     *
+     * Absent at `capture` scope, and that is deliberate rather than a
+     * degradation: this tool existed before reading did and has to keep working
+     * for a token that may only write. An idea then arrives with no worth
+     * attached, which is honest, because not yet knowable is not zero.
+     */
+    const { reference, stages } = await referenceFor(supabase, token)
+    const shown = rows.map((r) => ({ ...r, ...derive(r, reference, stages) }))
+
+    /*
      * Written out as text rather than handed over as JSON. The model has to
      * pick one and quote its id back, and a short readable list is easier to
      * be right about than a nested object. The note is truncated: it is here
-     * to identify a thought, not to be read back in full.
+     * to identify a thought, not to be read back in full, which is what
+     * read_idea is for.
      */
-    const listed = rows
+    const listed = shown
       .map((r) => {
         const note = r.note ? ` (${r.note.replace(/\s+/g, ' ').slice(0, 120)})` : ''
-        return `${r.id} — ${r.captured_on} — ${r.body}${note}`
+        const worth =
+          r.shareOfTarget === null
+            ? 'not worked out yet'
+            : `${(r.shareOfTarget * 100).toFixed(1)}% of the year's target` +
+              (r.mixedPopulations
+                ? ', BUT THE POPULATIONS DIFFER so this share is not comparable'
+                : '') +
+              (r.targetUnderstated ? ', against a target that is a floor' : '')
+        const judged =
+          r.quadrant === null ? 'not scored' : `${r.quadrant}, priority ${r.priority}`
+        return `${r.id}\n  ${r.captured_on}: ${r.body}${note}\n  worth: ${worth}\n  judged: ${judged}`
       })
       .join('\n')
 
     return reply(id, {
-      content: [{ type: 'text', text: `${rows.length} waiting:\n${listed}` }],
-      structuredContent: { sparks: rows },
+      content: [{ type: 'text', text: `${shown.length} waiting:\n${listed}` }],
+      structuredContent: { sparks: shown },
     })
   }
 
@@ -533,6 +671,75 @@ export async function POST(request: NextRequest) {
         },
       ],
       structuredContent: data as Record<string, unknown>,
+    })
+  }
+
+  if (params.name === READ_IDEA.name) {
+    const sparkId = String(args.id ?? '').trim()
+    if (sparkId === '') {
+      return toolError(id, 'Which thought? Use an id from list_ideas or past_verdicts.')
+    }
+
+    const { data, error } = await supabase.rpc('read_spark', {
+      token,
+      spark_id: sparkId,
+    })
+    if (error) return toolError(id, scopeHint(error.message))
+
+    const row = data as (Assessed & Record<string, unknown>) | null
+    if (row === null) return toolError(id, 'No such thought.')
+
+    const { reference, stages } = await referenceFor(supabase, token)
+
+    return reply(id, {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ ...row, ...derive(row, reference, stages) }, null, 2),
+        },
+      ],
+      structuredContent: { ...row, ...derive(row, reference, stages) },
+    })
+  }
+
+  if (params.name === VERDICTS.name) {
+    const { data, error } = await supabase.rpc('list_dropped_sparks', { token })
+    if (error) return toolError(id, scopeHint(error.message))
+
+    const rows = (data ?? []) as {
+      id: string
+      body: string
+      verdict: string | null
+      captured_on: string
+      dropped_on: string
+    }[]
+
+    if (rows.length === 0) {
+      return toolError(
+        id,
+        'Nothing has been decided against yet, so there is no earlier verdict ' +
+          'to weigh this against.',
+      )
+    }
+
+    /*
+     * A verdict with no reason on it is reported as such rather than left
+     * blank. «Dropped, no reason recorded» is a different thing from «dropped
+     * because the lead time was six months», and only one of them is an
+     * argument that should still count today.
+     */
+    const listed = rows
+      .map(
+        (r) =>
+          `${r.id}\n  dropped ${r.dropped_on}: ${r.body}\n  reason: ${
+            r.verdict ?? 'none recorded'
+          }`,
+      )
+      .join('\n')
+
+    return reply(id, {
+      content: [{ type: 'text', text: `${rows.length} decided against:\n${listed}` }],
+      structuredContent: { dropped: rows },
     })
   }
 
