@@ -165,7 +165,13 @@ a {
  * Only direct children are touched. A quoted paragraph inside a column carries
  * its own left rule and that one is not a column border.
  *
- * --frame-margin overrides the right column where a page wants it narrower.
+ * --frame-margin overrides the right column where a page wants it narrower, and
+ * --frame-label the left where a page needs it wider. The stand-up is why the
+ * second one exists: its first column is a list of work rather than a label, so
+ * 184px is too narrow, and it had solved that by writing its own grid at the
+ * call site. The page then had two sets of vertical rules, one under the header
+ * and another beside the rail, landing in different places, and the eye reads
+ * that as nothing lining up with anything.
  */
 .frame {
   display: grid;
@@ -174,7 +180,7 @@ a {
 
 @media (min-width: 1024px) {
   .frame {
-    grid-template-columns: 184px 1fr var(--frame-margin, 420px);
+    grid-template-columns: var(--frame-label, 184px) 1fr var(--frame-margin, 420px);
   }
 }
 
@@ -186,7 +192,7 @@ a {
 
 @media (min-width: 1024px) {
   .frame-pair {
-    grid-template-columns: 184px 1fr;
+    grid-template-columns: var(--frame-label, 184px) 1fr;
   }
 }
 

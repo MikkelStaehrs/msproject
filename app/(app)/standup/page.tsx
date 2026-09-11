@@ -425,7 +425,7 @@ export default async function StandupPage({
   return (
     <main>
       {/* Context band */}
-      <div className="frame">
+      <div className="frame [--frame-label:360px] [--frame-margin:280px]">
         <div className="lbl pl-5 lg:pl-16 py-3 pr-5 text-muted">
           {weekday.format(new Date())}
         </div>
@@ -514,7 +514,7 @@ export default async function StandupPage({
 
       {/* ================= 1. What is in the way ================= */}
       {part === '1' && (
-        <div className="frame min-h-[60vh]">
+        <div className="frame [--frame-label:360px] [--frame-margin:280px] min-h-[60vh]">
           <div className="pl-5 lg:pl-16 py-8 pr-5">
             <h1 className="font-display text-[30px] font-medium leading-[1.06]">
               What is in the way
@@ -712,10 +712,10 @@ export default async function StandupPage({
         fighting.
       */}
       {part === '2' && (
-        <div className="grid min-h-[76vh] grid-cols-1 lg:min-h-svh lg:grid-cols-[340px_1fr]">
+        <div className="frame [--frame-label:360px] [--frame-margin:280px] min-h-[76vh] lg:min-h-svh">
           {/* The agenda, always in view */}
           <aside className="border-b border-rule lg:sticky lg:top-0 lg:h-svh lg:overflow-y-auto lg:border-b-0 lg:border-r">
-            <div className="sticky top-0 z-10 border-b border-rule-strong bg-paper px-5 lg:px-7 py-5">
+            <div className="sticky top-0 z-10 border-b border-rule-strong bg-paper px-5 lg:pl-16 lg:pr-7 py-5">
               <h1 className="font-display text-[24px] font-medium leading-tight">
                 The whole portfolio
               </h1>
@@ -728,7 +728,7 @@ export default async function StandupPage({
             </div>
 
             {rows.length === 0 ? (
-              <p className="px-5 lg:px-7 py-6 text-[13px] text-muted">
+              <p className="px-5 lg:pl-16 lg:pr-7 py-6 text-[13px] text-muted">
                 Nothing is waiting, nothing is late, and nothing is sitting ready
                 with no owner. Short meeting.
               </p>
@@ -739,7 +739,7 @@ export default async function StandupPage({
                   if (group.length === 0) return null
                   return (
                     <div key={kind}>
-                      <div className="flex items-baseline justify-between border-b border-rule bg-sheet px-5 lg:px-7 py-1.5">
+                      <div className="flex items-baseline justify-between border-b border-rule bg-sheet px-5 lg:pl-16 lg:pr-7 py-1.5">
                         <span className="lbl-tight text-muted">
                           {AGENDA_LABEL[kind]}
                         </span>
@@ -756,7 +756,7 @@ export default async function StandupPage({
                           <Link
                             key={r.nodeId}
                             href={at(r.nodeId)}
-                            className={`flex items-baseline gap-3 border-b border-rule px-5 lg:px-7 py-3 ${
+                            className={`flex items-baseline gap-3 border-b border-rule px-5 lg:pl-16 lg:pr-7 py-3 ${
                               isOn ? 'bg-sheet' : 'hover:bg-sheet'
                             }`}
                           >
@@ -807,7 +807,7 @@ export default async function StandupPage({
               return (
                 <div key={project.id}>
                   <div
-                    className={`flex items-baseline gap-2.5 border-y border-rule-strong px-5 lg:px-7 py-2 ${
+                    className={`flex items-baseline gap-2.5 border-y border-rule-strong px-5 lg:pl-16 lg:pr-7 py-2 ${
                       selected?.id === project.id ? 'bg-sheet' : ''
                     }`}
                   >
@@ -839,7 +839,7 @@ export default async function StandupPage({
                   </div>
 
                   {rolled ? null : rest.length === 0 ? (
-                    <p className="px-5 lg:px-7 py-2.5 text-[11px] text-rule-strong">
+                    <p className="px-5 lg:pl-16 lg:pr-7 py-2.5 text-[11px] text-rule-strong">
                       Everything alive here is already on the agenda above.
                     </p>
                   ) : (
@@ -889,13 +889,10 @@ export default async function StandupPage({
                 )
             })}
 
-            <div className="px-5 lg:px-7 py-6">
-              <Room room={room} />
-            </div>
           </aside>
 
           {/* The item under discussion */}
-          <section className="px-5 lg:px-12 py-8">
+          <section className="px-5 lg:px-10 py-8">
             {!selected ? (
               <p className="text-[15px] text-muted">
                 Nothing needs the room. Chapter three is where the time goes.
@@ -1195,15 +1192,25 @@ export default async function StandupPage({
               </>
             )}
           </section>
+
+          {/*
+            The room, in the same column it occupies on the other two chapters.
+            It used to sit at the bottom of this chapter's rail, so the same list
+            appeared in a different place depending on which chapter you were on,
+            which is a large part of why the page read as three pages.
+          */}
+          <div className="border-l border-rule py-8 pl-5 lg:pl-8 pr-5 lg:pr-16">
+            <Room room={room} />
+          </div>
         </div>
       )}
 
-      {/* ================= 3. From spark to idea ================= */}
+      {/* ================= 3. What is next ================= */}
       {part === '3' && (
-        <div className="frame min-h-[60vh]">
+        <div className="frame [--frame-label:360px] [--frame-margin:280px] min-h-[60vh]">
           <div className="pl-5 lg:pl-16 py-8 pr-5">
             <h1 className="font-display text-[30px] font-medium leading-[1.06]">
-              From spark to idea
+              What is next
             </h1>
             <p className="mt-4 max-w-[26ch] text-[11px] leading-relaxed text-muted">
               Ranked by what each takes out of the year&rsquo;s target, so the
