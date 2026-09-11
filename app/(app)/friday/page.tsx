@@ -59,6 +59,29 @@ export default async function FridayPage() {
       </div>
       <Rule strong />
 
+      {/*
+        What this page is FOR, said before anything else.
+        
+        It used to say it in one line halfway down, and that line assumed you
+        already knew what «the Power App» was. Somebody who does not read the
+        page as four fields and some buttons, with no idea why those four.
+      */}
+      <div className="px-5 lg:px-16 pt-7">
+        <p className="max-w-[640px] text-[13px] leading-relaxed">
+          Every week UBS Projects wants{' '}
+          <strong className="font-medium">four fields per running project</strong>,
+          no more and no fewer. This writes them out of what is already here:
+          what you logged, who you are waiting on, and where the dates stand.
+          Copy each one across and mark it reported.
+        </p>
+        <p className="mt-2 max-w-[640px] text-[11.5px] leading-relaxed text-muted">
+          Nothing is sent anywhere. The text is assembled from your log entries
+          and never rewritten, so what comes out is as good as what went in. If a
+          field reads thinly, the answer is a line on the project rather than an
+          edit here.
+        </p>
+      </div>
+
       {reports.length === 0 && (
         <p className="px-5 lg:px-16 py-12 text-sm text-muted">
           No running projects to report on.
@@ -167,13 +190,13 @@ export default async function FridayPage() {
               </p>
 
               <div className="mt-6 flex flex-col gap-3.5">
-                <CopyField label="Status" source="Derived from node.status" value={r.fields.status}>
+                <CopyField label="Status" source="From the project's own status" value={r.fields.status}>
                   {r.fields.status}
                 </CopyField>
 
                 <CopyField
                   label="Stage"
-                  source="Your choice, reporting.stage"
+                  source="The one field you choose"
                   value={r.fields.stage ?? ''}
                 >
                   <StageSelect nodeId={r.project.id} stage={r.fields.stage} />
@@ -181,7 +204,7 @@ export default async function FridayPage() {
 
                 <CopyField
                   label="Progress"
-                  source="Derived from blockers and dates"
+                  source="From open blockers and the next date"
                   value={r.fields.progress}
                 >
                   <div className="flex items-baseline gap-3">
@@ -204,7 +227,7 @@ export default async function FridayPage() {
 
                 <CopyField
                   label="Status comment"
-                  source="Derived from log entries and blockers"
+                  source="From your log since the last report"
                   value={r.fields.comment}
                 >
                   {r.fields.comment}
