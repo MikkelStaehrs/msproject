@@ -8,11 +8,11 @@ import {
   attendees,
   movement,
   AGENDA_LABEL,
-  AGENDA_ORDER,
   CADENCE_DAYS,
   type AgendaItem,
 } from '@/lib/standup'
 import { holdStandup, reopenStandup } from '@/lib/standup-actions'
+import { setNodeStatus } from '@/lib/node-actions'
 import {
   basisCoversTarget,
   impactOf,
@@ -255,7 +255,6 @@ export default async function StandupPage({
    * toggle, because a toggle is where the twenty five would go to be forgotten
    * again.
    */
-  const onAgenda = new Set(rows.map((r) => r.nodeId))
   const OVER = new Set(['done', 'cancelled'])
 
   const depthOf = new Map<string, number>()
@@ -286,10 +285,18 @@ export default async function StandupPage({
        * So the cut is the same one `v_node_progress` makes: the finest level at
        * which the work is described. Active, with nothing active underneath.
        */
-      const activeUnder = (childrenOf.get(kid.id) ?? []).some(
-        (g) => g.status === 'active',
-      )
-      if (kid.status === 'active' && !activeUnder) into.push(kid)
+      /*
+       * Doing and on hold, both. Parking something is the decision this chapter
+       * is for, and a list that dropped it the moment you pressed «hold» would
+       * be a list you could put work into and never get it out of again.
+       *
+       * `idea` and `planned` stay off: those have not been started, which is the
+       * thing the room decided not to discuss. `paused` HAS been started and is
+       * waiting for a reason somebody chose.
+       */
+      const WALKED = new Set(['active', 'paused'])
+      const under = (childrenOf.get(kid.id) ?? []).some((g) => WALKED.has(g.status))
+      if (WALKED.has(kid.status) && !under) into.push(kid)
       walk(kid.id, depth + 1, into)
     }
   }
@@ -719,89 +726,29 @@ export default async function StandupPage({
                 The whole portfolio
               </h1>
               <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-                <span className="num text-ink">{rows.length}</span> of{' '}
-                <span className="num text-ink">{liveCount}</span> live pieces need
-                something before {formatDate(nextOn)}. Those come first; the rest
-                follows by project, so nothing is out of sight.
+                <span className="num text-ink">{liveCount}</span> pieces of work
+                under way. Walk them and decide what happens before{' '}
+                {formatDate(nextOn)}.
               </p>
             </div>
 
-            {rows.length === 0 ? (
-              <p className="px-5 lg:pl-16 lg:pr-7 py-6 text-[13px] text-muted">
-                Nothing is waiting, nothing is late, and nothing is sitting ready
-                with no owner. Short meeting.
-              </p>
-            ) : (
-              <nav>
-                {AGENDA_ORDER.map((kind) => {
-                  const group = rows.filter((r) => r.lead.kind === kind)
-                  if (group.length === 0) return null
-                  return (
-                    <div key={kind}>
-                      <div className="flex items-baseline justify-between border-b border-rule bg-sheet px-5 lg:pl-16 lg:pr-7 py-1.5">
-                        <span className="lbl-tight text-muted">
-                          {AGENDA_LABEL[kind]}
-                        </span>
-                        <span className="lbl-tight tabular-nums text-rule-strong">
-                          {group.length}
-                        </span>
-                      </div>
-                      {group.map((r) => {
-                        const node = byId.get(r.nodeId)
-                        const isOn = selected?.id === r.nodeId
-                        const loud =
-                          kind === 'overdue_blocker' || kind === 'overdue'
-                        return (
-                          <Link
-                            key={r.nodeId}
-                            href={at(r.nodeId)}
-                            className={`flex items-baseline gap-3 border-b border-rule px-5 lg:pl-16 lg:pr-7 py-3 ${
-                              isOn ? 'bg-sheet' : 'hover:bg-sheet'
-                            }`}
-                          >
-                            <span
-                              className={`num w-9 shrink-0 text-[19px] leading-none ${
-                                loud
-                                  ? 'text-oxblood'
-                                  : r.lead.days === 0
-                                    ? 'text-rule-strong'
-                                    : 'text-ink'
-                              }`}
-                            >
-                              {r.lead.days === 0 ? '·' : r.lead.days}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span
-                                className={`block text-[13.5px] leading-snug ${
-                                  isOn ? 'font-medium text-ink' : 'text-muted'
-                                }`}
-                              >
-                                {node?.title ?? r.lead.title}
-                              </span>
-                              <span className="mt-0.5 block text-[10px] text-rule-strong">
-                                {projectTitle(r.nodeId)}
-                                {r.lead.who && <> · {r.lead.who}</>}
-                                {r.also.length > 0 && (
-                                  <> · and {r.also.length} more here</>
-                                )}
-                              </span>
-                            </span>
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  )
-                })}
-              </nav>
-            )}
 
             {/*
               Everything else that is alive. Not a second screen and not behind a
               toggle: the agenda saw four of thirty five pieces, and the other
               thirty one are the ones a toggle would hide again.
             */}
+            {/*
+              Just the work, by project.
+              
+              The ranked agenda used to sit above this, and on chapter two it was
+              a second telling of chapter one: the same blocked pieces, listed
+              again, under a heading that said «Waiting». Chapter one is where
+              those are discussed. This chapter is for walking the work and
+              deciding what happens before next time.
+            */}
             {portfolio.map(({ project, pieces }) => {
-              const rest = pieces.filter((n) => !onAgenda.has(n.id))
+              const rest = pieces
               const rolled = isShut(project.id)
               return (
                 <div key={project.id}>
@@ -837,18 +784,14 @@ export default async function StandupPage({
                     </span>
                   </div>
 
-                  {rolled ? null : rest.length === 0 ? (
-                    <p className="px-5 lg:pl-16 lg:pr-7 py-2.5 text-[11px] text-rule-strong">
-                      Everything alive here is already on the agenda above.
-                    </p>
-                  ) : (
+                  {rolled ? null : (
                     rest.map((n) => {
                       const isOn = selected?.id === n.id
                       const late = n.due_date !== null && n.due_date < today
+                      const held = n.status === 'paused'
                       return (
-                        <Link
+                        <div
                           key={n.id}
-                          href={at(n.id)}
                           className={`flex items-baseline gap-2.5 border-b border-rule py-2 pr-5 lg:pr-7 ${
                             isOn ? 'bg-sheet' : 'hover:bg-sheet'
                           }`}
@@ -860,14 +803,39 @@ export default async function StandupPage({
                             status={n.status}
                             blocked={state.get(n.id)?.is_blocked ?? false}
                           />
-                          <span
+                          <Link
+                            href={at(n.id)}
                             className={`min-w-0 flex-1 truncate text-[12.5px] ${
                               isOn ? 'font-medium text-ink' : 'text-muted'
-                            }`}
+                            } ${held ? 'line-through decoration-rule-strong' : ''}`}
                           >
                             {n.title}
-                          </span>
-                          {n.due_date ? (
+                          </Link>
+                          {/*
+                            Park it, or pick it up again, without leaving the row.
+                            
+                            The meeting's own verb: something is either being
+                            worked on before next time or it is not, and deciding
+                            that is most of what chapter two is for. The full
+                            status picker is still on the piece itself, for the
+                            other four states that are not a weekly decision.
+                          */}
+                          <form action={setNodeStatus} className="shrink-0">
+                            <input type="hidden" name="id" value={n.id} />
+                            <input
+                              type="hidden"
+                              name="status"
+                              value={held ? 'active' : 'paused'}
+                            />
+                            <input type="hidden" name="redirectTo" value={at(n.id)} />
+                            <button
+                              className="text-[10px] text-rule-strong hover:text-green"
+                              title={held ? 'Pick it up again' : 'Park it until it matters'}
+                            >
+                              {held ? 'resume' : 'hold'}
+                            </button>
+                          </form>
+                          {n.due_date && (
                             <span
                               className={`shrink-0 text-[10px] tabular-nums ${
                                 late ? 'text-oxblood' : 'text-rule-strong'
@@ -875,12 +843,8 @@ export default async function StandupPage({
                             >
                               {formatDate(n.due_date)}
                             </span>
-                          ) : (
-                            <span className="lbl-tight shrink-0 text-rule-strong">
-                              {STATUS_LABEL[n.status]}
-                            </span>
                           )}
-                        </Link>
+                        </div>
                       )
                     })
                   )}
