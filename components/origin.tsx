@@ -85,6 +85,16 @@ export function Origin({
               >
                 {(impact.shareOfTarget * 100).toFixed(1)}% of the year
               </span>
+              {/*
+                What a project was promised on, read back later, against figures
+                nobody has checked. The doubt belongs beside the number rather
+                than in a footnote: this row exists to be quoted in six months.
+              */}
+              {reference !== null && !reference.confirmed && (
+                <span className="text-oxblood">
+                  against figures nobody has confirmed
+                </span>
+              )}
             </>
           )}
           {where !== null && <span className="text-muted">{where}</span>}

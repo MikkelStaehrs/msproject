@@ -184,6 +184,8 @@ export interface Strategy {
   sort_order: number
   created_at: string
   updated_at: string
+  /** True where the target is the yardstick's, computed rather than typed. */
+  target_from_yardstick: boolean
 }
 
 /** A node marked as serving a strategy. */
@@ -283,6 +285,9 @@ export interface Yardstick {
   cogs_target_eur_per_unit: number
   note: string | null
   updated_at: string
+  /** When these figures were last checked against their source. Null: never. */
+  confirmed_at: string | null
+  confirmed_by: string | null
 }
 
 /** Units through one process stage in one year. */

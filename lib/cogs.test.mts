@@ -34,6 +34,9 @@ const FY26: Reference = {
   // What the strategy covers is wider than what the figure counts, so this
   // reference is knowingly flattering. Named, not corrected.
   targetScope: 'Sukkerroefrø · hele virksomheden',
+  // And nobody has held any of it up against the dashboard it came from, which
+  // is the state of the real row too.
+  confirmed: false,
   hourRateDkk: 240,
   eurRate: 7.46,
   targetEurPerUnit: 1,

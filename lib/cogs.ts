@@ -71,6 +71,17 @@ export type Reference = {
   eurRate: number
   /** What the strategy asks for, per unit, per year. */
   targetEurPerUnit: number
+  /**
+   * Whether anybody has held these figures up against the source they came
+   * from. False is the honest default and is true of every one of them today.
+   *
+   * It is carried on the reference rather than looked up where it is shown,
+   * because everything derived from these numbers inherits their standing: a
+   * share of the target computed from an unconfirmed denominator is itself
+   * unconfirmed, and the page that prints it in tabular numerals is the one
+   * making it look otherwise.
+   */
+  confirmed: boolean
 }
 
 /** How a saving was described. Exactly one of these is filled in. */
@@ -177,6 +188,30 @@ export function targetAnnual(reference: Reference): { eur: number; dkk: number }
  * out loud that the target cannot be reached by saving time, which is worth
  * knowing before a quarter goes into an idea that is three per cent of it.
  */
+/**
+ * What a strategy asks for in a year, from whichever source it says.
+ *
+ * Two sources, never both, and the strategy says which. `target_from_yardstick`
+ * means it is the COGS one: the cost basis times the euro per unit, computed
+ * here, because storing it would be storing a derived value and a copy taken
+ * once keeps whatever it said after the denominator moves. Anything else is
+ * typed, which is right for a target that is a count of something rather than
+ * an amount of money and cannot be derived from anything this application holds.
+ *
+ * Null means there is no target, which for a heading is the correct answer
+ * rather than a missing one: `strategy.target_annual` is nullable precisely so
+ * a strategy can be a heading without inventing a number to fill the field.
+ */
+export function strategyTarget(
+  strategy: { target_annual: number | string | null; target_from_yardstick: boolean },
+  reference: Reference | null,
+): number | null {
+  if (strategy.target_from_yardstick) {
+    return reference === null ? null : (targetAnnual(reference)?.eur ?? null)
+  }
+  return strategy.target_annual === null ? null : Number(strategy.target_annual)
+}
+
 export function targetInHours(reference: Reference): number | null {
   const target = targetAnnual(reference)
   if (target === null || !finite(reference.hourRateDkk) || reference.hourRateDkk <= 0) {
@@ -210,6 +245,7 @@ export function referenceFrom(
     hour_rate_dkk: number | string
     eur_rate: number | string
     cogs_target_eur_per_unit: number | string
+    confirmed_at?: string | null
   } | null,
 ): Reference | null {
   if (y === null) return null
@@ -221,6 +257,7 @@ export function referenceFrom(
     hourRateDkk: Number(y.hour_rate_dkk),
     eurRate: Number(y.eur_rate),
     targetEurPerUnit: Number(y.cogs_target_eur_per_unit),
+    confirmed: y.confirmed_at != null,
   }
 }
 

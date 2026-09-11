@@ -105,6 +105,18 @@ export function Assessment({
             >
               {(impact.shareOfTarget * 100).toFixed(1)}% of the year
             </span>
+            {/*
+              Said before the other two, because it is the broader doubt: those
+              two are about which population the figure covers, and this one is
+              about whether anybody has checked the figure at all. A percentage
+              printed in tabular numerals with no caveat is a percentage
+              somebody quotes in a meeting.
+            */}
+            {reference !== null && !reference.confirmed && (
+              <span className="text-oxblood">
+                against figures nobody has confirmed
+              </span>
+            )}
             {flattered && (
               <span className="text-oxblood">
                 overstated: measured on {reference?.scope}, target covers{' '}

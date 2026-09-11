@@ -1144,6 +1144,18 @@ export default async function StandupPage({
                 a year. A percentage here is a percentage of that.
               </p>
             )}
+            {/*
+              Two separate doubts, and this one is the broader. «A floor, not
+              the figure» is about which population the denominator counts;
+              this is about whether anybody has checked the denominator at all.
+              Both can be true, and the second does not replace the first.
+            */}
+            {reference !== null && !reference.confirmed && (
+              <p className="mt-3 max-w-[26ch] border-l-2 border-oxblood pl-2.5 text-[10.5px] leading-relaxed text-oxblood">
+                And nobody has confirmed these figures against the dashboard
+                they came from. Every percentage below inherits that.
+              </p>
+            )}
             {reference !== null && !basisCoversTarget(reference) ? (
               <p className="mt-3 max-w-[26ch] border-l-2 border-oxblood pl-2.5 text-[10.5px] leading-relaxed text-oxblood">
                 A floor, not the figure. It is measured on{' '}

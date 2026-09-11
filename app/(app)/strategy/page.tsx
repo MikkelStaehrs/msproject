@@ -1,7 +1,13 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
-import { annualEur, referenceFrom, savingFrom, stagesFrom } from '@/lib/cogs'
+import {
+  annualEur,
+  referenceFrom,
+  savingFrom,
+  stagesFrom,
+  strategyTarget,
+} from '@/lib/cogs'
 import { formatMoney } from '@/lib/cost'
 import { notStartedShare, strategyPicture, type Marking } from '@/lib/strategy'
 import { createStrategy, deleteStrategy, updateStrategy } from '@/lib/strategy-actions'
@@ -154,12 +160,27 @@ export default async function StrategyPage({
                 />
               </label>
 
+              {/*
+                A strategy whose target is the yardstick's is not offered a box
+                to type one into. The database refuses both at once, and a form
+                that lets you type a value it will then reject is a form that
+                teaches you to distrust it. Shown instead, so the figure is
+                still visible and still derived.
+              */}
               <label className="block">
                 <span className="lbl text-muted">
                   <Hint text="What the strategy is measured against, per year, in euro. Leave it empty where the strategy carries no number: an invented target is worse than none.">
                     Target a year
                   </Hint>
                 </span>
+                {editing?.target_from_yardstick ? (
+                  <div className="border-b border-rule py-[7px] text-[13px] tabular-nums text-muted">
+                    {strategyTarget(editing, reference)?.toLocaleString('en-GB', {
+                      maximumFractionDigits: 0,
+                    }) ?? 'no yardstick'}{' '}
+                    <span className="lbl-tight">from the yardstick</span>
+                  </div>
+                ) : (
                 <input
                   name="target_annual"
                   inputMode="decimal"
@@ -167,6 +188,7 @@ export default async function StrategyPage({
                   placeholder="250000"
                   className="field tabular-nums"
                 />
+                )}
               </label>
 
               <label className="block">
@@ -240,10 +262,7 @@ export default async function StrategyPage({
           <div className="flex flex-col gap-12">
             {strategies.map((s) => {
               const mine = marks.filter((m) => m.strategy_id === s.id).map(markingFor)
-              const p = strategyPicture(
-                mine,
-                s.target_annual === null ? null : Number(s.target_annual),
-              )
+              const p = strategyPicture(mine, strategyTarget(s, reference))
               const ahead = notStartedShare(mine)
               const counted = marks.filter((m) => m.strategy_id === s.id && m.is_top)
 

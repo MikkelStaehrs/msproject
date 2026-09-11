@@ -203,7 +203,11 @@ const TARGET = {
     'only means something against the unit the target is per: use the figures ' +
     'this returns rather than any you remember or can derive from elsewhere. ' +
     'Where a figure is missing, say it is not known. An invented denominator ' +
-    'is how a saving comes to be reported as a share of a target nobody set.',
+    'is how a saving comes to be reported as a share of a target nobody set. ' +
+    'CHECK `confirmed`. Where it is false nobody has held these numbers up ' +
+    'against the source they came from, which is the case today, and every ' +
+    'share you compute from them inherits that. Say so whenever you quote one: ' +
+    'a percentage given without it will be repeated without it.',
   inputSchema: { type: 'object', properties: {}, additionalProperties: false },
 } as const
 
@@ -350,6 +354,8 @@ function derive(row: Assessed, reference: ReturnType<typeof referenceFrom>, stag
   }
 
   return {
+    /** False until somebody checks the yardstick against its source. */
+    figuresConfirmed: reference?.confirmed ?? false,
     annualDkk: impact?.annualDkk ?? null,
     eurPerUnit: impact?.eurPerUnit ?? null,
     shareOfTarget: impact?.shareOfTarget ?? null,
@@ -562,7 +568,8 @@ export async function POST(request: NextRequest) {
               (r.mixedPopulations
                 ? ', BUT THE POPULATIONS DIFFER so this share is not comparable'
                 : '') +
-              (r.targetUnderstated ? ', against a target that is a floor' : '')
+              (r.targetUnderstated ? ', against a target that is a floor' : '') +
+              (r.figuresConfirmed ? '' : ', AND THE FIGURES ARE UNCONFIRMED')
         const judged =
           r.quadrant === null ? 'not scored' : `${r.quadrant}, priority ${r.priority}`
         return `${r.id}\n  ${r.captured_on}: ${r.body}${note}\n  worth: ${worth}\n  judged: ${judged}`

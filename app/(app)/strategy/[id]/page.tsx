@@ -2,7 +2,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
-import { annualEur, referenceFrom, savingFrom, stagesFrom } from '@/lib/cogs'
+import {
+  annualEur,
+  referenceFrom,
+  savingFrom,
+  stagesFrom,
+  strategyTarget,
+} from '@/lib/cogs'
 import { subtreeSet } from '@/lib/subtree'
 import { formatMoney } from '@/lib/cost'
 import { contributionOf, strategyPicture, type Marking } from '@/lib/strategy'
@@ -122,10 +128,7 @@ export default async function StrategyDetailPage({
     }
   }
 
-  const picture = strategyPicture(
-    marks.map(markingFor),
-    strategy.target_annual === null ? null : Number(strategy.target_annual),
-  )
+  const picture = strategyPicture(marks.map(markingFor), strategyTarget(strategy, reference))
   const markedIds = new Set(marks.map((m) => m.node_id))
   const editing = editId ? marks.find((m) => m.id === editId) : undefined
 

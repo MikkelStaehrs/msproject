@@ -16,6 +16,12 @@ function strategyFields(fd: FormData) {
   return {
     name: required(fd, 'name'),
     description: text(fd, 'description'),
+    /*
+     * Absent from the form when the target is the yardstick's, and `number()`
+     * turns an absent field into null, which is exactly what the constraint
+     * wants. Left explicit rather than conditional: a strategy that stops
+     * deriving its target has nothing stale to clear out.
+     */
     target_annual: number(fd, 'target_annual'),
     owner: text(fd, 'owner'),
     started_on: text(fd, 'started_on'),
