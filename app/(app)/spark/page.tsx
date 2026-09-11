@@ -344,8 +344,8 @@ export default async function SparkPage({
                   >
                     <input type="hidden" name="id" value={s.id} />
                     <input type="hidden" name="redirectTo" value={`/spark?show=new`} />
-                    <div className="grid grid-cols-4 gap-x-5 gap-y-3">
-                      <label className="col-span-2 block">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-3">
+                      <label className="col-span-1 sm:col-span-2 block">
                         <span className="lbl text-muted">
                           <Hint text="The thought becomes the description. Give it a name here: how you first put it is often clearer than the name, so both are kept.">
                             Call it

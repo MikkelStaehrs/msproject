@@ -138,7 +138,7 @@ export function Assessment({
       <input type="hidden" name="redirectTo" value={redirectTo} />
 
       <div className="lbl text-muted">What it takes out</div>
-      <div className="mt-2 grid grid-cols-4 gap-x-5 gap-y-3">
+      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-3">
         <label className="block">
           <span className="lbl text-muted">
             <Hint text="Whichever way the saving was actually described. All three end at kroner a year, so the answer is the same however it was put.">
@@ -173,7 +173,7 @@ export function Assessment({
           />
         </label>
 
-        <label className="col-span-2 block">
+        <label className="col-span-1 sm:col-span-2 block">
           <span className="lbl text-muted">
             <Hint text="Only for a saving per unit. The stages do not run the same quantities, so the same saving is worth 68% more on cleaning than on coating.">
               At which stage
@@ -195,7 +195,7 @@ export function Assessment({
       </div>
 
       <div className="lbl mt-6 text-muted">What the project group scores</div>
-      <div className="mt-2 grid grid-cols-4 gap-x-5">
+      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5">
         {(
           [
             ['cost_score', 'Cost', spark.cost_score, '1 cheap, 5 expensive'],

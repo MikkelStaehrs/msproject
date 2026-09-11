@@ -195,9 +195,9 @@ export default async function MeetingPage({
 
   return (
     <main>
-      <div className="grid min-h-screen grid-cols-[340px_1fr]">
+      <div className="grid grid-cols-1 lg:min-h-screen lg:grid-cols-[340px_1fr]">
         {/* --- The pieces, always in view -------------------------------- */}
-        <aside className="border-r border-rule">
+        <aside className="border-b border-rule lg:border-r lg:border-b-0">
           <div className="border-b border-rule-strong px-7 py-5">
             <div className="lbl flex flex-wrap items-baseline gap-x-2 gap-y-1 text-muted">
               <Link href={base} className="hover:text-ink">
@@ -467,7 +467,7 @@ export default async function MeetingPage({
                 </div>
               )}
 
-              <div className="mt-9 grid grid-cols-2 gap-x-12">
+              <div className="mt-9 grid grid-cols-1 gap-y-9 lg:grid-cols-2 lg:gap-x-12 lg:gap-y-0">
                 {/* Blockers */}
                 <div>
                   <Head title="Blockers" action={{ href: at(selected.id, `bnew=${selected.id}`), label: 'New' }} />
@@ -570,7 +570,7 @@ export default async function MeetingPage({
               </div>
 
               {/* The log, and what it has cost */}
-              <div className="mt-9 grid grid-cols-2 gap-x-12">
+              <div className="mt-9 grid grid-cols-1 gap-y-9 lg:grid-cols-2 lg:gap-x-12 lg:gap-y-0">
                 <div>
                   <Head title="Log" />
                   {entries.length === 0 ? (

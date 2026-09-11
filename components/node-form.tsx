@@ -76,7 +76,7 @@ export function NodeForm({
       <form
         id={formId}
         action={editing ? updateNode : createNode}
-        className="grid grid-cols-4 gap-x-8 gap-y-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4"
       >
         {editing && <input type="hidden" name="id" value={node.id} />}
         {!editing && <input type="hidden" name="parent_id" value={parentId ?? ''} />}
@@ -222,7 +222,7 @@ export function NodeForm({
         </Field>
 
         {isRoot && editing && (
-          <p className="col-span-4 text-[11px] text-muted">
+          <p className="col-span-1 sm:col-span-2 lg:col-span-4 text-[11px] text-muted">
             Project no., account string, goal, people and economics live on{' '}
             <Link href={`/p/${node.id}/identitet`} className="text-green">
               Identity
@@ -232,7 +232,7 @@ export function NodeForm({
         )}
 
         {!isRoot && (
-          <details open={filledRoles > 0} className="col-span-4 border-t border-rule pt-3">
+          <details open={filledRoles > 0} className="col-span-1 sm:col-span-2 lg:col-span-4 border-t border-rule pt-3">
             <summary className="lbl cursor-pointer text-muted marker:text-rule-strong">
               Roles
               {filledRoles > 0 && (
@@ -244,7 +244,7 @@ export function NodeForm({
               project. A hardware installation is often led by a different profile
               than the programme around it.
             </p>
-            <div className="mt-3 grid grid-cols-4 gap-x-8 gap-y-4">
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
               {PEOPLE_FIELDS.map((f) => (
                 <label
                   key={f.key}
@@ -278,7 +278,7 @@ export function NodeForm({
           </details>
         )}
 
-        <label className="col-span-4 flex items-center gap-2.5 text-xs">
+        <label className="col-span-1 sm:col-span-2 lg:col-span-4 flex items-center gap-2.5 text-xs">
           <input
             type="checkbox"
             name="is_milestone"

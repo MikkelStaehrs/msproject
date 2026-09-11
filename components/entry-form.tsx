@@ -17,11 +17,11 @@ export function EntryForm({
     <div className="border-y border-rule-strong bg-sheet px-6 py-5">
       <div className="lbl mb-4 text-muted">Edit entry</div>
 
-      <form id={formId} action={updateEntry} className="grid grid-cols-4 gap-x-8 gap-y-4">
+      <form id={formId} action={updateEntry} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
         <input type="hidden" name="id" value={entry.id} />
         <input type="hidden" name="redirectTo" value={redirectTo} />
 
-        <label className="col-span-4 block">
+        <label className="col-span-1 sm:col-span-2 lg:col-span-4 block">
           <span className="lbl text-muted">Text</span>
           <textarea
             name="body"

@@ -88,12 +88,12 @@ export default async function StrategyPage({
             </div>
             <form
               action={editing ? updateStrategy : createStrategy}
-              className="grid grid-cols-4 gap-x-6 gap-y-4"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4"
             >
               {editing && <input type="hidden" name="id" value={editing.id} />}
               <input type="hidden" name="redirectTo" value="/strategy" />
 
-              <label className="col-span-2 block">
+              <label className="col-span-1 sm:col-span-2 block">
                 <span className="lbl text-muted">Name</span>
                 <input
                   name="name"
@@ -153,7 +153,7 @@ export default async function StrategyPage({
                 />
               </label>
 
-              <label className="col-span-4 block">
+              <label className="col-span-1 sm:col-span-2 lg:col-span-4 block">
                 <span className="lbl text-muted">What it is</span>
                 <textarea
                   name="description"
@@ -163,7 +163,7 @@ export default async function StrategyPage({
                 />
               </label>
 
-              <div className="col-span-4 mt-1 flex items-center gap-3">
+              <div className="col-span-1 sm:col-span-2 lg:col-span-4 mt-1 flex items-center gap-3">
                 <button className="btn">{editing ? 'Save' : 'Create'}</button>
                 <Link href="/strategy" className="btn btn-ghost">
                   Cancel
@@ -226,7 +226,7 @@ export default async function StrategyPage({
                     </p>
                   )}
 
-                  <div className="mt-5 grid max-w-4xl grid-cols-4 gap-x-8 border-y border-rule py-4">
+                  <div className="mt-5 grid max-w-4xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 border-y border-rule py-4">
                     <Figure
                       label="Promised a year"
                       value={formatMoney(Math.round(p.promised), 'EUR')}

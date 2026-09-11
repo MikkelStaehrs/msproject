@@ -29,12 +29,12 @@ function Login() {
   const linkProblem = useSearchParams().get('link')
 
   return (
-    <main className="grid min-h-screen grid-cols-[1fr_440px]">
+    <main className="grid grid-cols-1 lg:min-h-screen lg:grid-cols-[1fr_440px]">
       <div className="flex flex-col justify-between pl-5 lg:pl-16 py-11 pr-5 lg:pr-14">
         <div className="lbl text-muted">Portfolio · Internal</div>
 
         <div>
-          <h1 className="font-display text-[128px] font-medium leading-[0.94] tracking-[-0.03em]">
+          <h1 className="font-display text-[56px] font-medium leading-[0.94] tracking-[-0.03em] sm:text-[88px] lg:text-[128px]">
             Task Studio
           </h1>
           <div className="my-6 h-px bg-rule-strong" />
@@ -49,7 +49,7 @@ function Login() {
         </div>
       </div>
 
-      <div className="flex flex-col justify-center border-l border-rule-strong py-11 pl-10 pr-5 lg:pr-16">
+      <div className="flex flex-col justify-center border-t border-rule-strong py-11 pl-5 pr-5 lg:border-l lg:border-t-0 lg:pl-10 lg:pr-16">
         <h2 className="font-display text-3xl font-medium">
           {forgot ? 'Forgotten it' : 'Sign in'}
         </h2>

@@ -184,7 +184,7 @@ export default async function CostPage({
         </div>
 
         {/* The numbers that claim to be the cost, and what they leave open */}
-        <div className="mt-5 grid max-w-[760px] grid-cols-[132px_1fr_120px]">
+        <div className="mt-5 grid max-w-[760px] grid-cols-1 lg:grid-cols-[132px_1fr_120px]">
           {atProject && (
             <>
               <Figure
@@ -224,7 +224,7 @@ export default async function CostPage({
         </div>
 
         {roll.annual_items > 0 && (
-          <div className="mt-5 grid max-w-[760px] grid-cols-[132px_1fr_120px]">
+          <div className="mt-5 grid max-w-[760px] grid-cols-1 lg:grid-cols-[132px_1fr_120px]">
             <Figure
               label="Every year"
               note={`${roll.annual_items} recurring ${roll.annual_items === 1 ? 'line' : 'lines'}, of which ${formatMoney(Number(roll.annual_committed), currency)} committed. Never added to the figures above: one is an amount, the other is a rate`}
@@ -265,7 +265,7 @@ export default async function CostPage({
                 return (
                   <div
                     key={c.id}
-                    className="grid grid-cols-[1fr_92px_120px_120px] items-baseline gap-4 border-t border-rule py-2.5 last:border-b"
+                    className="grid grid-cols-1 gap-y-1.5 border-t border-rule py-2.5 last:border-b lg:grid-cols-[1fr_92px_120px_120px] lg:items-baseline lg:gap-4 lg:gap-y-0"
                   >
                     <Link
                       href={`${base}/cost?focus=${c.id}`}
@@ -273,17 +273,20 @@ export default async function CostPage({
                     >
                       {c.title}
                     </Link>
+                    {/* One wrapped line under the title on a phone, three columns at desk width. */}
+                    <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 lg:contents">
                     <span className="text-[10.5px] tabular-nums text-muted">
                       {r.items} {r.items === 1 ? 'line' : 'lines'}
                     </span>
-                    <span className="text-right text-[10.5px] tabular-nums text-muted">
+                    <span className="text-[10.5px] tabular-nums text-muted lg:text-right">
                       {r.annual_priced > 0
                         ? `${formatMoney(Number(r.annual_priced), currency)} a year`
                         : `${formatMoney(Number(r.once_committed), currency)} committed`}
                     </span>
-                    <span className="num text-right text-[15px]">
+                    <span className="num text-[15px] lg:text-right">
                       {formatMoney(Number(r.once_priced), currency)}
                     </span>
+                    </div>
                   </div>
                 )
               })}
@@ -302,7 +305,7 @@ export default async function CostPage({
           this separates what creates an asset from what keeps things running. Neither
           answers the other.
         </p>
-        <div className="mt-2 grid max-w-[760px] grid-cols-3 gap-4">
+        <div className="mt-2 grid max-w-[760px] grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="border-t border-rule-strong pt-2.5">
             <div className="lbl-tight text-muted">CAPEX, the investment</div>
             <div className="num mt-1 text-[19px]">
@@ -342,7 +345,7 @@ export default async function CostPage({
         </div>
 
         <div className="lbl mt-7 text-muted">One off, by certainty</div>
-        <div className="mt-2 grid max-w-[760px] grid-cols-4 gap-4">
+        <div className="mt-2 grid max-w-[760px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {COST_STATES.map((s) => (
             <div key={s} className="border-t border-rule pt-2.5">
               <div className="lbl-tight text-muted">{COST_STATE_LABEL[s]}</div>
@@ -373,12 +376,12 @@ export default async function CostPage({
           <form
             action={editing ? updateCost : createCost}
             encType="multipart/form-data"
-            className="mt-3 grid grid-cols-6 gap-x-5 gap-y-3"
+            className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-x-5 gap-y-3"
           >
             {editing && <input type="hidden" name="id" value={editing.id} />}
             <input type="hidden" name="redirectTo" value={here} />
 
-            <label className="col-span-3 block">
+            <label className="col-span-1 sm:col-span-2 lg:col-span-3 block">
               <span className="lbl text-muted">What</span>
               <input
                 name="description"
@@ -509,7 +512,7 @@ export default async function CostPage({
             </label>
 
             {!editing && (
-              <label className="col-span-2 block">
+              <label className="col-span-1 sm:col-span-2 block">
                 <span className="lbl text-muted">
                   On{!atProject && <span className="ml-2 text-rule-strong">this part</span>}
                 </span>
@@ -560,7 +563,7 @@ export default async function CostPage({
               />
             </label>
 
-            <label className="col-span-2 block">
+            <label className="col-span-1 sm:col-span-2 block">
               <span className="lbl text-muted">
                 Paper <span className="ml-2 text-rule-strong">the quote itself</span>
               </span>
@@ -588,7 +591,7 @@ export default async function CostPage({
             </label>
 
             {docs.length > 0 && (
-              <label className="col-span-2 block">
+              <label className="col-span-1 sm:col-span-2 block">
                 <span className="lbl text-muted">
                   Or one already here
                 </span>
@@ -607,7 +610,7 @@ export default async function CostPage({
               </label>
             )}
 
-            <label className="col-span-4 block">
+            <label className="col-span-1 sm:col-span-2 lg:col-span-4 block">
               <span className="lbl text-muted">Note</span>
               <input
                 name="note"
@@ -617,7 +620,7 @@ export default async function CostPage({
               />
             </label>
 
-            <div className="col-span-6 mt-1 flex items-center gap-3">
+            <div className="col-span-1 sm:col-span-2 lg:col-span-6 mt-1 flex items-center gap-3">
               <button className="btn">{editing ? 'Save' : 'Add'}</button>
               {editing && (
                 <Link href={here} className="btn btn-ghost">
@@ -657,7 +660,7 @@ export default async function CostPage({
                 {group.map((l) => (
                   <div
                     key={l.id}
-                    className="grid grid-cols-[1fr_120px_150px_120px] items-baseline gap-4 border-b border-rule py-3"
+                    className="grid grid-cols-1 gap-y-2 border-b border-rule py-3 lg:grid-cols-[1fr_120px_150px_120px] lg:items-baseline lg:gap-4 lg:gap-y-0"
                   >
                     <div className="min-w-0">
                       <div className="text-[13px]">{l.description}</div>
@@ -695,7 +698,9 @@ export default async function CostPage({
                       </div>
                     </div>
 
-                    <div className="num text-right text-[15px]">
+                    {/* Amount, state and actions share one wrapped line on a phone. */}
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-2 lg:contents">
+                    <div className="num text-[15px] lg:text-right">
                       {/*
                         The unit price only shown where it is not the whole
                         story. One of something reads as its price, and «1 x»
@@ -747,7 +752,7 @@ export default async function CostPage({
                       ))}
                     </div>
 
-                    <div className="flex items-baseline justify-end gap-3">
+                    <div className="flex items-baseline gap-3 lg:justify-end">
                       <Link
                         href={keep(`edit=${l.id}`)}
                         className="lbl-tight text-rule-strong hover:text-ink"
@@ -761,6 +766,7 @@ export default async function CostPage({
                           Delete
                         </button>
                       </form>
+                    </div>
                     </div>
                   </div>
                 ))}

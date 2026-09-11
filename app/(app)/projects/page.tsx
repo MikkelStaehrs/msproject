@@ -153,7 +153,7 @@ export default async function ProjectsPage({
             <p className="text-sm text-muted">No projects in this selection.</p>
           ) : (
             <div>
-              <div className="grid grid-cols-[1fr_150px_120px_92px_86px] items-baseline border-b border-rule-strong pb-2">
+              <div className="hidden grid-cols-[1fr_150px_120px_92px_86px] items-baseline border-b border-rule-strong pb-2 lg:grid">
                 <span className="lbl text-muted">Project</span>
                 <span className="lbl text-muted">Progress</span>
                 <span className="lbl text-right text-muted">Committed</span>
@@ -191,9 +191,9 @@ export default async function ProjectsPage({
                       return (
                         <div
                           key={p.id}
-                          className="grid grid-cols-[1fr_150px_120px_92px_86px] items-center border-b border-rule py-3.5"
+                          className="grid grid-cols-1 gap-y-3 border-b border-rule py-3.5 lg:grid-cols-[1fr_150px_120px_92px_86px] lg:items-center lg:gap-y-0"
                         >
-                          <div className="pr-6">
+                          <div className="lg:pr-6">
                             <Link
                               href={`/p/${p.id}`}
                               className={`text-[15px] hover:text-green ${
@@ -219,8 +219,16 @@ export default async function ProjectsPage({
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3 pr-6">
-                            <ProgressScale
+                          {/*
+                            The four measures. Their own line under the title on a
+                            phone, each carrying the label the header would have given
+                            it. `contents` at desk width, so the five column grid lays
+                            them out exactly as it did before.
+                          */}
+                          <div className="flex flex-wrap items-baseline gap-x-7 gap-y-2 lg:contents">
+                            <div className="flex items-center gap-3 lg:pr-6">
+                              <span className="lbl-tight text-muted lg:hidden">Progress</span>
+                              <ProgressScale
                               done={prog?.leaf_done ?? 0}
                               total={prog?.leaf_total ?? 0}
                             />
@@ -229,7 +237,8 @@ export default async function ProjectsPage({
                             </span>
                           </div>
 
-                          <div className="text-right text-[11px] tabular-nums text-muted">
+                          <div className="text-[11px] tabular-nums text-muted lg:text-right">
+                            <span className="lbl-tight mr-2 lg:hidden">Committed</span>
                             {(() => {
                               const c = cost.get(p.id)
                               if (!c || Number(c.once_committed) === 0) {
@@ -257,19 +266,22 @@ export default async function ProjectsPage({
                           </div>
 
                           <div
-                            className={`text-right text-[11px] tabular-nums ${
+                            className={`text-[11px] tabular-nums lg:text-right ${
                               next && next.days_until < 0 ? 'text-oxblood' : 'text-muted'
                             }`}
                           >
+                            <span className="lbl-tight mr-2 text-muted lg:hidden">Next</span>
                             {next ? formatDate(next.due_date) : '-'}
                           </div>
 
                           <div
-                            className={`num text-right text-[17px] ${
+                            className={`num flex items-baseline gap-2 text-[17px] lg:block lg:text-right ${
                               open > 0 ? 'text-oxblood' : 'text-rule-strong'
                             }`}
                           >
+                            <span className="lbl-tight text-muted lg:hidden">Blocked</span>
                             {open > 0 ? open : '-'}
+                          </div>
                           </div>
                         </div>
                       )

@@ -86,7 +86,7 @@ function Field({
 /** What is derived is shown but cannot be written. The rule everywhere. */
 function Derived({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[150px_1fr] border-t border-rule py-3">
+    <div className="grid grid-cols-1 sm:grid-cols-[150px_1fr] border-t border-rule py-3">
       <div className="lbl-tight text-muted">{label}</div>
       <div className="text-[12.5px] leading-relaxed">{children}</div>
     </div>
@@ -265,7 +265,7 @@ export default async function IdentityPage({
         <input type="hidden" name="id" value={project.id} />
 
         <Section title="Identification">
-          <div className="grid grid-cols-4 gap-x-8 gap-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <Field label="Project title" span={4}>
               <input
                 name="title"
@@ -321,7 +321,7 @@ export default async function IdentityPage({
         </Section>
 
         <Section title="Framing" note="This deadline belongs to the parent project and controls nothing in the tree">
-          <div className="grid grid-cols-4 gap-x-8 gap-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <Field label="Start">
               <input
                 type="date"
@@ -367,7 +367,7 @@ export default async function IdentityPage({
         </Section>
 
         <Section title="People" note="The roles the company system notifies">
-          <div className="grid grid-cols-4 gap-x-8 gap-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             {PEOPLE_FIELDS.map((f) => (
               <Field
                 key={f.key}
@@ -396,7 +396,7 @@ export default async function IdentityPage({
         </Section>
 
         <Section title="Economics" note="One amount, one unit, one place">
-          <div className="grid grid-cols-4 gap-x-8 gap-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
             <Field label="Benefit per year">
               <input
                 name="benefit"
@@ -449,7 +449,7 @@ export default async function IdentityPage({
                   Open cost
                 </Link>
               </div>
-              <div className="mt-2.5 grid grid-cols-4 gap-x-8">
+              <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8">
                 <div>
                   <div className="lbl-tight text-muted">Priced</div>
                   <div className="num mt-1 text-[17px]">
@@ -515,7 +515,7 @@ export default async function IdentityPage({
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-4 gap-x-8 gap-y-4 border-t border-rule pt-5">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4 border-t border-rule pt-5">
             <Field label="Grant">
               <select
                 name="approval_state"
@@ -555,7 +555,7 @@ export default async function IdentityPage({
             </Field>
             {variance !== null && (
               <p
-                className={`col-span-4 text-[11px] ${
+                className={`col-span-1 sm:col-span-2 lg:col-span-4 text-[11px] ${
                   variance < 0 ? 'text-oxblood' : 'text-muted'
                 }`}
               >
@@ -751,7 +751,7 @@ export default async function IdentityPage({
             >
               <input type="hidden" name="node_id" value={project.id} />
               <input type="hidden" name="redirectTo" value={base} />
-              <label className="block w-[240px]">
+              <label className="block w-full sm:w-[240px]">
                 <span className="lbl text-muted">Waiting on</span>
                 <select name="depends_on_id" required className="field">
                   {linkable.map((p) => (

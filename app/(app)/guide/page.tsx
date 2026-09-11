@@ -100,7 +100,7 @@ function Row({
   children: React.ReactNode
 }) {
   return (
-    <div className="grid max-w-[1040px] grid-cols-[168px_1fr] items-baseline gap-6 border-t border-rule py-3 last:border-b">
+    <div className="grid max-w-[1040px] grid-cols-1 lg:grid-cols-[168px_1fr] items-baseline gap-6 border-t border-rule py-3 last:border-b">
       <div className="lbl-tight text-muted">{left}</div>
       <div className="max-w-[820px] text-[13px] leading-relaxed">{children}</div>
     </div>
