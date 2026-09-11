@@ -148,8 +148,17 @@ export async function deleteSpark(fd: FormData) {
  * because the alternative is creating the node on one page and remembering to
  * come back and tick the spark off on another, which nobody does.
  *
- * A project has no parent. Anything else gets one, and the form only offers
- * types that can actually sit under the parent you picked.
+ * A project has no parent. Anything else needs one, and that is checked HERE
+ * rather than prevented in the form.
+ *
+ * An earlier version of this comment claimed the form only offered types that
+ * could sit under the parent you had picked. It never did, and saying so was
+ * worse than the gap itself: the next person to read it takes the constraint
+ * for granted and stops looking. The form offers all four types and every
+ * container, the two fields can be set to contradict each other, and this
+ * refuses the one combination that cannot be stored. Picking «project» with a
+ * parent is not refused, it is resolved: a project is a root, so the parent is
+ * dropped on the line below.
  */
 export async function promoteSpark(fd: FormData) {
   const supabase = await createClient()

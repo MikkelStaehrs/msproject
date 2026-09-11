@@ -18,6 +18,7 @@ import {
   TYPE_HINT,
   TYPE_LABEL,
   type Node,
+  type NodeType,
   type Spark,
   type StageVolume,
   type Yardstick,
@@ -360,18 +361,31 @@ export default async function SparkPage({
                         />
                       </label>
 
+                      {/*
+                        Defaulting to «project», because the field below it
+                        defaults to «nowhere, it is a project» and the two have
+                        to agree. They did not: the type defaulted to task while
+                        the parent defaulted to none, so the first press of
+                        «Create it» on an untouched form always threw «a task
+                        needs somewhere to sit». The same reasoning node-form
+                        uses, which picks its default from whether a parent is
+                        known at all.
+
+                        The hint sits INSIDE each option rather than under the
+                        select. This is a server component and the select is
+                        uncontrolled, so a hint outside it can only ever
+                        describe one of the four, and it described the one that
+                        is no longer the default. Same spelling as node-form.
+                      */}
                       <label className="block">
                         <span className="lbl text-muted">As a</span>
-                        <select name="type" defaultValue="task" className="field">
-                          {(['project', 'subproject', 'development', 'task'] as const).map((t) => (
+                        <select name="type" defaultValue="project" className="field">
+                          {(Object.keys(TYPE_LABEL) as NodeType[]).map((t) => (
                             <option key={t} value={t}>
-                              {TYPE_LABEL[t]}
+                              {TYPE_LABEL[t]} · {TYPE_HINT[t]}
                             </option>
                           ))}
                         </select>
-                        <span className="mt-1 block text-[10px] leading-snug text-rule-strong">
-                          {TYPE_HINT.task}
-                        </span>
                       </label>
 
                       <label className="block">
