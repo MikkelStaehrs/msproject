@@ -16,6 +16,10 @@ still cannot leak.
 
 [MASTER.md](MASTER.md) is the living spec: the data model, every decision and
 the reason behind it. Read that before changing anything.
+[CLAUDE.md](CLAUDE.md) is the short version an agent needs before its first edit,
+and [devlog/](devlog/README.md) holds what happened on a given day and what is
+still in flight, because the work runs on several machines and a memory that
+lives on one of them is no use to the others.
 
 ## Running it
 
