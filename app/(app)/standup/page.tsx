@@ -26,7 +26,6 @@ import { formatMoney } from '@/lib/cost'
 import { BlockerForm, ResolveBlockerForm } from '@/components/blocker-form'
 import { DecisionForm } from '@/components/decision-form'
 import { AgreedHere } from '@/components/agreed-here'
-import { WhichOne } from '@/components/which-one'
 import { DueDate } from '@/components/due-date'
 import { NodeForm } from '@/components/node-form'
 import { QuickAddOn } from '@/components/quick-add-on'
@@ -970,12 +969,12 @@ export default async function StandupPage({
                 ) : (
                   <Prose
                     text={selected.description}
-                    className="mt-5 max-w-[760px] text-[15px] leading-[1.7]"
+                    className="mt-7 max-w-[680px] text-[15px] leading-[1.75]"
                   />
                 )}
 
                 {/* What you change while somebody is still talking */}
-                <div className="mt-7 flex flex-wrap items-center gap-x-10 gap-y-4 border-y border-rule py-4">
+                <div className="mt-10 flex flex-wrap items-center gap-x-10 gap-y-5 border-y border-rule py-5">
                   <StatusSelect
                     id={selected.id}
                     status={selected.status}
@@ -1028,8 +1027,6 @@ export default async function StandupPage({
                   </span>
                 </div>
 
-                <WhichOne pricing />
-
                 {agreeing === selected.id && (
                   <AgreedHere
                     nodeId={selected.id}
@@ -1074,7 +1071,7 @@ export default async function StandupPage({
                   </div>
                 )}
 
-                <div className="mt-9 grid gap-x-12 gap-y-8 lg:grid-cols-2">
+                <div className="mt-12 grid gap-x-14 gap-y-10 lg:grid-cols-2">
                   <div>
                     <Head title="Blockers" />
                     {blockers.filter((b) => b.node_id === selected.id).length === 0 ? (
@@ -1118,14 +1115,10 @@ export default async function StandupPage({
                     )}
                   </div>
 
+                  {entries.some((e) => e.node_id === selected.id) && (
                   <div>
                     <Head title="Log" />
-                    {entries.filter((e) => e.node_id === selected.id).length === 0 ? (
-                      <p className="text-[13px] text-muted">
-                        Nothing written here. &laquo;Write a line&raquo; above lands
-                        on this piece.
-                      </p>
-                    ) : (
+                    {(
                       entries
                         .filter((e) => e.node_id === selected.id)
                         .slice(0, 6)
@@ -1139,14 +1132,12 @@ export default async function StandupPage({
                         ))
                     )}
                   </div>
+                  )}
 
+                  {decisions.some((d) => d.node_id === selected.id) && (
                   <div>
                     <Head title="Decisions" />
-                    {decisions.filter((d) => d.node_id === selected.id).length === 0 ? (
-                      <p className="text-[13px] text-muted">
-                        None yet. A meeting is where these happen.
-                      </p>
-                    ) : (
+                    {(
                       decisions
                         .filter((d) => d.node_id === selected.id)
                         .map((d) => (
@@ -1164,12 +1155,12 @@ export default async function StandupPage({
                         ))
                     )}
                   </div>
+                  )}
 
+                  {lines.some((l) => l.node_id === selected.id) && (
                   <div>
                     <Head title="Cost" />
-                    {lines.filter((l) => l.node_id === selected.id).length === 0 ? (
-                      <p className="text-[13px] text-muted">Nothing priced on this piece.</p>
-                    ) : (
+                    {(
                       lines
                         .filter((l) => l.node_id === selected.id)
                         .map((l) => (
@@ -1188,6 +1179,7 @@ export default async function StandupPage({
                         ))
                     )}
                   </div>
+                  )}
                 </div>
               </>
             )}
