@@ -1,4 +1,5 @@
-import { contributionOf, notStartedShare, strategyPicture, type Marking } from './strategy.ts'
+import { contributionOf,
+  provenanceOf, notStartedShare, strategyPicture, type Marking } from './strategy.ts'
 
 let failed = 0
 function check(name: string, got: unknown, expected: unknown) {
@@ -16,6 +17,7 @@ const m = (over: Partial<Marking> = {}): Marking => ({
   isTop: true,
   annualEur: null,
   ownBenefit: null,
+  originBenefit: null,
   status: 'active',
   blocked: false,
   investedEur: 0,
@@ -142,6 +144,32 @@ check(
   notStartedShare([m({ ownBenefit: 50000, status: 'active' }), m({ status: 'idea' })]),
   0,
 )
+
+
+// --- The third source, and the order between them ---------------------------
+
+/*
+ * The claim made when the work started is the last resort and never the first.
+ * These four cases are the whole rule, and the reason it is a rule: a project
+ * promoted from a spark has a claim and nothing else until somebody fills in
+ * its identity page, and before this the strategy total reported exactly that
+ * case as unquantified while the figure sat in the database.
+ */
+check('the claim counts when nothing newer exists', contributionOf(m({ originBenefit: 40 })), 40)
+check(
+  'the node own benefit beats the claim',
+  contributionOf(m({ ownBenefit: 90, originBenefit: 40 })),
+  90,
+)
+check(
+  'and the marking beats both',
+  contributionOf(m({ annualEur: 5, ownBenefit: 90, originBenefit: 40 })),
+  5,
+)
+check('nothing anywhere is still unknown', contributionOf(m()), null)
+
+check('and the page can say which answered', provenanceOf(m({ originBenefit: 40 })), 'origin')
+check('…or that none did', provenanceOf(m()), 'none')
 
 console.log(failed === 0 ? '\nAll tests passed.' : `\n${failed} test(s) failed.`)
 process.exitCode = failed === 0 ? 0 : 1

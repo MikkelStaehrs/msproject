@@ -275,6 +275,50 @@ export async function promoteSpark(fd: FormData) {
    */
   const claim = claimFrom(fd)
 
+  /*
+   * Which rules this piece of work is signing up to.
+   *
+   * A strategy marking used to be something you added afterwards on a page
+   * nobody visited, which is why there were none at all. Asked here it becomes
+   * a commitment made at the moment the commitment is actually made.
+   *
+   * And it decides which of the three answers above is good enough. The COGS
+   * strategy is «take a euro out of every unit, every year»: work that claims
+   * to serve it and carries no figure is not serving it, it is hoping to, and a
+   * total that adds up hopes is one nobody can report upwards. So a marking
+   * demands a saving.
+   *
+   * The way out is not to argue the figure down, it is to promote it unmarked
+   * and mark it the day the figure exists. The total stays true the whole way
+   * rather than carrying a placeholder.
+   */
+  const strategyId = text(fd, 'strategy_id')
+  if (strategyId !== null && claim.worth_basis !== 'saving') {
+    throw new Error(
+      'Work marked as serving a strategy has to carry a saving. If the figure ' +
+        'is not worked out yet, create it without the marking and add the ' +
+        'marking the day it is: a strategy total that adds up intentions is ' +
+        'one nobody can report upwards.',
+    )
+  }
+
+  /*
+   * And what an ordinary project is for.
+   *
+   * Not everything saves money, and demanding a figure of the work that does
+   * not is how you get a fiction in a column. But a project nobody can say the
+   * point of is a project nobody can ever close, so the one thing asked instead
+   * is the goal, which is the field `reporting.pid.goal` has always had and
+   * which nothing has ever required.
+   */
+  const goal = text(fd, 'goal')
+  if (strategyId === null && goal === null) {
+    throw new Error(
+      'Say what this should achieve, and how you will be able to tell whether ' +
+        'it worked. A goal without the second half is a wish.',
+    )
+  }
+
   const { error: claimError } = await supabase
     .from('spark')
     .update(claim)
@@ -324,6 +368,13 @@ export async function promoteSpark(fd: FormData) {
       description: spark.note ? `${spark.body}
 
 ${spark.note}` : spark.body,
+      /*
+       * The goal lands where the identity page already reads it from, so it is
+       * one field in one place rather than a second copy that drifts. Written
+       * only when there is one: a marked piece of work answered the question a
+       * different way.
+       */
+      reporting: goal === null ? {} : { pid: { goal } },
     })
 
   if (nodeError) throw new Error(`Could not create the node: ${nodeError.message}`)
@@ -338,6 +389,24 @@ ${spark.note}` : spark.body,
       throw new Error(
         `The project was created but you were not added to it: ${memberError.message}`,
       )
+    }
+  }
+
+  /*
+   * The marking, now that there is something to mark.
+   *
+   * Not fatal if it fails, for the same reason the origin below is not: the
+   * work exists and that is what mattered. But it is said out loud, because a
+   * piece of work that was meant to serve a strategy and silently does not is
+   * a figure missing from a total somebody will report.
+   */
+  if (strategyId !== null) {
+    const { error: markError } = await supabase
+      .from('node_strategy')
+      .insert({ node_id: nodeId, strategy_id: strategyId })
+
+    if (markError && markError.code !== '23505') {
+      console.error(`node_strategy not written for ${nodeId}: ${markError.message}`)
     }
   }
 

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
+import { annualEur, referenceFrom, savingFrom, stagesFrom } from '@/lib/cogs'
 import { subtreeSet } from '@/lib/subtree'
 import { formatMoney } from '@/lib/cost'
 import { contributionOf, strategyPicture, type Marking } from '@/lib/strategy'
@@ -12,8 +13,10 @@ import {
   TYPE_LABEL,
   type Node,
   type NodeCost,
+  type StageVolume,
   type Strategy,
   type StrategyNode,
+  type Yardstick,
 } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -35,15 +38,31 @@ export default async function StrategyDetailPage({
   const { add, edit: editId } = await searchParams
   const supabase = await createClient()
 
-  const [strategyRes, markRes, nodeRes, costRes] = await Promise.all([
+  const [strategyRes, markRes, nodeRes, costRes, yardRes, stageRes] = await Promise.all([
     supabase.from('strategy').select('*').eq('id', id).single(),
     supabase.from('v_strategy_node').select('*').eq('strategy_id', id),
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('v_node_cost').select('*'),
+    supabase.from('yardstick').select('*').maybeSingle(),
+    supabase.from('stage_volume').select('fiscal_year, stage, units, scope'),
   ])
 
   const failure = firstError([markRes, nodeRes, costRes])
   if (failure) return <QueryFailure message={failure} />
+
+  /*
+   * The reference behind a claim. Absent, an origin figure cannot be turned
+   * into euro at all and the contribution stays unknown, which is the honest
+   * answer: a saving has no value until you say which year's volumes it is
+   * weighed against.
+   *
+   * Deliberately outside firstError, like the yardstick on the cost page. A
+   * missing reference makes one of three fallbacks unavailable; it is not a
+   * reason to refuse to draw the page.
+   */
+  const yard = yardRes.data as Yardstick | null
+  const reference = referenceFrom(yard)
+  const stages = stagesFrom((stageRes.data ?? []) as StageVolume[], yard?.fiscal_year ?? null)
 
   const strategy = strategyRes.data as Strategy | null
   if (!strategy) notFound()
@@ -65,6 +84,24 @@ export default async function StrategyDetailPage({
     return [project.title, ...rest].join(' › ')
   }
 
+  /*
+   * What the work promised on the day it became work.
+   *
+   * The view carries the claim raw, on purpose: converting it there would put a
+   * third spelling of the euro rule into SQL beside lib/cogs and v_node_cost,
+   * and two of the three would eventually disagree. So it is converted here,
+   * with the same functions the spark page uses to show the same figure.
+   *
+   * Null without a yardstick, which is honest rather than unfortunate: a saving
+   * has no euro value until you say which year's volumes it is weighed against.
+   */
+  const originEur = (m: StrategyNode): number | null => {
+    if (reference === null) return null
+    const stage = stages.find((v) => v.stage === m.origin_saving_stage)
+    const saving = savingFrom(m.origin_saving_kind, m.origin_saving_value, stage?.units ?? null)
+    return saving === null ? null : annualEur(saving, reference)
+  }
+
   const markingFor = (m: StrategyNode): Marking => {
     const node = byId.get(m.node_id)
     return {
@@ -72,6 +109,13 @@ export default async function StrategyDetailPage({
       isTop: m.is_top,
       annualEur: m.annual_eur === null ? null : Number(m.annual_eur),
       ownBenefit: m.benefit_eur === null ? null : Number(m.benefit_eur),
+      /*
+       * The claim made when the work started, turned into euro by the same
+       * arithmetic every other page uses. Last of the three to be believed, and
+       * the only one a project promoted from a spark has before anybody fills in
+       * its identity page, which is all of them at first.
+       */
+      originBenefit: originEur(m),
       status: m.node_status,
       blocked: m.node_blocked,
       investedEur: Number(rolls.get(m.node_id)?.once_committed ?? 0),

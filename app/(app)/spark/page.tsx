@@ -61,11 +61,12 @@ export default async function SparkPage({
   const { keep, log, drop, edit, assess, show = 'new' } = await searchParams
   const supabase = await createClient()
 
-  const [sparkRes, nodeRes, yardstickRes, stageRes] = await Promise.all([
+  const [sparkRes, nodeRes, yardstickRes, stageRes, strategyRes] = await Promise.all([
     supabase.from('spark').select('*').order('captured_at', { ascending: false }),
     supabase.from('node').select('id, parent_id, title, type').order('sort_order'),
     supabase.from('yardstick').select('*').maybeSingle(),
     supabase.from('stage_volume').select('fiscal_year, stage, units, scope'),
+    supabase.from('strategy').select('id, name').order('sort_order').order('name'),
   ])
 
   const failure = firstError([sparkRes, nodeRes])
@@ -79,6 +80,13 @@ export default async function SparkPage({
   const yard = yardstickRes.data as Yardstick | null
   const reference = referenceFrom(yard)
   const stages = stagesFrom((stageRes.data ?? []) as StageVolume[], yard?.fiscal_year ?? null)
+
+  /*
+   * Left out of firstError beside the yardstick, and for the same reason: with
+   * no strategies the gate simply offers none and every promotion takes the
+   * ordinary branch. That is a narrower page, not a broken one.
+   */
+  const strategies = (strategyRes.data ?? []) as { id: string; name: string }[]
 
   const sparks = (sparkRes.data ?? []) as Spark[]
   const nodes = (nodeRes.data ?? []) as Pick<Node, 'id' | 'parent_id' | 'title' | 'type'>[]
@@ -446,6 +454,51 @@ export default async function SparkPage({
                     */}
                     <div className="mt-6 border-t border-rule pt-4">
                       <div className="lbl text-muted">Before it becomes work</div>
+
+                      {/*
+                        Which rules it signs up to, and that decides which answer
+                        below is good enough.
+
+                        A marking used to be something you added later, on a page
+                        nobody opened, which is why there were none at all. Asked
+                        here it is made at the moment the commitment is.
+
+                        Marked, it has to carry a saving: «take a euro out of
+                        every unit» is not served by work with no figure, it is
+                        only hoped at. Unmarked, the question is the goal
+                        instead, because a project nobody can state the point of
+                        is one nobody can ever close.
+                      */}
+                      <div className="mt-3 grid grid-cols-1 gap-x-5 gap-y-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="lbl text-muted">
+                            <Hint text="Marked work has to carry a saving. If the figure is not worked out yet, leave it unmarked and mark it the day it is.">
+                              Does it serve a strategy
+                            </Hint>
+                          </span>
+                          <select name="strategy_id" defaultValue="" className="field">
+                            <option value="">no, an ordinary project</option>
+                            {strategies.map((st) => (
+                              <option key={st.id} value={st.id}>
+                                {st.name} · needs a figure
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="block">
+                          <span className="lbl text-muted">
+                            <Hint text="Required for an ordinary project. What it must achieve, and how you can tell whether it worked. A goal without the second half is a wish.">
+                              Goal, if it is ordinary
+                            </Hint>
+                          </span>
+                          <input
+                            name="goal"
+                            placeholder="operators see line stops without asking IT for a report"
+                            className="field"
+                          />
+                        </label>
+                      </div>
 
                       <div className="mt-3 grid grid-cols-1 gap-x-5 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
                         <label className="col-span-1 block sm:col-span-2">

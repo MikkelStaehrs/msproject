@@ -28,6 +28,15 @@ export type Marking = {
   annualEur: number | null
   /** The node's own expected annual benefit, where it has one. */
   ownBenefit: number | null
+  /**
+   * What the work promised on the day it became work, in euro.
+   *
+   * Converted by the caller with lib/cogs, from the raw claim the view carries.
+   * It is the oldest of the three and therefore the last to be believed, but it
+   * is the only one that exists for a project that came from a spark and has
+   * never had its identity page filled in, which is every one of them at first.
+   */
+  originBenefit: number | null
   status: NodeStatus
   /** Whether the node has an open blocker of its own. */
   blocked: boolean
@@ -38,13 +47,46 @@ export type Marking = {
 /**
  * What one marking promises per year.
  *
- * The figure on the marking wins, because it was written about this strategy.
- * Falling back to the node's own benefit is what makes the common case, a whole
- * project serving one strategy, need no second number anywhere.
+ * Three sources, most specific first, and each is a different fact rather than
+ * a copy of the one above it.
+ *
+ * The figure on the MARKING wins, because it was written about this strategy in
+ * particular. Then the NODE's own benefit, which makes the common case, a whole
+ * project serving one strategy, need no second number anywhere. Then what was
+ * CLAIMED on the day the work started.
+ *
+ * The last one is why this function changed. Mark a promoted idea as serving
+ * COGS and the total used to report it as unquantified, because the saving sat
+ * on the spark and on node_origin and the sum read neither. The number was in
+ * the database twice and the page that adds up could see no copy of it.
+ *
+ * It is last because it is the oldest and the least considered: a claim made
+ * while the thing was still an idea. It is not copied into the node, because a
+ * figure copied once keeps whatever it said after the rate, the stage volume or
+ * the estimate moves underneath it.
  */
 export function contributionOf(m: Marking): number | null {
   if (m.annualEur !== null) return m.annualEur
-  return m.ownBenefit
+  if (m.ownBenefit !== null) return m.ownBenefit
+  return m.originBenefit
+}
+
+/**
+ * Which of the three answered, so a page can say so.
+ *
+ * A figure with no provenance invites the reader to assume the most considered
+ * source. «What was claimed when this started» and «what the project says it
+ * will deliver» are different promises with different ages, and a strategy
+ * total built mostly from the first should say that out loud rather than read
+ * as though somebody sat down and worked it out last week.
+ */
+export type Provenance = 'marking' | 'node' | 'origin' | 'none'
+
+export function provenanceOf(m: Marking): Provenance {
+  if (m.annualEur !== null) return 'marking'
+  if (m.ownBenefit !== null) return 'node'
+  if (m.originBenefit !== null) return 'origin'
+  return 'none'
 }
 
 export type StrategyPicture = {

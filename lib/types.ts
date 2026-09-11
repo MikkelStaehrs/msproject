@@ -219,6 +219,18 @@ export interface StrategyNode {
   benefit_eur: number | null
   node_status: NodeStatus
   node_blocked: boolean
+  /**
+   * What was claimed on the day this became work, raw and unconverted.
+   *
+   * Carried here rather than turned into euro by the view, because the euro
+   * rule lives in lib/cogs and v_node_cost and a third spelling in SQL is how
+   * two of them come to disagree. The page converts it with the same functions
+   * that show the same figure on the spark.
+   */
+  origin_saving_kind: SavingKind | null
+  origin_saving_value: number | string | null
+  origin_saving_stage: string | null
+  origin_fiscal_year: string | null
 }
 
 /**

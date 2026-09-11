@@ -141,6 +141,22 @@ export function impactOf(saving: Saving, reference: Reference): Impact | null {
  * it: 2% of the target is a different conversation when the target is 266 000
  * euro than when it is two million.
  */
+/**
+ * The same saving in euro a year, which is the currency everything rolled up is
+ * reported in.
+ *
+ * Sibling of `annualDkk` and deliberately not a second conversion: it is that
+ * function divided by the reference's own rate, so the two can never come to
+ * disagree about what a saving is worth. The strategy roll-up needs euro
+ * because a benefit typed on the identity page is already euro, and mixing the
+ * two would be the currency bug this project has designed out twice.
+ */
+export function annualEur(saving: Saving, reference: Reference): number | null {
+  const dkk = annualDkk(saving, reference)
+  if (dkk === null) return null
+  return reference.eurRate > 0 ? dkk / reference.eurRate : null
+}
+
 export function targetAnnual(reference: Reference): { eur: number; dkk: number } | null {
   if (
     !finite(reference.costBasisUnits) ||
