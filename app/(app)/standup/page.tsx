@@ -425,7 +425,7 @@ export default async function StandupPage({
   return (
     <main>
       {/* Context band */}
-      <div className="frame [--frame-label:360px] [--frame-margin:280px]">
+      <div className="frame [--frame-label:360px] [--frame-margin:330px]">
         <div className="lbl pl-5 lg:pl-16 py-3 pr-5 text-muted">
           {weekday.format(new Date())}
         </div>
@@ -514,7 +514,7 @@ export default async function StandupPage({
 
       {/* ================= 1. What is in the way ================= */}
       {part === '1' && (
-        <div className="frame [--frame-label:360px] [--frame-margin:280px] min-h-[60vh]">
+        <div className="frame [--frame-label:360px] [--frame-margin:330px] min-h-[60vh]">
           <div className="pl-5 lg:pl-16 py-8 pr-5">
             <h1 className="font-display text-[30px] font-medium leading-[1.06]">
               What is in the way
@@ -712,7 +712,7 @@ export default async function StandupPage({
         fighting.
       */}
       {part === '2' && (
-        <div className="frame [--frame-label:360px] [--frame-margin:280px] min-h-[76vh] lg:min-h-svh">
+        <div className="frame [--frame-label:360px] [--frame-margin:330px] min-h-[76vh] lg:min-h-svh">
           {/* The agenda, always in view */}
           <aside className="border-b border-rule lg:sticky lg:top-0 lg:h-svh lg:overflow-y-auto lg:border-b-0 lg:border-r">
             <div className="sticky top-0 z-10 border-b border-rule-strong bg-paper px-5 lg:pl-16 lg:pr-7 py-5">
@@ -951,7 +951,7 @@ export default async function StandupPage({
                 >
                   {reasons.map((i, n) => (
                     <p key={n} className="text-[12.5px] leading-snug text-muted">
-                      <span className="lbl-tight text-rule-strong">
+                      <span className="font-medium text-ink">
                         {AGENDA_LABEL[i.kind]}
                       </span>{' '}
                       {i.why}
@@ -1009,19 +1009,19 @@ export default async function StandupPage({
                     <QuickAddOn nodeId={selected.id} label="write a line" />
                     <Link
                       href={at(selected.id, `bnew=${selected.id}`)}
-                      className="lbl-tight text-rule-strong hover:text-green"
+                      className="text-[11.5px] text-rule-strong hover:text-green"
                     >
                       new blocker
                     </Link>
                     <Link
                       href={at(selected.id, `dnew=${selected.id}`)}
-                      className="lbl-tight text-rule-strong hover:text-green"
+                      className="text-[11.5px] text-rule-strong hover:text-green"
                     >
                       record a decision
                     </Link>
                     <Link
                       href={`/p/${projectOf.get(selected.id) ?? selected.id}/cost?focus=${selected.id}`}
-                      className="lbl-tight text-rule-strong hover:text-green"
+                      className="text-[11.5px] text-rule-strong hover:text-green"
                     >
                       price it
                     </Link>
@@ -1207,7 +1207,7 @@ export default async function StandupPage({
 
       {/* ================= 3. What is next ================= */}
       {part === '3' && (
-        <div className="frame [--frame-label:360px] [--frame-margin:280px] min-h-[60vh]">
+        <div className="frame [--frame-label:360px] [--frame-margin:330px] min-h-[60vh]">
           <div className="pl-5 lg:pl-16 py-8 pr-5">
             <h1 className="font-display text-[30px] font-medium leading-[1.06]">
               What is next
