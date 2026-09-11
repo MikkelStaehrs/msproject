@@ -34,7 +34,54 @@ export const metadata = { title: 'Guide' }
  * headings are the same question a reader arrives with: where do I put this,
  * what does this node mean, what does it rest on, who am I showing it to.
  */
+/**
+ * The way in, because nobody reads a guide.
+ *
+ * Thirty one sections grouped by topic is the table of contents of a manual,
+ * and it assumes you arrive knowing which topic your problem belongs to. You do
+ * not: you arrive with a sentence like «it says nought per cent and the work is
+ * clearly moving», and working out that this is filed under Types is the
+ * problem rather than the answer.
+ *
+ * ONE LINE EACH, AND A LINK. The temptation is to answer properly here, and
+ * that would make a second copy of thirty one explanations, drifting from the
+ * first the day either is edited. This project has broken that rule six times
+ * and each break was invisible until the copies disagreed. So the answer is
+ * short enough to be useless on its own, and the link does the work.
+ */
+const FAQ: [string, string, string][] = [
+  ['sparks', 'I have an idea. Where do I put it?',
+    'The Sparks inbox. One field, and nothing else asked until you triage it at a desk.'],
+  ['sparks', 'My idea is about work that is already running.',
+    'Then it is not a task. «Log it on existing work» writes it into that node’s log and makes nothing.'],
+  ['worth', 'It will not let me turn an idea into a project.',
+    'It wants to know what the work is worth. A saving, or no saving with a reason, or not worked out yet.'],
+  ['types', 'It says 0 % and the work is clearly moving.',
+    'Only tasks count. A container with no task underneath holds no work, and the frame says how many.'],
+  ['types', 'Is this a task or a development?',
+    'A development is a thing being built and breaks into tasks. A subproject just divides.'],
+  ['which', 'Log line, blocker or decision?',
+    'Five ways to write, and each is a different tense. The rule is printed under the buttons.'],
+  ['euro', 'Why does it say the figures are unconfirmed?',
+    'Because nobody has held them up against the dashboard they came from. That is true today.'],
+  ['euro', 'Why is the target called a floor?',
+    'The denominator counts one slice of what the strategy covers, so the target is too small.'],
+  ['strategy', 'What does marking work as COGS commit me to?',
+    'A figure, and paying for itself inside two years. Leave it unmarked until you have one.'],
+  ['worth', 'Where does the priority number come from?',
+    'Benefit twice, less cost, less complexity. Nothing about it is typed in.'],
+  ['identity', 'A project says «not registered in UBS Projects».',
+    'The number is typed in from there. Empty means the work exists here and not yet over there.'],
+  ['access', 'A colleague cannot see a project.',
+    'Membership sits on the project and is inherited. Add them under Identity.'],
+  ['claude', 'Claude says it cannot read my projects.',
+    'Its token was made for capture only. Make one with «Capture and read» on the Account page.'],
+]
+
 const SECTIONS = [
+  ['Start here', [
+    ['faq', 'Common questions'],
+  ]],
   ['Getting around', [
     ['start', 'Where to start'],
     ['access', 'Who sees what'],
@@ -57,6 +104,7 @@ const SECTIONS = [
   ]],
   ['What it rests on', [
     ['euro', 'The one euro'],
+    ['worth', 'What an idea is worth'],
     ['strategy', 'Strategy'],
     ['basis', 'Basis'],
     ['origin', 'What it promised'],
@@ -155,6 +203,29 @@ export default function GuidePage() {
 
         {/* The guide */}
         <div className="border-l border-rule px-5 lg:px-12 py-8">
+          <H id="faq">Common questions</H>
+          <P>
+            The short answer, and where the long one is. If your question is not
+            here it is almost certainly in the list on the left, filed under the
+            thing rather than under the trouble.
+          </P>
+          <div className="mt-5">
+            {FAQ.map(([id, question, answer]) => (
+              <a
+                key={question}
+                href={`#${id}`}
+                className="group grid max-w-[1040px] grid-cols-1 items-baseline gap-x-6 gap-y-1 border-t border-rule py-3 last:border-b lg:grid-cols-[300px_1fr]"
+              >
+                <span className="text-[13px] font-medium leading-snug group-hover:text-green">
+                  {question}
+                </span>
+                <span className="max-w-[820px] text-[13px] leading-relaxed text-muted">
+                  {answer}
+                </span>
+              </a>
+            ))}
+          </div>
+
           <H id="start">Where to start</H>
           <P>
             The point of this tool is that you never sit down to write a status report.
@@ -296,7 +367,17 @@ export default function GuidePage() {
               where you say and closes the spark in one step. Your original
               words become the description, and you give it a proper name: how
               you first put it is often clearer than the name you settle on, so
-              both are kept.
+              both are kept. It asks what the work is worth first: see{' '}
+              <Link href="#worth" className="text-green">What an idea is worth</Link>.
+            </Row>
+            <Row left="Not work at all">
+              <span className="text-ink">Log it on existing work</span>, for a
+              thought about something already running. «The scanner has been
+              moved out of the analytics room» is not a task, and forced through
+              the form above it becomes a task that is not one. This writes it
+              into that node&rsquo;s log, word for word, and creates nothing.
+              Nothing is asked about what it is worth, because an observation
+              about work already underway owes nobody a business case.
             </Row>
             <Row left="Decided against">
               <span className="text-ink">Drop</span>, with a line saying why.
@@ -309,10 +390,12 @@ export default function GuidePage() {
             </strong>{' '}
             Two numbers go in: what it takes out of cost, and the project
             group&rsquo;s one to five scores for cost, benefit and complexity.
-            Everything else is worked out &mdash; the kroner a year, the euro
-            per unit, the share of the year&rsquo;s target, the priority and the
-            quadrant &mdash; so none of it can be typed in and then quietly
-            disagree with the figures it came from.
+            Everything else is worked out: the kroner a year, the euro per
+            unit, the share of the year&rsquo;s target, the priority and the
+            quadrant. None of it can be typed in and then quietly disagree with
+            the figures it came from. See{' '}
+            <Link href="#worth" className="text-green">What an idea is worth</Link>{' '}
+            for what has to be answered before it becomes work.
           </P>
           <P>
             The saving goes in however it was actually described: hours a year,
@@ -911,8 +994,8 @@ export default function GuidePage() {
               Which is the first uncomfortable thing this arithmetic says.
             </strong>{' '}
             Meeting the target on saved time alone would take{' '}
-            <span className="text-ink">8 276 hours a year</span> &mdash; about
-            five people, every year, for ever. The target cannot be reached by
+            <span className="text-ink">8 276 hours a year</span>, about five
+            people, every year, for ever. The target cannot be reached by
             working faster, and that is worth knowing before a quarter goes into
             an idea that turns out to be three per cent of it.
           </P>
@@ -984,6 +1067,73 @@ export default function GuidePage() {
             kroner are right; the percentage comes out too large, and the page
             says so in oxblood rather than correcting it, because correcting it
             would need a filtered stage volume nobody has.
+          </P>
+
+          <H id="worth">What an idea is worth</H>
+          <P>
+            <strong className="font-medium">
+              An idea in the inbox is a sentence. Before it becomes work it has to
+              say what it is worth.
+            </strong>{' '}
+            Not with a budget: most ideas do not have one, and a figure typed to
+            get past a form is a figure somebody quotes in a meeting six months
+            later. Three answers are accepted and only silence is refused.
+          </P>
+          <Row left="It saves something">
+            A figure, in whichever way the saving was actually described: hours a
+            year, kroner per unit through a named stage, or kroner a year. The
+            rest is worked out.
+          </Row>
+          <Row left="No direct saving">
+            And a sentence saying why it is worth doing anyway. Enabling work,
+            removing a risk, something that has to happen before something else
+            can. That sentence is the whole answer in this case.
+          </Row>
+          <Row left="Not worked out yet">
+            Said out loud. It is a real answer, and it is different from leaving
+            the question alone.
+          </Row>
+          <P>
+            The three one to five scores come with it, all of them or none.
+            Benefit, cost and complexity place the idea in the same matrix the
+            project group already ranks candidates with: high benefit and low
+            complexity is a quick win, high benefit and high complexity a big
+            bet, and so down to a money pit. Two scores out of three would make a
+            number that looks comparable to a complete one and is not, so the
+            form asks for all three.
+          </P>
+          <P>
+            The priority is <Code>2 x benefit - cost - complexity</Code>, worked
+            out rather than chosen. So is the quadrant, the kroner a year, the
+            euro per unit and the share of the year&rsquo;s target. None of it
+            can be typed in and then quietly disagree with the figures it came
+            from. A score can come out negative, and that is the scale working.
+          </P>
+          <P>
+            <strong className="font-medium">
+              Marking it against a strategy is a commitment, not a label.
+            </strong>{' '}
+            Mark it as serving COGS saving and it has to carry a saving, because
+            &laquo;take a euro out of every unit&raquo; is not served by work
+            with no figure. It also has to pay for itself inside two years, which
+            is that programme&rsquo;s rule and not a rule about projects: the
+            other three headings set no limit. If the figure is not worked out
+            yet, create the work unmarked and mark it the day it is. The total
+            stays true the whole way rather than carrying a placeholder.
+          </P>
+          <P>
+            The payback is reported and never refused. It moves as quotes arrive
+            and as scope changes, so work sitting at four years stays on the page
+            reading four years: that is the evidence somebody needs before
+            deciding anything about it. It counts committed one-off money only,
+            so where there is a licence behind the work the figure is optimistic.
+          </P>
+          <P>
+            An idea with no strategy is an ordinary project, and the one thing it
+            is asked for instead is a goal: what it must achieve and how you will
+            be able to tell whether it worked. A goal without the second half is
+            a wish, and a project nobody can state the point of is one nobody can
+            ever close.
           </P>
 
           <H id="strategy">Strategy</H>
