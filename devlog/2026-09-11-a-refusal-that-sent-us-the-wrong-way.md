@@ -36,13 +36,25 @@ reported that the SPARKS INBOX was refused too. That is `list_ideas`, a capture
 tool. A capture-scoped token would have answered it. Scope was ruled out from
 the first reply, and three rounds were spent on scope anyway.
 
-**A refused read leaves no trace, which made the database look innocent.**
+**A refused read leaves no trace, and the obvious fix for that does not work.**
 `token_owner` stamps `last_used_at` after the scope check, so a token refused for
-scope records nothing, and an unknown token has no row to stamp. During the hunt
-«never used» therefore meant both «nothing ever arrived» and «something arrived
-and was refused». Stamping a known token before the scope check would have made
-the diagnosis immediate, and it leaks nothing to the caller. Left as it is for
-now, but that is the fix if this ever has to be debugged again.
+scope records nothing. The entry first written here proposed moving the stamp
+above the check. That is wrong twice over, and both are worth keeping written
+down because the idea is an easy one to have again:
+
+- **`raise exception` rolls the stamp back.** One PostgREST call is one
+  transaction, so a write made before the raise is undone by it. A function
+  cannot both record an attempt and refuse it. Recording a refusal needs a
+  second call from the endpoint, in its own transaction.
+- **It would not have caught this incident anyway.** The token here was UNKNOWN,
+  not narrow: it had been revoked, so there was no row to stamp. Every version
+  of this fix leaves that case invisible, and that case was the whole hour.
+
+What would have caught it was already on the screen. The Account page prints
+«never used» beside every token, and the new one said exactly that throughout.
+Nobody joined it to «the connector says it cannot read», because the two facts
+sit on different screens and neither says what it means. So the row now says
+what to do about it, where it can be true.
 
 **`Read-Host -AsSecureString` mangles pasted text in the PowerShell 5.1
 console.** A 43 character token pasted at that prompt arrived as one character,
@@ -60,8 +72,6 @@ person, with no extra work at all.
 
 ## Still open
 
-- Stamping `last_used_at` before the scope check, per above. Small, and it is the
-  difference between a five minute diagnosis and an hour.
 - The audit's check 6 is still not measured, and it matters more now: there is a
   credential that reads project structure, and nothing has ever proved the
   membership cut holds between two accounts.

@@ -36,6 +36,15 @@ type Token = {
  * so Claude can argue with an idea before it becomes work, and that is strictly
  * more to lose. Neither can change anything but a spark, at any scope.
  */
+/**
+ * Long enough ago that «never used» means something.
+ *
+ * A token made thirty seconds ago has not been used because nobody has had time
+ * to paste it anywhere yet, and saying so would cry wolf on every single mint.
+ */
+const olderThanAnHour = (iso: string) =>
+  Date.now() - Date.parse(iso) > 60 * 60 * 1000
+
 export function Connector({ url, tokens }: { url: string; tokens: Token[] }) {
   const [made, action, pending] = useActionState(createToken, null)
 
@@ -111,10 +120,35 @@ export function Connector({ url, tokens }: { url: string; tokens: Token[] }) {
                   {TOKEN_SCOPE_LABEL[t.scope]}
                 </span>
               </span>
-              <span className="lbl-tight shrink-0 text-rule-strong">
-                {t.last_used_at
-                  ? `used ${formatDate(t.last_used_at.slice(0, 10))}`
-                  : 'never used'}
+              {/*
+                «Never used» is the most useful line on this page and it took an
+                hour to notice, because it states a fact and not what the fact
+                means.
+                
+                A connector that reports it cannot read, beside a token here
+                that has never been used, is a connector sending a DIFFERENT
+                token: a revoked one it kept, almost always. Three rounds were
+                spent making new tokens over exactly that, with the answer on
+                screen the whole time. So the row says what to do about it
+                rather than leaving the reader to join two facts on separate
+                screens.
+                
+                It is only said where it can be true. A token that has been used
+                needs no explanation, and one made a moment ago has not had the
+                chance yet.
+              */}
+              <span className="shrink-0 text-right">
+                <span className="lbl-tight block text-rule-strong">
+                  {t.last_used_at
+                    ? `used ${formatDate(t.last_used_at.slice(0, 10))}`
+                    : 'never used'}
+                </span>
+                {t.last_used_at === null && olderThanAnHour(t.created_at) && (
+                  <span className="lbl-tight mt-0.5 block max-w-[15rem] leading-snug text-oxblood">
+                    Nothing has ever arrived with this one. If your connector
+                    says it cannot read, it is sending a different token.
+                  </span>
+                )}
               </span>
               <form action={revokeToken}>
                 <input type="hidden" name="id" value={t.id} />
