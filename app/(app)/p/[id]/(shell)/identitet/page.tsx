@@ -30,12 +30,10 @@ import {
 import { readStage } from '@/lib/report'
 import { Hint, formatDate, formatDateLong } from '@/components/ui'
 import {
-  CATEGORY_LABEL,
   type Blocker,
   type Decision,
   type ProjectMember,
   type Node,
-  type NodeCategory,
   type NodeDependency,
   type NodeCost,
 } from '@/lib/types'
@@ -327,20 +325,6 @@ export default async function IdentityPage({
                 />
               </Field>
             ))}
-            <Field label="Category">
-              <select
-                name="category"
-                defaultValue={project.category ?? ''}
-                className="field"
-              >
-                <option value="">-</option>
-                {(Object.keys(CATEGORY_LABEL) as NodeCategory[]).map((c) => (
-                  <option key={c} value={c}>
-                    {CATEGORY_LABEL[c]}
-                  </option>
-                ))}
-              </select>
-            </Field>
           </div>
         </Section>
 

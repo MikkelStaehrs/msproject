@@ -12,7 +12,7 @@ import {
   type TemplateBody,
   type TemplateRisk,
 } from '@/lib/template'
-import type { NodeCategory, NodeType, WaitingOnType } from '@/lib/types'
+import type { NodeType, WaitingOnType } from '@/lib/types'
 import { required, text } from '@/lib/form'
 
 /**
@@ -41,7 +41,7 @@ export async function templateFromNode(fd: FormData) {
   const [{ data: nodes }, { data: blockers }] = await Promise.all([
     supabase
       .from('node')
-      .select('id, parent_id, title, type, due_date, is_milestone, sort_order, start_date, category, description')
+      .select('id, parent_id, title, type, due_date, is_milestone, sort_order, start_date, description')
       .in('id', ids),
     supabase.from('blocker').select('title, waiting_on, waiting_on_type, opened_at, expected_by').in('node_id', ids),
   ])
@@ -98,7 +98,6 @@ export async function templateFromNode(fd: FormData) {
   const { error } = await supabase.from('template').insert({
     name: text(fd, 'name') ?? `Skabelon fra ${root.title}`,
     description: root.description,
-    category: root.category as NodeCategory | null,
     body,
   })
 
@@ -115,7 +114,6 @@ export async function updateTemplate(fd: FormData) {
     .update({
       name: required(fd, 'name'),
       description: text(fd, 'description'),
-      category: text(fd, 'category') as NodeCategory | null,
     })
     .eq('id', required(fd, 'id'))
 
@@ -172,8 +170,6 @@ export async function deployTemplate(fd: FormData) {
    */
   const parentId = text(fd, 'parent_id')
 
-  const category = (text(fd, 'category') ?? template.category) as NodeCategory | null
-
   let rootId: string
   let sortBase: number
 
@@ -192,7 +188,6 @@ export async function deployTemplate(fd: FormData) {
         type: 'project' as NodeType,
         title,
         description: text(fd, 'description') ?? template.description,
-        category,
         status: 'planned',
         start_date: start,
         reporting,
@@ -235,7 +230,6 @@ export async function deployTemplate(fd: FormData) {
         type: p.type,
         title: p.title,
         status: 'planned',
-        category: (text(fd, 'category') ?? template.category) as NodeCategory | null,
         due_date: p.due_date,
         is_milestone: p.is_milestone,
         sort_order: p.parentIndex === null ? sortBase + p.sort_order : p.sort_order,

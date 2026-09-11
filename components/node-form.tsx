@@ -5,12 +5,10 @@ import { PersonField } from '@/components/person-field'
 import { PEOPLE_FIELDS } from '@/lib/identity'
 import { Hint } from '@/components/ui'
 import {
-  CATEGORY_LABEL,
   STATUS_LABEL,
   TYPE_HINT,
   TYPE_LABEL,
   type Node,
-  type NodeCategory,
   type NodeStatus,
   type NodeType,
 } from '@/lib/types'
@@ -114,21 +112,6 @@ export function NodeForm({
             {(Object.keys(STATUS_LABEL) as NodeStatus[]).map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABEL[s]}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Category">
-          <select
-            name="category"
-            defaultValue={node?.category ?? ''}
-            className="field"
-          >
-            <option value="">-</option>
-            {(Object.keys(CATEGORY_LABEL) as NodeCategory[]).map((c) => (
-              <option key={c} value={c}>
-                {CATEGORY_LABEL[c]}
               </option>
             ))}
           </select>

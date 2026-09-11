@@ -8,7 +8,6 @@ import { QueryFailure, firstError } from '@/lib/failure'
 import { ProgressScale, Rule, formatDate, formatDateLong } from '@/components/ui'
 import { readIdentity } from '@/lib/identity'
 import {
-  CATEGORY_LABEL,
   EFFECTIVE_STATUS_LABEL,
   type NodeDependency,
   type NodeReady,
@@ -294,7 +293,6 @@ export default async function MapPage({
         <div className="flex items-end justify-between gap-10 border-b border-rule-strong pb-5">
           <div>
             <div className="lbl text-muted">
-              {project.category ? CATEGORY_LABEL[project.category] : 'No category'}
               {typeof project.reporting?.project_no === 'string' && (
                 <> &nbsp;·&nbsp; {project.reporting.project_no}</>
               )}

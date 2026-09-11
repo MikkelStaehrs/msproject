@@ -21,7 +21,6 @@ export type NodeStatus =
 /** What a node reads as on screen: the stored status, or blocked on top of it. */
 export type EffectiveStatus = NodeStatus | 'blocked'
 
-export type NodeCategory = 'capex' | 'production' | 'it' | 'other'
 
 export type WaitingOnType =
   | 'internal_it'
@@ -38,7 +37,6 @@ export interface Node {
   type: NodeType
   title: string
   description: string | null
-  category: NodeCategory | null
   status: NodeStatus
   owner: string | null
   start_date: string | null
@@ -746,12 +744,6 @@ export const EFFECTIVE_STATUS_LABEL: Record<EffectiveStatus, string> = {
   blocked: 'Blocked',
 }
 
-export const CATEGORY_LABEL: Record<NodeCategory, string> = {
-  capex: 'CAPEX',
-  production: 'Production',
-  it: 'IT',
-  other: 'Other',
-}
 
 /**
  * Listed top down, biggest first. The enum happens to be alphabetical, and a

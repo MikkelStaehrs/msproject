@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { purgeDocumentsForSubtree } from '@/lib/document-actions'
 import { PEOPLE_FIELDS } from '@/lib/identity'
 import { reorder, type Sortable } from '@/lib/reorder'
-import type { NodeCategory, NodeStatus, NodeType } from '@/lib/types'
+import type { NodeStatus, NodeType } from '@/lib/types'
 import { required, text, number } from '@/lib/form'
 
 /**
@@ -65,7 +65,6 @@ function nodeFields(fd: FormData) {
     type: required(fd, 'type') as NodeType,
     title: required(fd, 'title'),
     description: text(fd, 'description'),
-    category: text(fd, 'category') as NodeCategory | null,
     status: required(fd, 'status') as NodeStatus,
     owner: text(fd, 'owner'),
     start_date: text(fd, 'start_date'),

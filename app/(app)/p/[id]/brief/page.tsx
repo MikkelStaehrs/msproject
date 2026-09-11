@@ -22,7 +22,6 @@ import {
 import { readStage } from '@/lib/report'
 import { ProgressScale, Prose, Rule, formatDate, formatDateLong } from '@/components/ui'
 import {
-  CATEGORY_LABEL,
   DECISION_TOPICS,
   DECISION_TOPIC_LABEL,
   EFFECTIVE_STATUS_LABEL,
@@ -256,7 +255,6 @@ export default async function BriefPage({
       >
         {/* Head */}
         <div className="lbl text-muted">
-          {project.category ? CATEGORY_LABEL[project.category] : 'No category'}
           {identity.admin.project_no && <> &nbsp;·&nbsp; {identity.admin.project_no}</>}
           {identity.admin.portfolio && <> &nbsp;·&nbsp; {identity.admin.portfolio}</>}
         </div>

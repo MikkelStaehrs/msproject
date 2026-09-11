@@ -371,7 +371,7 @@ const declared = (name: string) => {
 }
 const PAIRS: [string, string, string][] = [
   ['node', 'status', 'NodeStatus'], ['node', 'type', 'NodeType'],
-  ['node', 'category', 'NodeCategory'], ['entry', 'kind', 'EntryKind'],
+  ['entry', 'kind', 'EntryKind'],
   ['blocker', 'waiting_on_type', 'WaitingOnType'], ['cost', 'state', 'COST_STATES'],
   ['cost', 'recurrence', 'COST_RECURRENCES'], ['cost', 'budget', 'COST_BUDGETS'],
   ['cost', 'currency', 'COST_CURRENCIES'], ['cost', 'kind', 'COST_KINDS'],
@@ -384,7 +384,6 @@ const PAIRS: [string, string, string][] = [
   // The copy carries the same answer, and has to agree with it for the same
   // reason node_origin.saving_kind does.
   ['node_origin', 'worth_basis', 'WORTH_BASES'],
-  ['template', 'category', 'NodeCategory'],
   // Same enum as on `spark`, and it has to be: node_origin is a copy of what a
   // spark claimed, read back by the same functions.
   ['node_origin', 'saving_kind', 'SAVING_KINDS'],

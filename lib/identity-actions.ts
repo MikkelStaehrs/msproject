@@ -12,7 +12,6 @@ import {
   type Currency,
   type FieldDef,
 } from '@/lib/identity'
-import type { NodeCategory } from '@/lib/types'
 import { number, required, text } from '@/lib/form'
 
 /** Fields that are not submitted are left standing in the jsonb. */
@@ -104,7 +103,6 @@ export async function saveIdentity(fd: FormData) {
     .update({
       title: required(fd, 'title'),
       description: text(fd, 'description'),
-      category: text(fd, 'category') as NodeCategory | null,
       owner: text(fd, 'owner'),
       start_date: text(fd, 'start_date'),
       due_date: text(fd, 'due_date'),

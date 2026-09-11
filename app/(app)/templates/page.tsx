@@ -18,7 +18,7 @@ import {
   type Template,
   type TemplateNode,
 } from '@/lib/template'
-import { CATEGORY_LABEL, type NodeCategory, type Node } from '@/lib/types'
+import type { Node } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -170,17 +170,6 @@ export default async function TemplatesPage({
               <span className="lbl text-muted">Name</span>
               <input name="name" required defaultValue={editing.name} className="field" autoFocus />
             </label>
-            <label className="block">
-              <span className="lbl text-muted">Category</span>
-              <select name="category" defaultValue={editing.category ?? ''} className="field">
-                <option value="">-</option>
-                {(Object.keys(CATEGORY_LABEL) as NodeCategory[]).map((c) => (
-                  <option key={c} value={c}>
-                    {CATEGORY_LABEL[c]}
-                  </option>
-                ))}
-              </select>
-            </label>
             <label className="col-span-1 sm:col-span-2 lg:col-span-4 block">
               <span className="lbl text-muted">Description</span>
               <textarea
@@ -255,18 +244,6 @@ export default async function TemplatesPage({
               />
             </label>
 
-            <label className="block">
-              <span className="lbl text-muted">Category</span>
-              <select name="category" defaultValue={deploying.category ?? ''} className="field">
-                <option value="">-</option>
-                {(Object.keys(CATEGORY_LABEL) as NodeCategory[]).map((c) => (
-                  <option key={c} value={c}>
-                    {CATEGORY_LABEL[c]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
             {deploying.body.risks.length > 0 && (
               <label className="col-span-1 sm:col-span-2 lg:col-span-4 flex items-center gap-2.5 text-xs">
                 <input
@@ -322,7 +299,6 @@ export default async function TemplatesPage({
                   <article key={t.id}>
                     <div className="flex items-baseline justify-between gap-5">
                       <div className="lbl text-muted">
-                        {t.category ? CATEGORY_LABEL[t.category] : 'No category'}
                       </div>
                       <div className="flex items-baseline gap-4">
                         <Link

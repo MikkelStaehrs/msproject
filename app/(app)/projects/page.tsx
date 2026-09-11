@@ -7,7 +7,6 @@ import { NodeForm } from '@/components/node-form'
 import { QuickAddTrigger } from '@/components/quick-add-trigger'
 import { ProgressScale, Rule, StatusMark, formatDate } from '@/components/ui'
 import {
-  CATEGORY_LABEL,
   EFFECTIVE_STATUS_LABEL,
   type EffectiveStatus,
   type NodeCost,
@@ -35,7 +34,8 @@ export default async function ProjectsPage({
   const { filter = 'running', new: creating } = await searchParams
   const supabase = await createClient()
 
-  const [nodeRes, progressRes, nextRes, blockerRes, descRes, stateRes, costRes] = await Promise.all([
+  const [nodeRes, progressRes, nextRes, blockerRes, descRes, stateRes, costRes, markRes, stratRes] =
+    await Promise.all([
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('v_node_progress').select('*'),
     supabase.from('v_next_date').select('*'),
@@ -43,6 +43,8 @@ export default async function ProjectsPage({
     supabase.from('v_node_descendant').select('root_id, node_id'),
     supabase.from('v_node_state').select('*'),
     supabase.from('v_node_cost').select('*'),
+    supabase.from('v_strategy_node').select('node_id, strategy_id'),
+    supabase.from('strategy').select('id, name').order('sort_order').order('name'),
   ])
 
   const failure = firstError([
@@ -53,8 +55,26 @@ export default async function ProjectsPage({
     descRes,
     stateRes,
     costRes,
+    markRes,
+    stratRes,
   ])
   if (failure) return <QueryFailure message={failure} />
+
+  /*
+   * What each project is for, which is the column this list was missing.
+   *
+   * `category` used to sit here saying «Production» on twenty five rows out of
+   * thirty, which separated nothing. The strategy marking is the answer to the
+   * same question and it is the one the work is actually assembled against.
+   */
+  const strategyName = new Map(
+    ((stratRes.data ?? []) as { id: string; name: string }[]).map((r) => [r.id, r.name]),
+  )
+  const servedBy = new Map<string, string[]>()
+  for (const m of (markRes.data ?? []) as { node_id: string; strategy_id: string }[]) {
+    const name = strategyName.get(m.strategy_id)
+    if (name) servedBy.set(m.node_id, [...(servedBy.get(m.node_id) ?? []), name])
+  }
 
   const nodes = (nodeRes.data ?? []) as Node[]
   const state = new Map(((stateRes.data ?? []) as NodeState[]).map((s) => [s.node_id, s]))
@@ -215,7 +235,7 @@ export default async function ProjectsPage({
                               {p.title}
                             </Link>
                             <div className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-muted">
-                              {p.category ? CATEGORY_LABEL[p.category] : 'No category'}
+                              {(servedBy.get(p.id) ?? []).join(', ') || 'no strategy'}
                               {/*
                                 An absent number is the signal, not a blank.
                                 It means the work exists here and has not been

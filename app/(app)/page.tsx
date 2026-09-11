@@ -14,7 +14,6 @@ import {
   relativeDays,
 } from '@/components/ui'
 import {
-  CATEGORY_LABEL,
   EFFECTIVE_STATUS_LABEL,
   type NodeState,
   type ActiveBlocker,
@@ -184,7 +183,6 @@ export default async function HomePage({
               >
                 <div className="flex items-baseline justify-between gap-5">
                   <div className="lbl text-muted">
-                    {project.category ? CATEGORY_LABEL[project.category] : 'NO CATEGORY'}
                     {typeof project.reporting?.project_no === 'string' && (
                       <> &nbsp;·&nbsp; {project.reporting.project_no}</>
                     )}

@@ -1,5 +1,5 @@
 import { addDays, daysBetween } from './date.ts'
-import type { NodeCategory, NodeType, WaitingOnType } from '@/lib/types'
+import type { NodeType, WaitingOnType } from '@/lib/types'
 
 /**
  * The shape of a template. Pure types and pure functions, so a deployment can
@@ -34,7 +34,6 @@ export type Template = {
   id: string
   name: string
   description: string | null
-  category: NodeCategory | null
   body: TemplateBody
   created_at: string
   updated_at: string

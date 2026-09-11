@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { QuickAddTrigger } from '@/components/quick-add-trigger'
 import { Rule } from '@/components/ui'
 import { readIdentity } from '@/lib/identity'
-import { CATEGORY_LABEL, type Node } from '@/lib/types'
+import type { Node } from '@/lib/types'
 
 /**
  * Only the context band lives here. The title block, the sub navigation and
@@ -23,9 +23,34 @@ export default async function ProjectShell({
   const supabase = await createClient()
   const base = `/p/${id}`
 
-  const { data } = await supabase.from('node').select('*').eq('id', id).single()
-  const project = data as Node | null
+  /*
+   * What this project is FOR, read alongside it.
+   *
+   * The band used to open with «Production.PR-26-0001»: a category that drove
+   * nothing, glued to the number with a full stop as though the two were one
+   * address. The category is gone, and what replaces it is the thing that
+   * actually answers the question, which is the strategy the work is marked
+   * against.
+   */
+  const [nodeRes, markRes] = await Promise.all([
+    supabase.from('node').select('*').eq('id', id).single(),
+    supabase
+      .from('v_strategy_node')
+      .select('strategy_id, node_id')
+      .eq('node_id', id),
+  ])
+  const project = nodeRes.data as Node | null
   if (!project) notFound()
+
+  const marks = (markRes.data ?? []) as { strategy_id: string }[]
+  const { data: stratRows } = marks.length
+    ? await supabase
+        .from('strategy')
+        .select('id, name')
+        .in('id', marks.map((m) => m.strategy_id))
+        .order('sort_order')
+    : { data: [] }
+  const serves = ((stratRows ?? []) as { id: string; name: string }[]).map((r) => r.name)
 
   const identity = readIdentity(project.reporting)
 
@@ -36,14 +61,19 @@ export default async function ProjectShell({
         <div className="lbl border-l border-rule px-5 lg:px-10 py-3">
           {/* The path reads as one address: Production.PR-26-0001 */}
           <span className="text-ink">
-            {project.category ? CATEGORY_LABEL[project.category] : 'No category'}
-            {identity.admin.project_no && (
-              <>
-                <span className="text-rule-strong">.</span>
-                {identity.admin.project_no}
-              </>
+            {identity.admin.project_no ?? (
+              <span className="text-oxblood">not registered in UBS Projects</span>
             )}
           </span>
+          {/*
+            Said here because it is the question somebody standing on a project
+            actually has, and because until now the only place to see it was the
+            strategy page, which is the wrong way round: you mark work from the
+            strategy and you read it from the work.
+          */}
+          {serves.length > 0 && (
+            <span className="text-muted"> &nbsp;·&nbsp; {serves.join(', ')}</span>
+          )}
           {identity.admin.portfolio && (
             <span className="text-muted"> &nbsp;·&nbsp; {identity.admin.portfolio}</span>
           )}
