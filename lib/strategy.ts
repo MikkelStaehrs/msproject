@@ -80,6 +80,39 @@ export function contributionOf(m: Marking): number | null {
  * total built mostly from the first should say that out loud rather than read
  * as though somebody sat down and worked it out last week.
  */
+/**
+ * How long a marking would take to pay for itself, against the limit its
+ * strategy sets.
+ *
+ * Two things are deliberately absent. There is no annual RUNNING cost here,
+ * because `investedEur` is committed one-off money and the yearly side is not
+ * carried on a marking: where a strategy's work has a licence behind it the
+ * payback shown is optimistic, and that is worth knowing rather than papering
+ * over with a zero that pretends otherwise.
+ *
+ * And nothing is refused. A payback is an outcome rather than a claim: it moves
+ * as quotes arrive and as scope changes, so work whose payback is four years
+ * today stays on the page reading four years. Refusing to record it would
+ * delete the evidence somebody needs.
+ *
+ * Null where it cannot be worked out, which covers three different situations
+ * that all deserve the same answer: nothing has been committed yet, nothing has
+ * been promised yet, or the promise is not positive.
+ */
+export function paybackYears(m: Marking): number | null {
+  const promised = contributionOf(m)
+  if (promised === null || promised <= 0) return null
+  if (m.investedEur <= 0) return null
+  return m.investedEur / promised
+}
+
+/** Past what the strategy allows. False where either half is unknown. */
+export function overPayback(m: Marking, limitYears: number | null): boolean {
+  if (limitYears === null) return false
+  const years = paybackYears(m)
+  return years !== null && years > limitYears
+}
+
 export type Provenance = 'marking' | 'node' | 'origin' | 'none'
 
 export function provenanceOf(m: Marking): Provenance {

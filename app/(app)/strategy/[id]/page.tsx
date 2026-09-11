@@ -11,7 +11,13 @@ import {
 } from '@/lib/cogs'
 import { subtreeSet } from '@/lib/subtree'
 import { formatMoney } from '@/lib/cost'
-import { contributionOf, strategyPicture, type Marking } from '@/lib/strategy'
+import {
+  contributionOf,
+  overPayback,
+  paybackYears,
+  strategyPicture,
+  type Marking,
+} from '@/lib/strategy'
 import { setContribution, toggleNodeStrategy } from '@/lib/strategy-actions'
 import { pathTo } from '@/lib/wbs'
 import { Hint, Rule, StatusMark } from '@/components/ui'
@@ -129,6 +135,12 @@ export default async function StrategyDetailPage({
   }
 
   const picture = strategyPicture(marks.map(markingFor), strategyTarget(strategy, reference))
+  /*
+   * Null for a heading, which sets no limit, and that is not the same as a
+   * limit of zero: nothing is flagged rather than everything.
+   */
+  const limitYears =
+    strategy.max_payback_years === null ? null : Number(strategy.max_payback_years)
   const markedIds = new Set(marks.map((m) => m.node_id))
   const editing = editId ? marks.find((m) => m.id === editId) : undefined
 
@@ -242,6 +254,7 @@ export default async function StrategyDetailPage({
               const node = byId.get(m.node_id)
               const marking = markingFor(m)
               const contribution = contributionOf(marking)
+              const years = paybackYears(marking)
               const project = projectOf(m.node_id)
 
               return (
@@ -292,6 +305,32 @@ export default async function StrategyDetailPage({
                       {m.annual_eur === null && contribution !== null && (
                         <div className="lbl-tight text-rule-strong">
                           its own expected benefit
+                        </div>
+                      )}
+                      {/*
+                        How long it takes to pay for itself, against what this
+                        strategy allows. Said on the row rather than in a summary
+                        because the decision is about this piece of work.
+                        
+                        Reported, never refused. A payback moves as quotes
+                        arrive, so work at four years stays here reading four
+                        years: that is the evidence somebody needs before
+                        deciding anything about it.
+                      */}
+                      {years !== null && (
+                        <div
+                          className={`lbl-tight ${
+                            overPayback(marking, limitYears) ? 'text-oxblood' : 'text-rule-strong'
+                          }`}
+                        >
+                          pays for itself in {years.toFixed(1)} years
+                          {limitYears !== null && (
+                            <>
+                              {overPayback(marking, limitYears)
+                                ? `, past the ${limitYears} this strategy allows`
+                                : ` of ${limitYears} allowed`}
+                            </>
+                          )}
                         </div>
                       )}
                     </div>

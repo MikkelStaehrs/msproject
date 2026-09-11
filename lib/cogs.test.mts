@@ -38,6 +38,8 @@ const FY26: Reference = {
   // is the state of the real row too.
   confirmed: false,
   hourRateDkk: 240,
+  // Correct in Holeby, and only there until somebody says otherwise.
+  hourRateScope: 'Holeby',
   eurRate: 7.46,
   targetEurPerUnit: 1,
 }

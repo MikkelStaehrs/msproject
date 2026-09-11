@@ -67,6 +67,15 @@ export type Reference = {
   targetScope: string | null
   /** Kroner per man-hour. */
   hourRateDkk: number
+  /**
+   * Where that rate is the right one, «Holeby» today.
+   *
+   * Carried for the same reason `scope` is carried beside the denominator: a
+   * saving described as hours becomes kroner by multiplying by this, and a rate
+   * borrowed from another site produces a confident figure built on the wrong
+   * factory with nothing on screen looking unusual.
+   */
+  hourRateScope: string | null
   /** Kroner per euro, as used for this reference. */
   eurRate: number
   /** What the strategy asks for, per unit, per year. */
@@ -243,6 +252,7 @@ export function referenceFrom(
     cost_basis_scope?: string | null
     target_scope?: string | null
     hour_rate_dkk: number | string
+    hour_rate_scope?: string | null
     eur_rate: number | string
     cogs_target_eur_per_unit: number | string
     confirmed_at?: string | null
@@ -255,6 +265,7 @@ export function referenceFrom(
     scope: y.cost_basis_scope ?? null,
     targetScope: y.target_scope ?? null,
     hourRateDkk: Number(y.hour_rate_dkk),
+    hourRateScope: y.hour_rate_scope ?? null,
     eurRate: Number(y.eur_rate),
     targetEurPerUnit: Number(y.cogs_target_eur_per_unit),
     confirmed: y.confirmed_at != null,

@@ -1,5 +1,12 @@
-import { contributionOf,
-  provenanceOf, notStartedShare, strategyPicture, type Marking } from './strategy.ts'
+import {
+  contributionOf,
+  overPayback,
+  paybackYears,
+  provenanceOf,
+  notStartedShare,
+  strategyPicture,
+  type Marking,
+} from './strategy.ts'
 
 let failed = 0
 function check(name: string, got: unknown, expected: unknown) {
@@ -170,6 +177,23 @@ check('nothing anywhere is still unknown', contributionOf(m()), null)
 
 check('and the page can say which answered', provenanceOf(m({ originBenefit: 40 })), 'origin')
 check('…or that none did', provenanceOf(m()), 'none')
+
+// --- Paying for itself, against the limit the strategy sets -----------------
+
+/*
+ * The COGS programme allows two years. The rule is reported, never enforced:
+ * work at four years stays on the page reading four years, because that is the
+ * evidence somebody has to see before deciding anything about it.
+ */
+check('committed money over what it promises', paybackYears(m({ ownBenefit: 50, investedEur: 100 })), 2)
+check('nothing committed yet is not a payback of zero', paybackYears(m({ ownBenefit: 50 })), null)
+check('nothing promised yet cannot be paid back', paybackYears(m({ investedEur: 100 })), null)
+check('and neither can a promise of nothing', paybackYears(m({ ownBenefit: 0, investedEur: 100 })), null)
+
+check('two years exactly is within a limit of two', overPayback(m({ ownBenefit: 50, investedEur: 100 }), 2), false)
+check('a day over is over', overPayback(m({ ownBenefit: 50, investedEur: 101 }), 2), true)
+check('a strategy with no limit flags nothing', overPayback(m({ ownBenefit: 1, investedEur: 999 }), null), false)
+check('and an unknown payback is not a breach', overPayback(m({ investedEur: 999 }), 2), false)
 
 console.log(failed === 0 ? '\nAll tests passed.' : `\n${failed} test(s) failed.`)
 process.exitCode = failed === 0 ? 0 : 1

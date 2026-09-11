@@ -186,6 +186,8 @@ export interface Strategy {
   updated_at: string
   /** True where the target is the yardstick's, computed rather than typed. */
   target_from_yardstick: boolean
+  /** How long work serving this may take to pay for itself. Null: no limit. */
+  max_payback_years: number | null
 }
 
 /** A node marked as serving a strategy. */
@@ -285,6 +287,8 @@ export interface Yardstick {
   cogs_target_eur_per_unit: number
   note: string | null
   updated_at: string
+  /** Where this rate applies. A rate with no place gets used in the wrong one. */
+  hour_rate_scope: string | null
   /** When these figures were last checked against their source. Null: never. */
   confirmed_at: string | null
   confirmed_by: string | null
