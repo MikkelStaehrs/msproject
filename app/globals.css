@@ -1,20 +1,64 @@
 @import 'tailwindcss';
 
+/*
+ * The design language lives in DESIGN_1.md. This file is its only spelling.
+ *
+ * The token NAMES from the first design are kept alive and pointed at the new
+ * values, because every page in the application asks Tailwind for utilities
+ * built from them: `border-rule`, `text-muted`, `bg-green`. Dropping a name
+ * does not fail a build, it silently stops generating the utility and the page
+ * quietly loses its rules. So `rule` and `line` are the same colour under two
+ * names, and new code uses the new one.
+ */
 @theme {
-  --color-paper: #f8f8f6;
-  --color-sheet: #ffffff;
-  --color-ink: #1a1f1b;
-  --color-muted: #6b6b65;
-  --color-rule: #dcdcd7;
-  --color-rule-strong: #b4b4ad;
-  --color-green: #1e4a34;
-  --color-oxblood: #8a3520;
-  --color-empty: #e6e6e1;
+  /* Surfaces */
+  --color-paper: #f4efe6;  /* the page ground */
+  --color-inset: #fbf8f2;  /* content inside a frame */
+  --color-sheet: #fbf8f2;  /* the old name for inset */
+  --color-hover: #efe9de;  /* hover on a row or a card */
 
+  /* Text */
+  --color-green: #1e4632;      /* brand, headings, the active state */
+  --color-ink: #15251b;        /* body */
+  --color-green-soft: #4e6b59; /* standfirst, secondary prose */
+  --color-muted: #7c8479;      /* labels, metadata, dates */
+
+  /* Lines */
+  --color-line: #cdc5b6;
+  --color-rule: #cdc5b6;        /* the old name for line */
+  --color-line-strong: #a79e8c;
+  --color-rule-strong: #a79e8c; /* the old name for line-strong */
+
+  /* Needs a human */
+  --color-rust: #a8431f;
+  --color-oxblood: #a8431f;     /* the old name for rust */
+
+  /* An unfilled cell in a meter */
+  --color-empty: #e2dbcc;
+
+  /*
+   * Two typefaces. There is no serif: `font-display` now resolves to Archivo,
+   * so every heading written against the old design keeps its size and loses
+   * its serif, and `.num` moves to mono where the figures belong.
+   */
   --font-sans: var(--font-archivo), 'Helvetica Neue', Arial, sans-serif;
-  --font-display: var(--font-bodoni), Didot, 'Times New Roman', serif;
+  --font-display: var(--font-archivo), 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: var(--font-plex), ui-monospace, 'SF Mono', Menlo, monospace;
 
   --radius-none: 0;
+}
+
+/*
+ * Two spacings and one gutter. §3: 44 px between main sections and nothing
+ * else, 16 to 20 px inside a group.
+ */
+:root {
+  --gut: 32px;
+  --sec: 44px;
+  --grp: 18px;
+}
+@media (max-width: 767px) {
+  :root { --gut: 16px; --sec: 36px; }
 }
 
 html {
@@ -23,40 +67,81 @@ html {
 
 body {
   margin: 0;
-  background: #f8f8f6;
-  color: #1a1f1b;
+  background: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Small caps label with tracking. Used for every field name and category. */
-.lbl {
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+/*
+ * Headings are carried by size, weight and tracking now that there is no
+ * second typeface to carry them. Written against the utility rather than the
+ * element, because that is how the pages ask for it.
+ */
+.font-display {
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 
-.lbl-tight {
-  font-size: 10px;
-  font-weight: 500;
+/* Small caps label with tracking. Every field name and category. */
+.lbl {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-/* Numbers meant to be read: serif with tabular figures. */
-.num {
-  font-family: var(--font-display);
-  font-variant-numeric: tabular-nums;
-  font-weight: 500;
+.lbl-tight {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-/* Form fields. A rule rather than a box: the paper is already the surface. */
+/* The micro step: tags and column heads, and nothing else. */
+.micro {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Numbers meant to be read: mono with tabular figures. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A key figure. 44 px, mono, green. */
+.fig-num {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--color-green);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   Form fields. A rule rather than a box: the paper is already the surface.
+   --------------------------------------------------------------------------- */
 .field {
   width: 100%;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--color-rule-strong);
+  border-bottom: 1px solid var(--color-line-strong);
   padding: 7px 0 6px;
   font-family: var(--font-sans);
   font-size: 13px;
@@ -65,28 +150,19 @@ body {
 }
 
 .field:focus {
-  border-bottom-color: var(--color-ink);
+  border-bottom-color: var(--color-green);
 }
 
 /*
  * Anything under 16px makes Safari zoom the page the moment a field takes
- * focus, and the zoom does not come back on its own. 13px is the right size to
- * read at a desk and the wrong size to touch, so the touch size is keyed to the
- * pointer rather than to the window: a narrow browser window on a laptop is
- * still a mouse, and keeps the editorial size.
+ * focus, and the zoom does not come back on its own. The touch size is keyed
+ * to the pointer rather than to the window: a narrow browser window on a
+ * laptop is still a mouse, and keeps the editorial size.
  */
 @media (pointer: coarse) {
-  .field {
-    font-size: 16px;
-  }
+  .field { font-size: 16px; }
 }
 
-/*
- * Text areas grow with their content instead of scrolling inside two lines.
- * field-sizing is supported in Chrome and Edge; browsers without it fall back
- * to the rows attribute, which is why they all carry resize-y and can still
- * be dragged larger by hand.
- */
 textarea.field {
   field-sizing: content;
   min-height: 52px;
@@ -97,38 +173,58 @@ textarea.field {
 select.field {
   border-radius: 0;
   appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, #6b6b65 50%),
-    linear-gradient(135deg, #6b6b65 50%, transparent 50%);
+  background-image: linear-gradient(45deg, transparent 50%, #7c8479 50%),
+    linear-gradient(135deg, #7c8479 50%, transparent 50%);
   background-position: calc(100% - 9px) center, calc(100% - 5px) center;
   background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
   padding-right: 18px;
 }
 
-/* Buttons. Solid for the primary action, outlined for the secondary. */
+/* ---------------------------------------------------------------------------
+   Buttons and actions. §4: a row's primary action is the row itself, the
+   overflow is visible, and a named action is used only where it differs from
+   «open».
+   --------------------------------------------------------------------------- */
 .btn {
   display: inline-block;
-  padding: 10px 18px;
-  font-size: 10px;
+  padding: 9px 15px;
+  font-family: var(--font-sans);
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  border: 1px solid var(--color-ink);
-  background: var(--color-ink);
-  color: var(--color-paper);
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.2;
+  border: 1px solid var(--color-green);
+  background: var(--color-green);
+  color: var(--color-inset);
   cursor: pointer;
+}
+
+.btn:hover {
+  background: #17382a;
+  border-color: #17382a;
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--color-ink);
-  border-color: var(--color-rule-strong);
+  border-color: var(--color-line-strong);
+}
+
+.btn-ghost:hover {
+  background: var(--color-hover);
+  border-color: var(--color-line-strong);
 }
 
 .btn-danger {
   background: transparent;
-  color: var(--color-oxblood);
-  border-color: var(--color-oxblood);
+  color: var(--color-rust);
+  border-color: var(--color-rust);
+}
+
+.btn-danger:hover {
+  background: transparent;
 }
 
 .btn:disabled {
@@ -136,17 +232,49 @@ select.field {
   cursor: default;
 }
 
-/*
- * 10px type with 10px of padding is a 30px target, which is fine for a cursor
- * and small for a thumb. The type stays where it is, the target grows.
- */
 @media (pointer: coarse) {
-  .btn {
-    min-height: 44px;
-    padding-top: 0;
-    padding-bottom: 0;
-    line-height: 44px;
-  }
+  .btn { min-height: 44px; }
+}
+
+/* A named action inside a row. Always visible, never dimmed. */
+.act {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-green);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.act:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The overflow. Visible in full colour, at the end of the fixed columns. */
+.more {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--color-green);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0 5px;
+  line-height: 1;
+}
+
+.more:hover { background: var(--color-hover); }
+
+.kbd {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  border: 1px solid var(--color-line-strong);
+  padding: 2px 5px;
+  color: var(--color-muted);
 }
 
 a {
@@ -154,25 +282,120 @@ a {
   text-decoration: none;
 }
 
+:focus-visible {
+  outline: 1px solid var(--color-green);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Panels, tags and tables. §4.
+   --------------------------------------------------------------------------- */
+.panel {
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-inset);
+}
+
+.panel-h {
+  display: flex;
+  gap: 13px;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-line-strong);
+}
+
+.panel-b { padding: 14px; }
+
+.panel-list > * {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.panel-list > *:last-child { border-bottom: 0; }
+.panel-list > *:hover { background: var(--color-hover); }
+
 /*
- * The page frame: a label column, the content, and the margin notes. The outer
- * two are fixed at 184 and 420, so the frame needs about a thousand pixels
- * before the middle column has room to be read, and below that the three
- * become one. The rules that separate them turn from vertical to horizontal at
- * the same moment, because a left rule on a full width block is a line down the
- * side of the page rather than a column divider.
- *
- * Only direct children are touched. A quoted paragraph inside a column carries
- * its own left rule and that one is not a column border.
- *
- * --frame-margin overrides the right column where a page wants it narrower, and
- * --frame-label the left where a page needs it wider. The stand-up is why the
- * second one exists: its first column is a list of work rather than a label, so
- * 184px is too narrow, and it had solved that by writing its own grid at the
- * call site. The page then had two sets of vertical rules, one under the header
- * and another beside the rail, landing in different places, and the eye reads
- * that as nothing lining up with anything.
+ * A tag. Status has no colour: only rust breaks the calm, and rust means a
+ * person has to do something.
  */
+.tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-line-strong);
+  padding: 2px 5px;
+  color: var(--color-green-soft);
+  white-space: nowrap;
+  display: inline-block;
+  line-height: 1.35;
+}
+
+.tag-rust {
+  color: var(--color-rust);
+  border-color: var(--color-rust);
+}
+
+/*
+ * A table grows to a point and then stops, and it carries no blind column:
+ * the title stretches and the fixed columns sit together on the right.
+ */
+.tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
+
+.tbl th {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-weight: 400;
+  text-align: left;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--color-line-strong);
+  white-space: nowrap;
+  width: 1%;
+}
+
+.tbl td {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--color-line);
+  line-height: 1.4;
+  vertical-align: baseline;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.tbl th.grow,
+.tbl td.grow { width: auto; white-space: normal; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:hover { background: var(--color-hover); }
+.tbl .cap { max-width: 1120px; }
+
+/* A filter row is a set of switches, never a set of actions. */
+.filterrow { display: flex; flex-wrap: wrap; align-items: baseline; }
+
+.filterrow button {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--color-muted);
+  padding: 4px 11px;
+  border-left: 1px solid var(--color-line);
+}
+
+.filterrow button:first-child { border-left: 0; padding-left: 0; }
+.filterrow button:hover { color: var(--color-ink); }
+.filterrow button[aria-pressed='true'] { color: var(--color-green); }
+
+/* ---------------------------------------------------------------------------
+   The page frame: a label column, the content, and the margin notes.
+   The frame runs to the gutter; only running prose is measured.
+   --------------------------------------------------------------------------- */
 .frame {
   display: grid;
   grid-template-columns: 1fr;
@@ -180,11 +403,10 @@ a {
 
 @media (min-width: 1024px) {
   .frame {
-    grid-template-columns: var(--frame-label, 184px) 1fr var(--frame-margin, 420px);
+    grid-template-columns: var(--frame-label, 190px) 1fr var(--frame-margin, 400px);
   }
 }
 
-/* The same frame on pages that carry no margin notes. */
 .frame-pair {
   display: grid;
   grid-template-columns: 1fr;
@@ -192,32 +414,30 @@ a {
 
 @media (min-width: 1024px) {
   .frame-pair {
-    grid-template-columns: var(--frame-label, 184px) 1fr;
+    grid-template-columns: var(--frame-label, 190px) 1fr;
   }
 }
 
 @media (max-width: 1023px) {
   .frame > *,
-  .frame-pair > * {
-    border-left: 0;
-  }
+  .frame-pair > * { border-left: 0; }
 
   .frame > * + *,
-  .frame-pair > * + * {
-    border-top: 1px solid var(--color-rule);
-  }
+  .frame-pair > * + * { border-top: 1px solid var(--color-line); }
 }
 
-/* Print: only the sheet itself goes on paper. */
-/*
- * Each printable page declares its own paper. A global «size: A4» would have
- * forced the project map into portrait, and the map is wider than it is tall.
- * Browsers without named page support fall back to the paper chosen in the
- * print dialog, which is no worse than before.
- */
-@page {
-  margin: 14mm;
-}
+/* The work area stops at 1600; running prose at 64 characters. */
+.work { max-width: 1600px; }
+.prose-measure { max-width: 64ch; line-height: 1.55; }
+
+/* Two spacings, and only two. */
+.sec-gap { margin-top: var(--sec); }
+.grp-gap { margin-top: var(--grp); }
+
+/* ---------------------------------------------------------------------------
+   Print: only the sheet itself goes on paper, and the paper is white.
+   --------------------------------------------------------------------------- */
+@page { margin: 14mm; }
 
 @page brief {
   size: A4 portrait;
@@ -230,15 +450,15 @@ a {
 }
 
 .page-brief { page: brief; }
-.page-map   { page: map; }
+.page-map { page: map; }
 
 @media print {
   .no-print { display: none !important; }
   body { background: #ffffff; }
+  .panel { background: #ffffff; }
   .print-sheet { padding: 0; }
   a { color: inherit; }
 
-  /* Never break a labelled row or a heading across two sheets. */
   h1, h2, h3 { break-after: avoid; }
   section, dl, tr { break-inside: avoid; }
 }

@@ -582,7 +582,7 @@ export default async function IdentityPage({
               idea became work, which is a figure somebody can argue with rather
               than a label somebody chose.
             */}
-            <Field label="Responsible" hint="Who is responsible for the project. The same field as owner on the nodes in the tree, so it is also used when a task is waiting on someone.">
+            <Field label="Driver" hint="Who drives this forward. The same field as the driver on every node in the tree, so it is also used when a task is waiting on someone.">
               <input
                 name="owner"
                 defaultValue={project.owner ?? ''}

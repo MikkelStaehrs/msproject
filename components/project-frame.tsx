@@ -95,7 +95,7 @@ export async function ProjectFrame({
       supabase.from('decision').select('*').order('decided_on', { ascending: false }),
       supabase.from('v_node_state').select('*').eq('node_id', frameNodeId).maybeSingle(),
       supabase.from('v_node_ready').select('*').eq('node_id', frameNodeId).maybeSingle(),
-      supabase.from('v_node_progress').select('node_id, leaf_total'),
+      supabase.from('v_node_progress').select('node_id, leaf_total, leaf_done'),
       supabase.from('node_dependency').select('*').eq('node_id', frameNodeId),
       supabase.from('node_dependency').select('*').eq('depends_on_id', frameNodeId),
     ])
@@ -206,12 +206,24 @@ export async function ProjectFrame({
    * that holds no work is invisible otherwise: it contributes nothing to
    * progress and nothing says why.
    */
-  const leafTotals = new Map(
-    ((partsRes.data ?? []) as { node_id: string; leaf_total: number }[]).map((r) => [
-      r.node_id,
-      r.leaf_total,
-    ]),
-  )
+  const partCounts = (partsRes.data ?? []) as {
+    node_id: string
+    leaf_total: number
+    leaf_done: number
+  }[]
+  const leafTotals = new Map(partCounts.map((r) => [r.node_id, r.leaf_total]))
+
+  /*
+   * Waiting days per node for the rail, its OWN open blockers rather than the
+   * subtree's. A project is not blocked because one task out of twelve is, and
+   * the rail is a table of contents: it should point at the line that hurts
+   * rather than colour every ancestor of it.
+   */
+  const railBlocked: Record<string, number> = {}
+  for (const b of (blockerRes.data ?? []) as BlockerDays[]) {
+    if (!b.is_active) continue
+    railBlocked[b.node_id] = Math.max(railBlocked[b.node_id] ?? 0, b.days_blocked)
+  }
   const notBrokenDown = chain.filter(
     (n) =>
       inSubtree.has(n.id) &&
@@ -417,7 +429,17 @@ export async function ProjectFrame({
 
       {/* Body: sub navigation, the page, the pulse */}
       <div className="frame min-h-[50vh]">
-        <ProjectNav base={base} />
+        <ProjectNav
+          base={base}
+          projectId={projectId}
+          projectTitle={isProject ? node.title : (parent?.title ?? node.title)}
+          projectNo={(isProject ? identity : parentIdentity).admin.project_no}
+          place={(isProject ? identity : parentIdentity).admin.location}
+          nodes={chain}
+          counts={partCounts}
+          blocked={railBlocked}
+          currentId={frameNodeId}
+        />
 
         <div className="border-l border-rule">{children}</div>
 
