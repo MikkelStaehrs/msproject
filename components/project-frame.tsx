@@ -3,6 +3,7 @@ import { daysBetween, today as todayIso } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { ProjectNav } from '@/components/project-nav'
+import { LogStream, type LogItem } from '@/components/log-stream'
 import { StatusSelect } from '@/components/status-select'
 import { PEOPLE_FIELDS, readIdentity } from '@/lib/identity'
 import { pathTo } from '@/lib/wbs'
@@ -232,6 +233,77 @@ export async function ProjectFrame({
       (leafTotals.get(n.id) ?? 0) === 0,
   ).length
 
+  /*
+   * The four kinds, composed into one list in date order.
+   *
+   * A relation carries no date of its own, so it sorts last rather than
+   * pretending to a day nobody recorded. A blocker sorts on the day it opened,
+   * which is the day the wait started and the day the question was asked.
+   */
+  const stream: LogItem[] = [
+    ...entries.map((e) => ({
+      id: `e${e.id}`,
+      kind: 'work' as const,
+      date: e.entry_date,
+      when: formatDate(e.entry_date),
+      line: e.body,
+      note:
+        e.node_id === frameNodeId
+          ? KIND_LABEL[e.kind] ?? null
+          : (chainById.get(e.node_id)?.title ?? null),
+      href: e.node_id === frameNodeId ? null : `${base}?focus=${e.node_id}`,
+    })),
+    ...blockers.map((b) => ({
+      id: `b${b.id}`,
+      kind: 'blocker' as const,
+      date: b.opened_at,
+      when: formatDate(b.opened_at),
+      line: b.title,
+      note: b.is_active
+        ? `${b.waiting_on}${b.expected_by ? `, expected by ${formatDate(b.expected_by)}` : ', no expected reply'}`
+        : `${b.waiting_on} · closed after ${b.days_blocked} days${b.resolution ? ` · ${b.resolution}` : ''}`,
+      rust: b.is_active,
+      right: b.is_active ? `${b.days_blocked}d` : null,
+      action: b.is_active ? { label: 'Close', href: link(`bedit=${b.id}`) } : null,
+      href: link(`bedit=${b.id}`),
+    })),
+    ...decisions.map((d) => ({
+      id: `d${d.id}`,
+      kind: 'decision' as const,
+      date: d.decided_on,
+      when: formatDate(d.decided_on),
+      line: d.decision,
+      note: d.rationale ?? 'No rationale written down',
+      rust: !d.rationale,
+      href: link(`dedit=${d.id}`),
+    })),
+    ...waitsOn.map((d) => ({
+      id: `w${d.id}`,
+      kind: 'sequence' as const,
+      date: null,
+      when: null,
+      line: `Waits on ${chainById.get(d.depends_on_id)?.title ?? 'a part you cannot open'}`,
+      note: d.note,
+      rust: isLate(d.depends_on_id),
+      right: isLate(d.depends_on_id) ? 'late' : null,
+      href: `${base}?focus=${d.depends_on_id}`,
+    })),
+    ...blocks.map((d) => ({
+      id: `h${d.id}`,
+      kind: 'sequence' as const,
+      date: null,
+      when: null,
+      line: `Holds up ${chainById.get(d.node_id)?.title ?? 'a part you cannot open'}`,
+      note: d.note,
+      href: `${base}?focus=${d.node_id}`,
+    })),
+  ].sort((a, b) => {
+    if (a.date === null && b.date === null) return 0
+    if (a.date === null) return 1
+    if (b.date === null) return -1
+    return a.date < b.date ? 1 : -1
+  })
+
   const identity = readIdentity(node.reporting)
   const parentIdentity = readIdentity(parent?.reporting ?? null)
 
@@ -443,10 +515,20 @@ export async function ProjectFrame({
 
         <div className="border-l border-rule">{children}</div>
 
+        {/*
+          The pulse, as one stream.
+
+          It was four sections, Work log, Blockers, Decisions and Sequence, which
+          is four tables in the database showing through as four headings on the
+          screen. The question a person has is one question, «what has happened
+          here», and its answer is one list in date order. Nothing is merged
+          underneath: this composes rows the frame has already fetched, and the
+          glyphs are the four quick entry already parses.
+        */}
         <div className="border-l border-rule">
           <section className="py-7 pl-5 lg:pl-8 pr-5 lg:pr-16">
             <div className="flex items-baseline justify-between gap-4">
-              <h2 className="font-display text-2xl font-medium">Work log</h2>
+              <h2 className="text-[17px] font-semibold tracking-[-0.025em]">Log</h2>
               <Link
                 href={`${base}/rapporter`}
                 className="lbl-tight text-green hover:text-oxblood"
@@ -455,250 +537,44 @@ export async function ProjectFrame({
               </Link>
             </div>
             {!isProject && (
-              <div className="lbl-tight mt-1 text-rule-strong">this part only</div>
+              <div className="lbl-tight mt-1 text-rule-strong">this part and below</div>
             )}
-            {entries.length === 0 ? (
-              <p className="mt-3 text-[13px] text-muted">
-                No entries yet. Press Ctrl+K and write a line.
-              </p>
-            ) : (
-              <div className="mt-3.5">
-                {entries.map((e) => (
-                  <div key={e.id} className="border-t border-rule py-3 last:border-b">
-                    <div className="flex items-baseline gap-3">
-                      <span className="min-w-[52px] text-[10px] tabular-nums text-muted">
-                        {formatDate(e.entry_date)}
-                      </span>
-                      <span
-                        className={`text-[9px] font-medium uppercase tracking-[0.14em] ${
-                          e.kind === 'risk'
-                            ? 'text-oxblood'
-                            : e.kind === 'work'
-                              ? 'text-green'
-                              : 'text-muted'
-                        }`}
-                      >
-                        {KIND_LABEL[e.kind] ?? e.kind}
-                      </span>
-                      <Link
-                        href={link(`eedit=${e.id}`)}
-                        className="lbl-tight ml-auto text-rule-strong hover:text-ink"
-                      >
-                        Edit
-                      </Link>
-                    </div>
-                    <p className="mt-1.5 text-[12.5px] leading-relaxed">{e.body}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-          <Rule />
 
-          <section className="py-6 pl-5 lg:pl-8 pr-5 lg:pr-16">
-            <div className="flex items-baseline justify-between">
-              <h2 className="font-display text-2xl font-medium">Blockers</h2>
-              <Link
-                href={link(`bnew=${frameNodeId}`)}
-                className="lbl text-green hover:text-oxblood"
-              >
-                New
+            <LogStream
+              items={stream}
+              empty={
+                isProject
+                  ? 'Nothing written on this project yet. Press Ctrl+K and write a line.'
+                  : 'Nothing written on this part or anything under it.'
+              }
+            />
+
+            {/*
+              Three ways in that quick entry cannot express on its own. A blocker
+              and a decision it can, and they are offered here anyway because
+              this is where you are looking when you notice one. An order
+              between two pieces of work it cannot: it needs a picker, because
+              the other end is a node and not a sentence.
+            */}
+            <div className="sec-gap flex flex-wrap items-baseline gap-5">
+              <Link href={link(`bnew=${frameNodeId}`)} className="act">
+                New blocker
               </Link>
-            </div>
-            {blockers.length === 0 ? (
-              <p className="mt-3 text-[13px] text-muted">None recorded.</p>
-            ) : (
-              <div className="mt-3.5">
-                {[...blockers]
-                  .sort((a, b) => {
-                    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1
-                    return b.days_blocked - a.days_blocked
-                  })
-                  .map((b) => {
-                    const overdue =
-                      b.is_active && b.expected_by !== null && b.expected_by < today
-                    return (
-                      <div
-                        key={b.id}
-                        className="flex items-baseline gap-3.5 border-t border-rule py-3 last:border-b"
-                      >
-                        <div
-                          className={`num min-w-[40px] text-[26px] leading-none ${
-                            overdue
-                              ? 'text-oxblood'
-                              : b.is_active
-                                ? 'text-ink'
-                                : 'text-rule-strong'
-                          }`}
-                        >
-                          {b.days_blocked}
-                        </div>
-                        <div className="flex-1">
-                          <div
-                            className={`text-[12.5px] leading-snug ${
-                              b.is_active ? '' : 'text-muted'
-                            }`}
-                          >
-                            {b.title}
-                          </div>
-                          <div className="mt-0.5 text-[10.5px] text-muted">
-                            {b.waiting_on} · {titleById.get(b.node_id)}
-                            {!b.is_active && b.resolution && <> · {b.resolution}</>}
-                          </div>
-                          <div className="mt-1.5 flex items-baseline gap-3.5">
-                            {b.is_active && (
-                              <Link
-                                href={link(`bresolve=${b.id}`)}
-                                className="lbl-tight text-green hover:text-oxblood"
-                              >
-                                Close
-                              </Link>
-                            )}
-                            <Link
-                              href={link(`bedit=${b.id}`)}
-                              className="lbl-tight text-muted hover:text-ink"
-                            >
-                              Edit
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-              </div>
-            )}
-          </section>
-          <Rule />
-
-          <section className="py-6 pb-8 pl-5 lg:pl-8 pr-5 lg:pr-16">
-            <div className="flex items-baseline justify-between">
-              <h2 className="font-display text-2xl font-medium">Decisions</h2>
-              <Link
-                href={link(`dnew=${frameNodeId}`)}
-                className="lbl text-green hover:text-oxblood"
-              >
-                New
+              <Link href={link(`dnew=${frameNodeId}`)} className="act">
+                Record a decision
               </Link>
-            </div>
-            {decisions.length === 0 ? (
-              <p className="mt-3 text-[13px] text-muted">
-                None yet. Type{' '}
-                <span className="text-rule-strong">? decision // why</span> in quick
-                entry.
-              </p>
-            ) : (
-              <div className="mt-3.5">
-                {decisions.map((d) => (
-                  <div key={d.id} className="border-t border-rule py-3 last:border-b">
-                    <div className="flex items-baseline justify-between gap-4">
-                      <div className="text-[10px] tabular-nums text-muted">
-                        {formatDateLong(d.decided_on)}
-                      </div>
-                      <Link
-                        href={link(`dedit=${d.id}`)}
-                        className="lbl-tight text-muted hover:text-ink"
-                      >
-                        Edit
-                      </Link>
-                    </div>
-                    <div className="mt-1.5 text-[13px] font-medium leading-snug">
-                      {d.decision}
-                    </div>
-                    {d.rationale ? (
-                      <p className="mt-1.5 text-[11.5px] leading-relaxed">{d.rationale}</p>
-                    ) : (
-                      <p className="mt-1.5 text-[11.5px] text-rule-strong">
-                        No rationale recorded.
-                      </p>
-                    )}
-                    {d.alternatives && (
-                      <p className="mt-1.5 border-l border-rule pl-3 text-[11.5px] leading-relaxed text-muted">
-                        {d.alternatives}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-          <Rule />
-
-          <section className="py-6 pl-5 lg:pl-8 pr-5 lg:pr-16">
-            <div className="flex items-baseline justify-between gap-4">
-              <h2 className="font-display text-2xl font-medium">Sequence</h2>
               {ready && !ready.is_ready && (
-                ready.overdue_count > 0 ? (
-                  <span className="lbl-tight text-oxblood">
-                    Held up, {ready.overdue_count} late
-                  </span>
-                ) : (
-                  <span className="lbl-tight text-muted">
-                    Waiting on {ready.waiting_on_count}
-                  </span>
-                )
+                <span
+                  className={`lbl-tight ${
+                    ready.overdue_count > 0 ? 'text-oxblood' : 'text-muted'
+                  }`}
+                >
+                  {ready.overdue_count > 0
+                    ? `Held up, ${ready.overdue_count} late`
+                    : `Waiting on ${ready.waiting_on_count}`}
+                </span>
               )}
             </div>
-
-            <div className="lbl-tight mt-1 text-rule-strong">
-              What must finish first. Ordinary until something runs late
-            </div>
-
-            {waitsOn.length === 0 && blocks.length === 0 ? (
-              <p className="mt-3 text-[13px] text-muted">Nothing recorded either way.</p>
-            ) : (
-              <div className="mt-3.5">
-                {waitsOn.map((d) => {
-                  const target = chainById.get(d.depends_on_id)
-                  const settled =
-                    target?.status === 'done' || target?.status === 'cancelled'
-                  const late = isLate(d.depends_on_id)
-                  return (
-                    <div key={d.id} className="border-t border-rule py-2.5 last:border-b">
-                      <div className="flex items-baseline gap-3">
-                        <span className="lbl-tight w-[62px] shrink-0 text-muted">Waits on</span>
-                        <Link
-                          href={`${base}?focus=${d.depends_on_id}`}
-                          className={`flex-1 text-[12.5px] hover:text-green ${
-                            settled ? 'text-muted line-through decoration-rule' : ''
-                          }`}
-                        >
-                          {target?.title ?? 'Unknown node'}
-                        </Link>
-                        {late && (
-                          <span className="lbl-tight shrink-0 text-oxblood">Late</span>
-                        )}
-                        <form action={removeDependency}>
-                          <input type="hidden" name="id" value={d.id} />
-                          <input type="hidden" name="redirectTo" value={link('')} />
-                          <button className="lbl-tight text-rule-strong hover:text-oxblood">
-                            Remove
-                          </button>
-                        </form>
-                      </div>
-                      {d.note && (
-                        <p className="ml-[74px] mt-1 text-[11.5px] leading-relaxed text-muted">
-                          {d.note}
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {blocks.map((d) => (
-                  <div key={d.id} className="border-t border-rule py-2.5 last:border-b">
-                    <div className="flex items-baseline gap-3">
-                      <span className="lbl-tight w-[62px] shrink-0 text-rule-strong">Holds up</span>
-                      <Link
-                        href={`${base}?focus=${d.node_id}`}
-                        className="flex-1 text-[12.5px] text-muted hover:text-green"
-                      >
-                        {chainById.get(d.node_id)?.title ?? 'Unknown node'}
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {candidates.length > 0 && (
               <form action={addDependency} className="mt-4 flex flex-col gap-2">
@@ -715,9 +591,7 @@ export async function ProjectFrame({
                   ))}
                 </select>
                 <input name="note" placeholder="Why, in one line" className="field" />
-                <button className="lbl-tight self-start text-green hover:text-oxblood">
-                  Add
-                </button>
+                <button className="act self-start">Add the order</button>
               </form>
             )}
           </section>
