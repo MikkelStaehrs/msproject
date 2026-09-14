@@ -1,21 +1,18 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
-import { addDays, daysBetween, today as todayIso } from '@/lib/date'
+import { addDays, today as todayIso } from '@/lib/date'
 import { looseEnds } from '@/lib/loose-ends'
 import { projectOf } from '@/lib/subtree'
 import {
   agenda,
   attendees,
   movement,
-  AGENDA_LABEL,
   CADENCE_DAYS,
   type AgendaItem,
 } from '@/lib/standup'
 import { holdStandup, reopenStandup } from '@/lib/standup-actions'
-import { moveInStandupQueue, setNodeStatus } from '@/lib/node-actions'
 import {
-  basisCoversTarget,
   impactOf,
   referenceFrom,
   savingFrom,
@@ -23,41 +20,24 @@ import {
   targetAnnual,
 } from '@/lib/cogs'
 import { priorityScore, quadrant } from '@/lib/priority'
-import { formatMoney } from '@/lib/cost'
-import { BlockerForm, ResolveBlockerForm } from '@/components/blocker-form'
-import { DecisionForm } from '@/components/decision-form'
-import { AgreedHere } from '@/components/agreed-here'
-import { DueDate } from '@/components/due-date'
-import { NodeForm } from '@/components/node-form'
-import { QuickAddOn } from '@/components/quick-add-on'
 import { QuickAddTrigger } from '@/components/quick-add-trigger'
-import { StatusSelect } from '@/components/status-select'
-import {
-  Prose,
-  Rule,
-  StatusMark,
-  formatDate,
-  formatDateLong,
-  relativeDays,
-} from '@/components/ui'
-import {
-  COST_BUDGET_LABEL,
-  COST_STATE_LABEL,
-  DECISION_TOPIC_LABEL,
-  STATUS_LABEL,
-  TYPE_LABEL,
-  type BlockerDays,
-  type Cost,
-  type Decision,
-  type Entry,
-  type Node,
-  type NodeCost,
-  type NodeReady,
-  type NodeState,
-  type Spark,
-  type StageVolume,
-  type Standup,
-  type Yardstick,
+import { Rule, formatDate, formatDateLong } from '@/components/ui'
+import { WhatIsInTheWay } from './_chapters/what-is-in-the-way'
+import { WhatWeAreDoing } from './_chapters/what-we-are-doing'
+import { WhatIsNext } from './_chapters/what-is-next'
+import type {
+  BlockerDays,
+  Cost,
+  Decision,
+  Entry,
+  Node,
+  NodeCost,
+  NodeReady,
+  NodeState,
+  Spark,
+  StageVolume,
+  Standup,
+  Yardstick,
 } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -506,187 +486,19 @@ export default async function StandupPage({
 
       {/* ================= 1. What is in the way ================= */}
       {part === '1' && (
-        <div className="frame [--frame-label:360px] [--frame-margin:330px] min-h-[60vh]">
-          <div className="pl-5 lg:pl-16 py-8 pr-5">
-            <h1 className="font-display text-[30px] font-medium leading-[1.06]">
-              What is in the way
-            </h1>
-            {/*
-              Blockers on work somebody is actually doing, and nothing else.
-              
-              This chapter used to be the retrospective: what finished, what came
-              unstuck, what got stuck. That is a read rather than a working
-              surface, and it had the whole first chapter of a meeting. It is now
-              the line above the chapters, which keeps the boundary meaning
-              something without spending a chapter on it.
-            */}
-            <p className="mt-5 max-w-[24ch] text-[11px] leading-relaxed text-rule-strong">
-              Only on work that has been started. A blocker on something nobody
-              has begun is a note about a future problem, not something standing
-              in the way today.
-            </p>
-          </div>
-
-          <div className="border-l border-rule px-5 lg:px-10 py-8">
-            {waitingRows.length === 0 ? (
-              <p className="max-w-prose text-[13px] leading-relaxed text-muted">
-                Nothing is waiting on anybody. Every open blocker sits on work
-                that has not been started, or there are none at all.
-              </p>
-            ) : (
-              <div>
-                {waitingRows.map((r) => {
-                  const b = r.lead
-                  return (
-                    <Link
-                      key={r.nodeId + b.title}
-                      href={here('2', r.nodeId)}
-                      className="group grid grid-cols-1 items-baseline gap-x-5 gap-y-1 border-t border-rule py-3 last:border-b lg:grid-cols-[54px_1fr_auto]"
-                    >
-                      <span
-                        className={`num text-[19px] ${
-                          b.kind === 'overdue_blocker' ? 'text-oxblood' : 'text-ink'
-                        }`}
-                      >
-                        {b.days}
-                        <span className="lbl-tight text-rule-strong"> d</span>
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-[13px] leading-snug group-hover:text-green">
-                          {b.title}
-                        </span>
-                        <span className="lbl-tight text-muted">
-                          {byId.get(r.nodeId)?.title} · {projectTitle(r.nodeId)}
-                        </span>
-                      </span>
-                      <span
-                        className={`lbl-tight shrink-0 ${
-                          b.kind === 'overdue_blocker' ? 'text-oxblood' : 'text-muted'
-                        }`}
-                      >
-                        {b.who}
-                        {b.kind === 'overdue_blocker' && ' · answer is late'}
-                      </span>
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
-
-            {agreedLast && (
-              <div className="mt-8 border-t border-rule-strong pt-5">
-                <div className="flex items-baseline gap-4">
-                  <h2 className="lbl">Agreed last time</h2>
-                  <span className="lbl-tight tabular-nums text-rule-strong">
-                    {formatDate(lastStandup!.held_on)}
-                  </span>
-                </div>
-
-                {agreedLast.lines.length === 0 && agreedLast.tasks.length === 0 ? (
-                  <p className="mt-2.5 max-w-prose text-[11.5px] leading-relaxed text-rule-strong">
-                    Nothing was written down at that stand-up. Use{' '}
-                    <span className="text-ink">agreed here</span> on a piece in
-                    chapter two and it lands in this list next week.
-                  </p>
-                ) : (
-                  <div className="mt-3">
-                    {agreedLast.tasks.map((n) => {
-                      const done = n.status === 'done' || n.completed_at !== null
-                      const late =
-                        !done && n.due_date !== null && n.due_date < today
-                      return (
-                        <div
-                          key={n.id}
-                          className="flex items-baseline gap-3 border-t border-rule py-2.5 last:border-b"
-                        >
-                          <StatusMark
-                            status={n.status}
-                            blocked={state.get(n.id)?.is_blocked ?? false}
-                          />
-                          <Link
-                            href={at(n.id)}
-                            className={`min-w-0 flex-1 text-[12.5px] leading-snug hover:text-green ${
-                              done ? 'text-muted line-through' : ''
-                            }`}
-                          >
-                            {n.title}
-                          </Link>
-                          {n.owner && (
-                            <span className="lbl-tight shrink-0 text-muted">
-                              {n.owner}
-                            </span>
-                          )}
-                          <span
-                            className={`shrink-0 text-[10px] tabular-nums ${
-                              late ? 'text-oxblood' : 'text-rule-strong'
-                            }`}
-                          >
-                            {done
-                              ? 'done'
-                              : n.due_date
-                                ? formatDate(n.due_date)
-                                : STATUS_LABEL[n.status]}
-                          </span>
-                        </div>
-                      )
-                    })}
-
-                    {/* Lines that changed nothing structural. Still the record. */}
-                    {agreedLast.lines
-                      .filter(
-                        (e) => !agreedLast.tasks.some((n) => n.title === e.body),
-                      )
-                      .map((e) => (
-                        <div
-                          key={e.id}
-                          className="flex items-baseline gap-3 border-t border-rule py-2.5 last:border-b"
-                        >
-                          <span className="w-[9px] shrink-0" />
-                          <Link
-                            href={at(e.node_id)}
-                            className="min-w-0 flex-1 text-[12.5px] leading-snug hover:text-green"
-                          >
-                            {e.body}
-                            <span className="text-rule-strong">
-                              {' '}
-                              · {byId.get(e.node_id)?.title}
-                            </span>
-                          </Link>
-                        </div>
-                      ))}
-
-                    {agreedLast.decisions.map((d) => (
-                      <div
-                        key={d.id}
-                        className="flex items-baseline gap-3 border-t border-rule py-2.5 last:border-b"
-                      >
-                        <span className="lbl-tight w-[9px] shrink-0 text-green">
-                          &#9670;
-                        </span>
-                        <span className="min-w-0 flex-1 text-[12.5px] leading-snug">
-                          {d.decision}
-                        </span>
-                        <span className="lbl-tight shrink-0 text-rule-strong">
-                          decided
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <p className="mt-7 max-w-prose border-t border-rule pt-3.5 text-[11.5px] leading-relaxed text-rule-strong">
-              {moved.written === 0
-                ? 'Not one log line was written in the period. Friday assembles the weekly report out of those, so it has nothing to say. That is the cheapest thing on this whole page to fix.'
-                : `${moved.written} log ${moved.written === 1 ? 'line' : 'lines'} written. That is what Friday assembles the report from.`}
-            </p>
-          </div>
-
-          <div className="border-l border-rule py-8 pl-5 lg:pl-8 pr-5 lg:pr-16">
-            <Room room={room} />
-          </div>
-        </div>
+        <WhatIsInTheWay
+          waitingRows={waitingRows}
+          room={room}
+          moved={moved}
+          agreedLast={agreedLast}
+          lastStandup={lastStandup}
+          byId={byId}
+          state={state}
+          today={today}
+          projectTitle={projectTitle}
+          at={at}
+          here={here}
+        />
       )}
 
       {/*
@@ -704,683 +516,46 @@ export default async function StandupPage({
         fighting.
       */}
       {part === '2' && (
-        <div className="frame [--frame-label:360px] [--frame-margin:330px] min-h-[76vh] lg:min-h-svh">
-          {/* The agenda, always in view */}
-          <aside className="border-b border-rule lg:sticky lg:top-0 lg:h-svh lg:overflow-y-auto lg:border-b-0 lg:border-r">
-            <div className="sticky top-0 z-10 border-b border-rule-strong bg-paper px-5 lg:pl-16 lg:pr-7 py-5">
-              <h1 className="font-display text-[24px] font-medium leading-tight">
-                The whole portfolio
-              </h1>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-                <span className="num text-ink">{liveCount}</span> pieces of work
-                under way. Walk them and decide what happens before{' '}
-                {formatDate(nextOn)}.
-              </p>
-            </div>
-
-
-            {/*
-              Everything else that is alive. Not a second screen and not behind a
-              toggle: the agenda saw four of thirty five pieces, and the other
-              thirty one are the ones a toggle would hide again.
-            */}
-            {/*
-              One queue, in the order the room decided, across every project.
-              
-              It was grouped by project, which answers «what do we take first»
-              once per project. A stand-up asks it once, over all the work, so
-              the grouping had to go and the project becomes a line under the
-              title instead.
-            */}
-            {queue.length === 0 ? (
-              <p className="px-5 lg:pl-16 lg:pr-7 py-6 text-[13px] text-muted">
-                Nothing is under way. Everything is either finished or has not
-                been started.
-              </p>
-            ) : (
-              queue.map(({ node: n, project }, i) => {
-                const isOn = selected?.id === n.id
-                const late = n.due_date !== null && n.due_date < today
-                const held = n.status === 'paused'
-                return (
-                  <div
-                    key={n.id}
-                    className={`border-b border-rule px-5 lg:pl-16 lg:pr-7 py-2.5 ${
-                      isOn ? 'bg-sheet' : 'hover:bg-sheet'
-                    }`}
-                  >
-                    <div className="flex items-baseline gap-2.5">
-                      <StatusMark
-                        status={n.status}
-                        blocked={state.get(n.id)?.is_blocked ?? false}
-                      />
-                      <Link
-                        href={at(n.id)}
-                        className={`min-w-0 flex-1 truncate text-[13px] ${
-                          isOn ? 'font-medium text-ink' : 'text-ink'
-                        } ${held ? 'line-through decoration-rule-strong' : ''}`}
-                      >
-                        {n.title}
-                      </Link>
-                      {n.due_date && (
-                        <span
-                          className={`shrink-0 text-[10px] tabular-nums ${
-                            late ? 'text-oxblood' : 'text-rule-strong'
-                          }`}
-                        >
-                          {formatDate(n.due_date)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-0.5 flex items-baseline gap-3">
-                      <span className="min-w-0 flex-1 truncate text-[10.5px] text-muted">
-                        {project.title}
-                      </span>
-                      {/*
-                        Ranking and parking, the two things this chapter decides,
-                        on the row rather than on the piece. Both are one press,
-                        because a meeting does not wait while somebody navigates.
-                      */}
-                      <form action={moveInStandupQueue} className="shrink-0">
-                        <input type="hidden" name="id" value={n.id} />
-                        <input type="hidden" name="direction" value="up" />
-                        <input type="hidden" name="redirectTo" value={at(n.id)} />
-                        <button
-                          disabled={i === 0}
-                          className="px-0.5 text-[10px] text-rule-strong hover:text-ink disabled:opacity-25"
-                          title="Take it earlier"
-                        >
-                          ▲
-                        </button>
-                      </form>
-                      <form action={moveInStandupQueue} className="shrink-0">
-                        <input type="hidden" name="id" value={n.id} />
-                        <input type="hidden" name="direction" value="down" />
-                        <input type="hidden" name="redirectTo" value={at(n.id)} />
-                        <button
-                          disabled={i === queue.length - 1}
-                          className="px-0.5 text-[10px] text-rule-strong hover:text-ink disabled:opacity-25"
-                          title="Take it later"
-                        >
-                          ▼
-                        </button>
-                      </form>
-                      <form action={setNodeStatus} className="shrink-0">
-                        <input type="hidden" name="id" value={n.id} />
-                        <input
-                          type="hidden"
-                          name="status"
-                          value={held ? 'active' : 'paused'}
-                        />
-                        <input type="hidden" name="redirectTo" value={at(n.id)} />
-                        <button
-                          className="text-[10px] text-rule-strong hover:text-green"
-                          title={held ? 'Pick it up again' : 'Park it until it matters'}
-                        >
-                          {held ? 'resume' : 'hold'}
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-
-          </aside>
-
-          {/* The item under discussion */}
-          <section className="px-5 lg:px-10 py-8">
-            {!selected ? (
-              <p className="text-[15px] text-muted">
-                Nothing needs the room. Chapter three is where the time goes.
-              </p>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-start justify-between gap-6">
-                  <div className="min-w-0">
-                    <div className="lbl text-rule-strong">
-                      <Link
-                        href={`/p/${projectOfNode.get(selected.id) ?? selected.id}`}
-                        className="hover:text-ink"
-                      >
-                        {projectTitle(selected.id)}
-                      </Link>
-                      &nbsp;·&nbsp; {TYPE_LABEL[selected.type]}
-                    </div>
-                    <h2 className="mt-1.5 font-display text-[36px] font-medium leading-[1.08] tracking-[-0.02em]">
-                      {selected.title}
-                    </h2>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-5">
-                    {prev && (
-                      <Link href={at(prev.id)} className="lbl-tight text-muted hover:text-ink">
-                        &larr; Prev
-                      </Link>
-                    )}
-                    {next && (
-                      <Link href={at(next.id)} className="lbl-tight text-muted hover:text-ink">
-                        Next &rarr;
-                      </Link>
-                    )}
-                    <Link
-                      href={editId === selected.id ? at(selected.id) : at(selected.id, `edit=${selected.id}`)}
-                      className={`lbl-tight ${
-                        editId === selected.id ? 'text-green' : 'text-muted hover:text-ink'
-                      }`}
-                    >
-                      {editId === selected.id ? 'Close' : 'Edit'}
-                    </Link>
-                    <Link
-                      href={`/p/${projectOfNode.get(selected.id) ?? selected.id}/meeting?task=${selected.id}`}
-                      className="lbl-tight text-rule-strong hover:text-ink"
-                    >
-                      Open in project
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Why it is on the agenda at all */}
-                <div
-                  className={`mt-4 flex flex-col gap-1.5 pl-3 ${
-                    reasons.length > 0 ? 'border-l-2 border-rule-strong' : ''
-                  }`}
-                >
-                  {reasons.map((i, n) => (
-                    <p key={n} className="text-[12.5px] leading-snug text-muted">
-                      <span className="font-medium text-ink">
-                        {AGENDA_LABEL[i.kind]}
-                      </span>{' '}
-                      {i.why}
-                    </p>
-                  ))}
-                </div>
-
-                {editId === selected.id ? (
-                  <div className="mt-6">
-                    <NodeForm
-                      node={selected}
-                      redirectTo={at(selected.id)}
-                      cancelHref={at(selected.id)}
-                    />
-                  </div>
-                ) : (
-                  <Prose
-                    text={selected.description}
-                    className="mt-7 max-w-[680px] text-[15px] leading-[1.75]"
-                  />
-                )}
-
-                {/* What you change while somebody is still talking */}
-                <div className="mt-10 flex flex-wrap items-center gap-x-10 gap-y-5 border-y border-rule py-5">
-                  <StatusSelect
-                    id={selected.id}
-                    status={selected.status}
-                    blocked={state.get(selected.id)?.is_blocked ?? false}
-                    waitDays={state.get(selected.id)?.worst_wait ?? 0}
-                  />
-                  <DueDate id={selected.id} due={selected.due_date} today={today} />
-                  {selected.due_date && (
-                    <span className="text-[11px] text-muted">
-                      {relativeDays(daysBetween(today, selected.due_date))}
-                    </span>
-                  )}
-                  <Fact label="Responsible" value={selected.owner} />
-                  <Fact
-                    label="Priced"
-                    value={
-                      cost.get(selected.id) && Number(cost.get(selected.id)!.once_priced) > 0
-                        ? formatMoney(Number(cost.get(selected.id)!.once_priced), 'EUR')
-                        : null
-                    }
-                  />
-                  <span className="ml-auto flex items-center gap-5">
-                    <AgreedHere
-                      nodeId={selected.id}
-                      nextOn={nextOn}
-                      open={agreeing === selected.id}
-                      openHref={at(selected.id, `agree=${selected.id}`)}
-                      closeHref={at(selected.id)}
-                      redirectTo={at(selected.id)}
-                    />
-                    <QuickAddOn nodeId={selected.id} label="write a line" />
-                    <Link
-                      href={at(selected.id, `bnew=${selected.id}`)}
-                      className="text-[11.5px] text-rule-strong hover:text-green"
-                    >
-                      new blocker
-                    </Link>
-                    <Link
-                      href={at(selected.id, `dnew=${selected.id}`)}
-                      className="text-[11.5px] text-rule-strong hover:text-green"
-                    >
-                      record a decision
-                    </Link>
-                    <Link
-                      href={`/p/${projectOfNode.get(selected.id) ?? selected.id}/cost?focus=${selected.id}`}
-                      className="text-[11.5px] text-rule-strong hover:text-green"
-                    >
-                      price it
-                    </Link>
-                  </span>
-                </div>
-
-                {agreeing === selected.id && (
-                  <AgreedHere
-                    nodeId={selected.id}
-                    nextOn={nextOn}
-                    open
-                    openHref={at(selected.id, `agree=${selected.id}`)}
-                    closeHref={at(selected.id)}
-                    redirectTo={at(selected.id)}
-                  />
-                )}
-
-                {newBlocker === selected.id && (
-                  <div className="mt-5">
-                    <BlockerForm
-                      nodeId={selected.id}
-                      redirectTo={at(selected.id)}
-                      cancelHref={at(selected.id)}
-                    />
-                  </div>
-                )}
-                {/*
-                  Found rather than asserted. A stale link - somebody resolved it
-                  from another screen while this one was open - would otherwise
-                  hand the form undefined and take the page down mid-meeting.
-                */}
-                {closing && (
-                  <div className="mt-5">
-                    <ResolveBlockerForm
-                      blocker={closing}
-                      redirectTo={at(selected.id)}
-                      cancelHref={at(selected.id)}
-                    />
-                  </div>
-                )}
-                {newDecision === selected.id && (
-                  <div className="mt-5">
-                    <DecisionForm
-                      nodeId={selected.id}
-                      redirectTo={at(selected.id)}
-                      cancelHref={at(selected.id)}
-                    />
-                  </div>
-                )}
-
-                <div className="mt-12 grid gap-x-14 gap-y-10 lg:grid-cols-2">
-                  <div>
-                    <Head title="Blockers" />
-                    {blockers.filter((b) => b.node_id === selected.id).length === 0 ? (
-                      <p className="text-[13px] text-muted">None recorded.</p>
-                    ) : (
-                      blockers
-                        .filter((b) => b.node_id === selected.id)
-                        .map((b) => (
-                          <div
-                            key={b.id}
-                            className={`flex items-baseline gap-3.5 border-t border-rule py-3 last:border-b ${
-                              b.is_active ? '' : 'opacity-55'
-                            }`}
-                          >
-                            <span
-                              className={`num min-w-[40px] text-[22px] leading-none ${
-                                b.is_active ? 'text-oxblood' : ''
-                              }`}
-                            >
-                              {b.days_blocked}
-                            </span>
-                            <span className="flex-1">
-                              <span className="block text-[13.5px] leading-snug">
-                                {b.title}
-                              </span>
-                              <span className="mt-0.5 block text-[11px] text-muted">
-                                {b.waiting_on}
-                                {b.expected_by && <> · expected {formatDate(b.expected_by)}</>}
-                              </span>
-                            </span>
-                            {b.is_active && (
-                              <Link
-                                href={at(selected.id, `bresolve=${b.id}`)}
-                                className="lbl-tight text-green hover:text-oxblood"
-                              >
-                                Close
-                              </Link>
-                            )}
-                          </div>
-                        ))
-                    )}
-                  </div>
-
-                  {entries.some((e) => e.node_id === selected.id) && (
-                  <div>
-                    <Head title="Log" />
-                    {(
-                      entries
-                        .filter((e) => e.node_id === selected.id)
-                        .slice(0, 6)
-                        .map((e) => (
-                          <div key={e.id} className="border-t border-rule py-3 last:border-b">
-                            <div className="text-[10px] tabular-nums text-muted">
-                              {formatDate(e.entry_date)}
-                            </div>
-                            <p className="mt-1 text-[13px] leading-relaxed">{e.body}</p>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                  )}
-
-                  {decisions.some((d) => d.node_id === selected.id) && (
-                  <div>
-                    <Head title="Decisions" />
-                    {(
-                      decisions
-                        .filter((d) => d.node_id === selected.id)
-                        .map((d) => (
-                          <div key={d.id} className="border-t border-rule py-3 last:border-b">
-                            <div className="flex items-baseline gap-2.5 text-[10px] tabular-nums text-muted">
-                              {formatDate(d.decided_on)}
-                              {d.topic !== 'other' && (
-                                <span className="lbl-tight text-rule-strong">
-                                  {DECISION_TOPIC_LABEL[d.topic]}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1 text-[13.5px] leading-snug">{d.decision}</div>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                  )}
-
-                  {lines.some((l) => l.node_id === selected.id) && (
-                  <div>
-                    <Head title="Cost" />
-                    {(
-                      lines
-                        .filter((l) => l.node_id === selected.id)
-                        .map((l) => (
-                          <div
-                            key={l.id}
-                            className="flex items-baseline gap-4 border-t border-rule py-3 last:border-b"
-                          >
-                            <span className="flex-1 text-[13px]">{l.description}</span>
-                            <span className="lbl-tight text-rule-strong">
-                              {COST_BUDGET_LABEL[l.budget]} · {COST_STATE_LABEL[l.state]}
-                            </span>
-                            <span className="num text-[14px]">
-                              {formatMoney(Number(l.amount), l.currency)}
-                            </span>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                  )}
-                </div>
-              </>
-            )}
-          </section>
-
-          {/*
-            The room, in the same column it occupies on the other two chapters.
-            It used to sit at the bottom of this chapter's rail, so the same list
-            appeared in a different place depending on which chapter you were on,
-            which is a large part of why the page read as three pages.
-          */}
-          <div className="border-l border-rule py-8 pl-5 lg:pl-8 pr-5 lg:pr-16">
-            <Room room={room} />
-          </div>
-        </div>
+        <WhatWeAreDoing
+          queue={queue}
+          liveCount={liveCount}
+          selected={selected}
+          prev={prev}
+          next={next}
+          reasons={reasons}
+          closing={closing}
+          blockers={blockers}
+          entries={entries}
+          decisions={decisions}
+          lines={lines}
+          cost={cost}
+          state={state}
+          held={held}
+          room={room}
+          today={today}
+          nextOn={nextOn}
+          editId={editId}
+          newBlocker={newBlocker}
+          newDecision={newDecision}
+          agreeing={agreeing}
+          projectTitle={projectTitle}
+          projectOfNode={projectOfNode}
+          at={at}
+        />
       )}
 
       {/* ================= 3. What is next ================= */}
       {part === '3' && (
-        <div className="frame [--frame-label:360px] [--frame-margin:330px] min-h-[60vh]">
-          <div className="pl-5 lg:pl-16 py-8 pr-5">
-            <h1 className="font-display text-[30px] font-medium leading-[1.06]">
-              What is next
-            </h1>
-            <p className="mt-4 max-w-[26ch] text-[11px] leading-relaxed text-muted">
-              Ranked by what each takes out of the year&rsquo;s target, so the
-              last five minutes go on the biggest one rather than the newest.
-            </p>
-            {target && (
-              <p className="mt-4 text-[11px] leading-relaxed text-rule-strong">
-                The whole target is
-                <br />
-                <span className="num text-[17px] text-ink">{kr(target.dkk)} kr</span>
-                <br />
-                a year. A percentage here is a percentage of that.
-              </p>
-            )}
-            {/*
-              Two separate doubts, and this one is the broader. «A floor, not
-              the figure» is about which population the denominator counts;
-              this is about whether anybody has checked the denominator at all.
-              Both can be true, and the second does not replace the first.
-            */}
-            {reference !== null && !reference.confirmed && (
-              <p className="mt-3 max-w-[26ch] border-l-2 border-oxblood pl-2.5 text-[10.5px] leading-relaxed text-oxblood">
-                And nobody has confirmed these figures against the dashboard
-                they came from. Every percentage below inherits that.
-              </p>
-            )}
-            {reference !== null && !basisCoversTarget(reference) ? (
-              <p className="mt-3 max-w-[26ch] border-l-2 border-oxblood pl-2.5 text-[10.5px] leading-relaxed text-oxblood">
-                A floor, not the figure. It is measured on{' '}
-                <span className="font-medium">{reference.scope}</span> while the
-                strategy covers{' '}
-                <span className="font-medium">{reference.targetScope}</span>, so
-                the target is too small and every percentage below is too large.
-                <span className="mt-1.5 block text-rule-strong">
-                  Same dashboard, both brand codes selected, Type = Sugar: read
-                  Units and Unit Cost + IPC.
-                </span>
-              </p>
-            ) : reference?.scope ? (
-              <p className="mt-3 max-w-[26ch] text-[10.5px] leading-relaxed text-rule-strong">
-                Measured on <span className="text-muted">{reference.scope}</span>,
-                the slice the unit cost is computed over.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="border-l border-rule px-5 lg:px-10 py-8">
-            {weighed.length === 0 ? (
-              <p className="text-[13px] text-muted">
-                No idea has a figure on it yet.{' '}
-                <Link href="/spark" className="text-green">
-                  Assess one
-                </Link>{' '}
-                and it will be ranked here.
-              </p>
-            ) : (
-              weighed.map(({ spark, impact, score, where }) => (
-                <div key={spark.id} className="border-t border-rule py-4 last:border-b">
-                  <div className="flex items-baseline gap-5">
-                    <span
-                      className={`num min-w-[72px] shrink-0 text-[26px] leading-none ${
-                        (impact?.shareOfTarget ?? 0) >= 0.1 ? 'text-green' : 'text-ink'
-                      }`}
-                    >
-                      {impact ? `${(impact.shareOfTarget * 100).toFixed(1)}%` : '—'}
-                    </span>
-                    <div className="flex-1">
-                      <p className="max-w-prose text-[14px] leading-relaxed">{spark.body}</p>
-                      <div className="lbl-tight mt-2 flex flex-wrap gap-x-4 gap-y-1 text-muted">
-                        {impact && (
-                          <span className="num">{kr(impact.annualDkk)} kr a year</span>
-                        )}
-                        {where && <span>{where}</span>}
-                        {score !== null && (
-                          <span className="num text-rule-strong">priority {score}</span>
-                        )}
-                        <Link href="/spark" className="text-rule-strong hover:text-ink">
-                          Open the inbox
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-
-            {unweighed > 0 && (
-              <p className="mt-5 text-[11.5px] leading-relaxed text-rule-strong">
-                {unweighed} more {unweighed === 1 ? 'spark has' : 'sparks have'} no
-                figure yet and cannot be ranked. An empty assessment is not zero,
-                it is not worked out.{' '}
-                <Link href="/spark" className="text-green">
-                  Inbox
-                </Link>
-              </p>
-            )}
-          </div>
-
-          <div className="border-l border-rule py-8 pl-5 lg:pl-8 pr-5 lg:pr-16">
-            <h2 className="font-display text-[24px] font-medium">Held before</h2>
-            {held.length === 0 ? (
-              <p className="mt-3.5 text-[12.5px] text-muted">
-                None yet. Until one is recorded, chapter one covers the whole
-                history rather than a week.
-              </p>
-            ) : (
-              <div className="mt-3.5">
-                {held.map((h) => (
-                  <div key={h.id} className="border-t border-rule py-2.5 last:border-b">
-                    <div className="text-[11px] tabular-nums text-muted">
-                      {formatDateLong(h.held_on)}
-                    </div>
-                    {h.note && (
-                      <p className="mt-1 text-[12px] leading-relaxed">{h.note}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <WhatIsNext
+          weighed={weighed}
+          unweighed={unweighed}
+          reference={reference}
+          target={target}
+          held={held}
+          at={at}
+          here={here}
+        />
       )}
     </main>
-  )
-}
-
-/**
- * Who the agenda needs in the room.
- *
- * Not an invitation list. A standing one invites the same six people every week
- * whether or not anything needs them, and then the one person who could unblock
- * the oldest item is not there.
- */
-function Room({ room }: { room: { who: string; items: number; longestWait: number }[] }) {
-  return (
-    <>
-      <h2 className="font-display text-[22px] font-medium">The room</h2>
-      {room.length === 0 ? (
-        <p className="mt-2.5 text-[12.5px] text-muted">
-          Nothing is waiting on anyone. Nobody has to be here but you.
-        </p>
-      ) : (
-        <div className="mt-3">
-          {room.map((a) => (
-            <div
-              key={a.who}
-              className="flex items-baseline gap-3.5 border-t border-rule py-2.5 last:border-b"
-            >
-              <span
-                className={`num min-w-[38px] text-[22px] leading-none ${
-                  a.longestWait >= 30 ? 'text-oxblood' : 'text-ink'
-                }`}
-              >
-                {a.longestWait}
-              </span>
-              <span className="flex-1">
-                <span className="block text-[12.5px] leading-snug">{a.who}</span>
-                <span className="mt-0.5 block text-[10.5px] text-muted">
-                  {a.items} {a.items === 1 ? 'item' : 'items'} · longest wait{' '}
-                  {a.longestWait} days
-                </span>
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
-/** One column of what moved. Three of these are the whole of chapter one. */
-function Moved({
-  title,
-  empty,
-  rows,
-  tone,
-}: {
-  title: string
-  empty: string
-  rows: { key: string; on: string; text: string; href?: string }[]
-  tone?: 'oxblood'
-}) {
-  return (
-    <div>
-      <div className="flex items-baseline justify-between border-b border-rule-strong pb-1.5">
-        <span className="lbl text-muted">{title}</span>
-        <span
-          className={`num text-[18px] leading-none ${
-            rows.length === 0
-              ? 'text-rule-strong'
-              : tone === 'oxblood'
-                ? 'text-oxblood'
-                : 'text-ink'
-          }`}
-        >
-          {rows.length}
-        </span>
-      </div>
-      {rows.length === 0 ? (
-        <p className="mt-2 text-[11px] text-rule-strong">{empty}</p>
-      ) : (
-        <div className="mt-1">
-          {rows.slice(0, 8).map((r) => (
-            <div key={r.key} className="border-b border-rule py-2 last:border-b-0">
-              <div className="text-[10px] tabular-nums text-muted">{formatDate(r.on)}</div>
-              {r.href ? (
-                <Link href={r.href} className="text-[12px] leading-snug hover:text-green">
-                  {r.text}
-                </Link>
-              ) : (
-                <span className="text-[12px] leading-snug">{r.text}</span>
-              )}
-            </div>
-          ))}
-          {rows.length > 8 && (
-            <p className="mt-1.5 text-[10px] text-rule-strong">
-              and {rows.length - 8} more
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Head({ title }: { title: string }) {
-  return (
-    <div className="mb-2.5 border-b border-rule-strong pb-1.5">
-      <h3 className="lbl">{title}</h3>
-    </div>
-  )
-}
-
-function Fact({ label, value }: { label: string; value: string | null }) {
-  return (
-    <span className="flex flex-col">
-      <span className="lbl-tight text-muted">{label}</span>
-      <span className="mt-0.5 text-[14px] tabular-nums">
-        {value ?? <span className="text-rule-strong">not set</span>}
-      </span>
-    </span>
   )
 }
