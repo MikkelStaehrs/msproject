@@ -106,7 +106,14 @@ export function ProjectNav({
 
   return (
     <nav className="py-5 pl-5 pr-5 lg:py-7 lg:pl-16">
-      <div className="font-display text-[23px] leading-tight text-green">{projectTitle}</div>
+      {/*
+        The rail names the project, the page names what you are looking at. On a
+        part those are two different things; on the project root they are the
+        same words, and set at display size in both places it read as the title
+        printed twice. So this is furniture: the heading weight belongs to the
+        page, and the rail is the label on the drawer.
+      */}
+      <div className="text-[15px] font-semibold leading-snug text-ink">{projectTitle}</div>
       <div className="lbl mt-1.5 text-muted">
         {projectNo ?? 'no number'}
         {place ? ` · ${place}` : ''}
