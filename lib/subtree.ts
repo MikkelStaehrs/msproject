@@ -52,3 +52,48 @@ export function subtreeSet(nodes: Parented[], rootId: string): Set<string> {
 export function descendantIds(nodes: Parented[], rootId: string): string[] {
   return subtreeIds(nodes, rootId).slice(1)
 }
+
+/**
+ * Which project every node belongs to: the root of its own branch.
+ *
+ * Four pages built this by hand, and each of them paid a round trip to
+ * `v_node_descendant` for it, filtering the result down to the rows whose
+ * `root_id` happens to be a root. That is the exact thing the top of this file
+ * says is the wrong answer: the id list arrives first and only then can the
+ * page use it, which turns one wait into two, for an answer already sitting in
+ * the `node` rows the page has.
+ *
+ * Memoised on the way up, so a deep branch is walked once rather than once per
+ * node on it. A node whose parent is missing - which RLS can produce, since a
+ * child is visible only when its project is - maps to itself, so a link built
+ * from this always goes somewhere rather than nowhere.
+ */
+export function projectOf(nodes: Parented[]): Map<string, string> {
+  const parent = new Map(nodes.map((n) => [n.id, n.parent_id]))
+  const root = new Map<string, string>()
+
+  const find = (id: string): string => {
+    const known = root.get(id)
+    if (known !== undefined) return known
+
+    const climbed: string[] = []
+    let at: string = id
+    for (;;) {
+      const up = parent.get(at) ?? null
+      if (up === null || !parent.has(up)) break
+      climbed.push(at)
+      const cached = root.get(up)
+      if (cached !== undefined) {
+        at = cached
+        break
+      }
+      at = up
+    }
+    for (const seen of climbed) root.set(seen, at)
+    root.set(id, at)
+    return at
+  }
+
+  for (const n of nodes) find(n.id)
+  return root
+}

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { formatMoney } from '@/lib/cost'
 import { readIdentity } from '@/lib/identity'
+import { projectOf } from '@/lib/subtree'
 import { NodeForm } from '@/components/node-form'
 import { QuickAddTrigger } from '@/components/quick-add-trigger'
 import { ProgressScale, Rule, StatusMark, formatDate } from '@/components/ui'
@@ -34,13 +35,12 @@ export default async function ProjectsPage({
   const { filter = 'running', new: creating } = await searchParams
   const supabase = await createClient()
 
-  const [nodeRes, progressRes, nextRes, blockerRes, descRes, stateRes, costRes, markRes, stratRes] =
+  const [nodeRes, progressRes, nextRes, blockerRes, stateRes, costRes, markRes, stratRes] =
     await Promise.all([
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('v_node_progress').select('*'),
     supabase.from('v_next_date').select('*'),
     supabase.from('v_active_blocker').select('*'),
-    supabase.from('v_node_descendant').select('root_id, node_id'),
     supabase.from('v_node_state').select('*'),
     supabase.from('v_node_cost').select('*'),
     supabase.from('v_strategy_node').select('node_id, strategy_id'),
@@ -52,7 +52,6 @@ export default async function ProjectsPage({
     progressRes,
     nextRes,
     blockerRes,
-    descRes,
     stateRes,
     costRes,
     markRes,
@@ -89,14 +88,9 @@ export default async function ProjectsPage({
     ((nextRes.data ?? []) as NextDate[]).map((n) => [n.node_id, n]),
   )
   const blockers = (blockerRes.data ?? []) as ActiveBlocker[]
-  const descendants = (descRes.data ?? []) as { root_id: string; node_id: string }[]
-
   const roots = nodes.filter((n) => n.parent_id === null)
-  const rootIds = new Set(roots.map((n) => n.id))
-  const projectOfNode = new Map<string, string>()
-  for (const d of descendants) {
-    if (rootIds.has(d.root_id)) projectOfNode.set(d.node_id, d.root_id)
-  }
+  // Walked from the rows above rather than fetched. See lib/subtree.
+  const projectOfNode = projectOf(nodes)
   const blockerCount = new Map<string, number>()
   for (const b of blockers) {
     const key = projectOfNode.get(b.node_id)

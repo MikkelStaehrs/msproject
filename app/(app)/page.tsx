@@ -6,6 +6,7 @@ import { NodeForm } from '@/components/node-form'
 import { QuickAddTrigger } from '@/components/quick-add-trigger'
 import { QuickAddOn } from '@/components/quick-add-on'
 import { looseEnds } from '@/lib/loose-ends'
+import { projectOf } from '@/lib/subtree'
 import {
   ProgressRow,
   Rule,
@@ -39,14 +40,13 @@ export default async function HomePage({
   const supabase = await createClient()
 
   const [
-    nodesRes, progressRes, nextDateRes, blockerRes, descendantRes, stateRes,
+    nodesRes, progressRes, nextDateRes, blockerRes, stateRes,
     entryRes, allBlockerRes, decisionRes,
   ] = await Promise.all([
       supabase.from('node').select('*').order('sort_order'),
       supabase.from('v_node_progress').select('*'),
       supabase.from('v_next_date').select('*'),
       supabase.from('v_active_blocker').select('*'),
-      supabase.from('v_node_descendant').select('root_id, node_id'),
       supabase.from('v_node_state').select('*'),
       supabase.from('entry').select('node_id, entry_date'),
       supabase.from('blocker').select('node_id, title, waiting_on, opened_at, resolved_at'),
@@ -54,7 +54,7 @@ export default async function HomePage({
     ])
 
   const failure = firstError([
-    nodesRes, progressRes, nextDateRes, blockerRes, descendantRes, stateRes,
+    nodesRes, progressRes, nextDateRes, blockerRes, stateRes,
     entryRes, allBlockerRes, decisionRes,
   ])
   if (failure) return <QueryFailure message={failure} />
@@ -91,20 +91,13 @@ export default async function HomePage({
     decisions: (decisionRes.data ?? []) as { node_id: string }[],
     today: todayIso(),
   })
-  const descendants = (descendantRes.data ?? []) as {
-    root_id: string
-    node_id: string
-  }[]
-
   const byId = new Map(nodes.map((n) => [n.id, n]))
   const roots = nodes.filter((n) => n.parent_id === null)
-  const rootIds = new Set(roots.map((n) => n.id))
 
-  // Which top level project does a node belong to?
-  const projectOfNode = new Map<string, string>()
-  for (const d of descendants) {
-    if (rootIds.has(d.root_id)) projectOfNode.set(d.node_id, d.root_id)
-  }
+  // Which top level project does a node belong to? Walked from the rows above
+  // rather than fetched: see lib/subtree on why the id list as its own round
+  // trip is the wrong shape.
+  const projectOfNode = projectOf(nodes)
 
   const blockersByProject = new Map<string, ActiveBlocker[]>()
   for (const b of blockers) {

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { addDays, daysBetween, today as todayIso } from '@/lib/date'
 import { medianWait } from '@/lib/recipient'
+import { projectOf } from '@/lib/subtree'
 import { readRecipients } from '@/lib/recipient-data'
 import { BlockerForm, ReopenBlockerButton, ResolveBlockerForm } from '@/components/blocker-form'
 import { QuickAddTrigger } from '@/components/quick-add-trigger'
@@ -26,10 +27,9 @@ export default async function BlockersPage({
   const { filter = 'all', edit: editId, resolve: resolveId } = await searchParams
   const supabase = await createClient()
 
-  const [blockerRes, nodeRes, descendantRes] = await Promise.all([
+  const [blockerRes, nodeRes] = await Promise.all([
     supabase.from('v_blocker_days').select('*').order('opened_at'),
     supabase.from('node').select('id, parent_id, title'),
-    supabase.from('v_node_descendant').select('root_id, node_id'),
   ])
 
   /*
@@ -38,7 +38,7 @@ export default async function BlockersPage({
    * as nobody holding anything up, which is the one thing this page exists to
    * refuse to say.
    */
-  const failure = firstError([blockerRes, nodeRes, descendantRes])
+  const failure = firstError([blockerRes, nodeRes])
   if (failure) return <QueryFailure message={failure} />
 
   const all = (blockerRes.data ?? []) as BlockerDays[]
@@ -47,17 +47,11 @@ export default async function BlockersPage({
     parent_id: string | null
     title: string
   }[]
-  const descendants = (descendantRes.data ?? []) as {
-    root_id: string
-    node_id: string
-  }[]
-
   const titleById = new Map(nodes.map((n) => [n.id, n.title]))
-  const rootIds = new Set(nodes.filter((n) => n.parent_id === null).map((n) => n.id))
-  const projectOfNode = new Map<string, string>()
-  for (const d of descendants) {
-    if (rootIds.has(d.root_id)) projectOfNode.set(d.node_id, d.root_id)
-  }
+  // Walked from the rows already fetched, rather than asked for separately.
+  // See lib/subtree: the id list as its own round trip is the thing that file
+  // exists to avoid, and this page was still paying for one.
+  const projectOfNode = projectOf(nodes)
 
   const shown =
     filter === 'open'

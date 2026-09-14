@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { addDays, daysBetween, today as todayIso } from '@/lib/date'
 import { looseEnds } from '@/lib/loose-ends'
+import { projectOf } from '@/lib/subtree'
 import {
   agenda,
   attendees,
@@ -127,7 +128,7 @@ export default async function StandupPage({
 
   const [
     nodeRes, readyRes, stateRes, blockerRes, entryRes, decisionRes, costRollRes,
-    lineRes, descendantRes, standupRes, sparkRes, yardstickRes, stageRes,
+    lineRes, standupRes, sparkRes, yardstickRes, stageRes,
   ] = await Promise.all([
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('v_node_ready').select('*'),
@@ -137,7 +138,6 @@ export default async function StandupPage({
     supabase.from('decision').select('*').order('decided_on', { ascending: false }),
     supabase.from('v_node_cost').select('*'),
     supabase.from('cost').select('*').order('dated', { ascending: false }),
-    supabase.from('v_node_descendant').select('root_id, node_id'),
     supabase.from('standup').select('*').order('held_on', { ascending: false }).limit(8),
     supabase.from('spark').select('*').eq('state', 'new'),
     supabase.from('yardstick').select('*').maybeSingle(),
@@ -145,7 +145,7 @@ export default async function StandupPage({
   ])
 
   const failure = firstError([
-    nodeRes, readyRes, stateRes, blockerRes, entryRes, decisionRes, descendantRes, standupRes,
+    nodeRes, readyRes, stateRes, blockerRes, entryRes, decisionRes, standupRes,
   ])
   if (failure) return <QueryFailure message={failure} />
 
@@ -213,14 +213,11 @@ export default async function StandupPage({
       }
     : null
 
-  // Which project a node belongs to, so a row can say where it lives.
-  const rootIds = new Set(nodes.filter((n) => n.parent_id === null).map((n) => n.id))
-  const projectOf = new Map<string, string>()
-  for (const d of (descendantRes.data ?? []) as { root_id: string; node_id: string }[]) {
-    if (rootIds.has(d.root_id)) projectOf.set(d.node_id, d.root_id)
-  }
+  // Which project a node belongs to, so a row can say where it lives. Walked
+  // from the rows above rather than fetched; see lib/subtree.
+  const projectOfNode = projectOf(nodes)
   const projectTitle = (nodeId: string) =>
-    byId.get(projectOf.get(nodeId) ?? nodeId)?.title ?? ''
+    byId.get(projectOfNode.get(nodeId) ?? nodeId)?.title ?? ''
 
   /*
    * One row per NODE on the left, not one per reason. A task with two blockers
@@ -843,7 +840,7 @@ export default async function StandupPage({
                   <div className="min-w-0">
                     <div className="lbl text-rule-strong">
                       <Link
-                        href={`/p/${projectOf.get(selected.id) ?? selected.id}`}
+                        href={`/p/${projectOfNode.get(selected.id) ?? selected.id}`}
                         className="hover:text-ink"
                       >
                         {projectTitle(selected.id)}
@@ -875,7 +872,7 @@ export default async function StandupPage({
                       {editId === selected.id ? 'Close' : 'Edit'}
                     </Link>
                     <Link
-                      href={`/p/${projectOf.get(selected.id) ?? selected.id}/meeting?task=${selected.id}`}
+                      href={`/p/${projectOfNode.get(selected.id) ?? selected.id}/meeting?task=${selected.id}`}
                       className="lbl-tight text-rule-strong hover:text-ink"
                     >
                       Open in project
@@ -960,7 +957,7 @@ export default async function StandupPage({
                       record a decision
                     </Link>
                     <Link
-                      href={`/p/${projectOf.get(selected.id) ?? selected.id}/cost?focus=${selected.id}`}
+                      href={`/p/${projectOfNode.get(selected.id) ?? selected.id}/cost?focus=${selected.id}`}
                       className="text-[11.5px] text-rule-strong hover:text-green"
                     >
                       price it

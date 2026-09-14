@@ -13,6 +13,7 @@ import {
   type Week,
 } from '@/lib/report'
 import { firstError } from '@/lib/failure'
+import { projectOf } from '@/lib/subtree'
 import type {
   ActiveBlocker,
   Entry,
@@ -86,7 +87,7 @@ export async function collectReports(
 ): Promise<ProjectReport[]> {
   const week = isoWeek(today)
 
-  const [nodeRes, progressRes, nextRes, blockerRes, entryRes, reportRes, descRes, costRes] =
+  const [nodeRes, progressRes, nextRes, blockerRes, entryRes, reportRes, costRes] =
     await Promise.all([
       supabase.from('node').select('*').order('sort_order'),
       supabase.from('v_node_progress').select('*'),
@@ -94,7 +95,6 @@ export async function collectReports(
       supabase.from('v_active_blocker').select('*'),
       supabase.from('entry').select('*').order('entry_date'),
       supabase.from('report').select('*').order('period_end', { ascending: false }),
-      supabase.from('v_node_descendant').select('root_id, node_id'),
       supabase.from('v_node_cost').select('*'),
     ])
 
@@ -105,7 +105,6 @@ export async function collectReports(
     blockerRes,
     entryRes,
     reportRes,
-    descRes,
     costRes,
   ])
   if (failure) throw new ReportDataError(failure)
@@ -120,15 +119,12 @@ export async function collectReports(
   const allBlockers = (blockerRes.data ?? []) as ActiveBlocker[]
   const allEntries = (entryRes.data ?? []) as Entry[]
   const reports = (reportRes.data ?? []) as Report[]
-  const descendants = (descRes.data ?? []) as { root_id: string; node_id: string }[]
+
   const costs = new Map(((costRes.data ?? []) as NodeCost[]).map((c) => [c.node_id, c]))
 
   const roots = nodes.filter((n) => n.parent_id === null)
-  const rootIds = new Set(roots.map((n) => n.id))
-  const projectOfNode = new Map<string, string>()
-  for (const d of descendants) {
-    if (rootIds.has(d.root_id)) projectOfNode.set(d.node_id, d.root_id)
-  }
+  // Walked from the rows above rather than fetched. See lib/subtree.
+  const projectOfNode = projectOf(nodes)
 
   return roots
     .filter((p) => p.status !== 'done' && p.status !== 'cancelled')
