@@ -49,9 +49,6 @@ const weekday = new Intl.DateTimeFormat('en-GB', {
   month: 'short',
 })
 
-const kr = (n: number) =>
-  new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(n)
-
 type Part = '1' | '2' | '3'
 
 /**

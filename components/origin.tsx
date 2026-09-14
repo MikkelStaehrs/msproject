@@ -1,5 +1,6 @@
 import { impactOf, savingFrom, type Reference } from '@/lib/cogs'
 import { priorityScore, quadrant } from '@/lib/priority'
+import { kroner } from '@/lib/cost'
 import { formatDateLong } from '@/components/ui'
 import type { NodeOrigin } from '@/lib/types'
 
@@ -51,9 +52,6 @@ export function Origin({
     reference !== null &&
     origin.fiscal_year !== reference.fiscalYear
 
-  const kr = (n: number) =>
-    new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(n)
-
   return (
     <div className="border-l-2 border-rule-strong pl-4">
       {title && <div className="lbl-tight text-muted">{title}</div>}
@@ -74,7 +72,7 @@ export function Origin({
         <div className="lbl-tight mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           {impact !== null && (
             <>
-              <span className="num text-ink">{kr(impact.annualDkk)} kr a year</span>
+              <span className="num text-ink">{kroner(impact.annualDkk)} kr a year</span>
               <span className="num text-muted">
                 {impact.eurPerUnit.toFixed(3)} &euro;/unit
               </span>

@@ -151,3 +151,26 @@ export function formatMoney(amount: number, currency: string): string {
     maximumFractionDigits: 2,
   }).format(amount)} ${currency}`
 }
+
+/**
+ * Whole kroner, Danish grouping: 19.200 rather than 19200.
+ *
+ * Separate from `formatMoney` because it answers a different question. That one
+ * prices a cost line in whichever currency the project buys in, and names the
+ * currency because a number without it is not an amount. This one expresses a
+ * saving against the COGS target, which is always in kroner, and the call site
+ * says so in its own words: «19.200 kr a year», «19.200 kr». Putting the unit
+ * in here would print it twice at three of the four places that use it.
+ *
+ * It lived as a one line copy in four files, and the copies had already
+ * disagreed: one of them included the unit and the others did not. Same reason
+ * lib/date.ts exists. The same word computed twice eventually says two things.
+ */
+export function kroner(n: number): string {
+  return new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(n)
+}
+
+/** A count of things, grouped the same way. Units through a process stage. */
+export function count(n: number): string {
+  return new Intl.NumberFormat('da-DK').format(n)
+}

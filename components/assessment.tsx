@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { assessSpark } from '@/lib/spark-actions'
+import { count, kroner } from '@/lib/cost'
 import { Hint } from '@/components/ui'
 import {
   basisCoversTarget,
@@ -24,9 +25,6 @@ import { SAVING_KINDS, SAVING_KIND_HINT, SAVING_KIND_LABEL, type Spark } from '@
 export function savingOf(spark: Spark, stageUnits: number | null): Saving | null {
   return savingFrom(spark.saving_kind, spark.saving_value, stageUnits)
 }
-
-const kr = (n: number) =>
-  `${new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(n)} kr`
 
 export function Assessment({
   spark,
@@ -89,7 +87,7 @@ export function Assessment({
       <div className="lbl-tight mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
         {impact !== null && (
           <>
-            <span className="num text-ink">{kr(impact.annualDkk)} a year</span>
+            <span className="num text-ink">{kroner(impact.annualDkk)} kr a year</span>
             <span className="num text-muted">
               {impact.eurPerUnit.toFixed(3)} &euro;/unit
             </span>
@@ -199,7 +197,7 @@ export function Assessment({
             <option value="">not per unit</option>
             {stages.map((s) => (
               <option key={s.stage} value={s.stage}>
-                {s.stage} — {new Intl.NumberFormat('da-DK').format(s.units)} units
+                {s.stage}, {count(s.units)} units
               </option>
             ))}
           </select>

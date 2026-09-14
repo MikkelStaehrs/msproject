@@ -1,6 +1,8 @@
 import {
   costPicture,
+  count,
   formatMoney,
+  kroner,
   payback,
   unpricedShare,
   type CostRoll,
@@ -126,6 +128,15 @@ check('no benefit, no answer', payback({ investment: 1_000, annualBenefit: null,
 check('whole amounts carry no decimals', formatMoney(38_000, 'DKK'), '38,000 DKK')
 check('an amount with ore keeps them', formatMoney(4_200.5, 'DKK'), '4,200.50 DKK')
 check('the currency comes from the project', formatMoney(1_200, 'EUR'), '1,200 EUR')
+
+/*
+ * Danish grouping, and no unit. Four files carried a copy of this and one of
+ * them had already drifted to including the «kr», which is why it is here.
+ */
+check('whole kroner are grouped, not suffixed', kroner(19_200), '19.200')
+check('and rounded, because a saving is not to the ore', kroner(19_200.6), '19.201')
+check('a small number is left alone', kroner(48), '48')
+check('a count groups the same way', count(465_216), '465.216')
 
 console.log(failed === 0 ? '\nAll tests passed.' : `\n${failed} test(s) failed.`)
 process.exitCode = failed === 0 ? 0 : 1

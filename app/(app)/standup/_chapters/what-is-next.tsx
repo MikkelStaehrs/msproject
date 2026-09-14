@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { basisCoversTarget, type Reference } from '@/lib/cogs'
 import type { Impact } from '@/lib/cogs'
 import type { Quadrant } from '@/lib/priority'
+import { kroner } from '@/lib/cost'
 import { formatDateLong } from '@/components/ui'
 import type { Spark, Standup } from '@/lib/types'
 
@@ -27,9 +28,6 @@ export type Weighed = {
   score: number | null
   where: Quadrant | null
 }
-
-const kr = (n: number) =>
-  new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(n)
 
 export function WhatIsNext({
   weighed,
@@ -64,7 +62,7 @@ export function WhatIsNext({
           <p className="mt-4 text-[11px] leading-relaxed text-rule-strong">
             The whole target is
             <br />
-            <span className="num text-[17px] text-ink">{kr(target.dkk)} kr</span>
+            <span className="num text-[17px] text-ink">{kroner(target.dkk)} kr</span>
             <br />
             a year. A percentage here is a percentage of that.
           </p>
@@ -125,7 +123,7 @@ export function WhatIsNext({
                   <p className="max-w-prose text-[14px] leading-relaxed">{spark.body}</p>
                   <div className="lbl-tight mt-2 flex flex-wrap gap-x-4 gap-y-1 text-muted">
                     {impact && (
-                      <span className="num">{kr(impact.annualDkk)} kr a year</span>
+                      <span className="num">{kroner(impact.annualDkk)} kr a year</span>
                     )}
                     {where && <span>{where}</span>}
                     {score !== null && (
