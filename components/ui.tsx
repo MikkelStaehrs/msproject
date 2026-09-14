@@ -70,31 +70,38 @@ export function StatusMark({
 
 export function ProgressScale({ done, total }: { done: number; total: number }) {
   if (total === 0) {
-    return <span className="block h-1.5 flex-1 bg-empty" />
+    return <span className="block h-[5px] max-w-[280px] flex-1 bg-empty" />
   }
 
   if (total > 24) {
     const pct = Math.round((100 * done) / total)
     return (
-      <span className="block h-1.5 flex-1 bg-empty">
+      <span className="block h-[5px] max-w-[280px] flex-1 bg-empty">
         <span className="block h-full bg-green" style={{ width: `${pct}%` }} />
       </span>
     )
   }
 
   return (
-    <span className="flex flex-1 gap-0.5">
+    <span className="flex max-w-[280px] flex-1 gap-[2px]">
       {Array.from({ length: total }, (_, i) => (
         <span
           key={i}
-          className={`h-1.5 flex-1 ${i < done ? 'bg-green' : 'bg-empty'}`}
+          className={`h-[5px] flex-1 ${i < done ? 'bg-green' : 'bg-empty'}`}
         />
       ))}
     </span>
   )
 }
 
-/** Progress as a full row: the scale, the percentage and the task count. */
+/**
+ * Progress as a full row.
+ *
+ * The percentage used to be the loud half, set large in serif. It was the same
+ * fact three times over, and on a portfolio where nothing has finished it made
+ * a row of noughts the biggest thing on the page. The count leads now, in mono,
+ * because «0 of 18» says what «0 %» cannot: how much there is.
+ */
 export function ProgressRow({
   done,
   total,
@@ -107,10 +114,10 @@ export function ProgressRow({
   return (
     <div className="flex items-center gap-4">
       <ProgressScale done={done} total={total} />
-      <span className="num min-w-[52px] text-right text-xl">{pct} %</span>
-      <span className="min-w-[54px] text-[11px] tabular-nums text-muted">
+      <span className="mono min-w-[64px] text-[13px] text-muted">
         {done} of {total}
       </span>
+      <span className="mono min-w-[44px] text-right text-[13px] text-muted">{pct} %</span>
     </div>
   )
 }
