@@ -57,23 +57,22 @@ export default async function ProjectShell({
   return (
     <main>
       <div className="frame">
-        <div className="lbl pl-5 lg:pl-16 py-3 pr-5 text-muted">Serves</div>
-        {/*
-          The number and the place moved into the rail, which is where the
-          project is named. What is left here is the half the rail has no room
-          for and no business carrying: what the work is FOR, and the two
-          strings the company system demands.
-
-          Said on the project because it is the question somebody standing on one
-          actually has, and because until this existed the only place to see it
-          was the strategy page, which is the wrong way round: you mark work from
-          the strategy and you read it from the work.
-        */}
+        <div className="lbl pl-5 lg:pl-16 py-3 pr-5 text-muted">Project</div>
         <div className="lbl border-l border-rule px-5 lg:px-10 py-3">
-          {serves.length > 0 ? (
-            <span className="text-ink">{serves.join(', ')}</span>
-          ) : (
-            <span className="text-oxblood">not marked against a strategy</span>
+          {/* The path reads as one address: Production.PR-26-0001 */}
+          <span className="text-ink">
+            {identity.admin.project_no ?? (
+              <span className="text-oxblood">not registered in UBS Projects</span>
+            )}
+          </span>
+          {/*
+            Said here because it is the question somebody standing on a project
+            actually has, and because until now the only place to see it was the
+            strategy page, which is the wrong way round: you mark work from the
+            strategy and you read it from the work.
+          */}
+          {serves.length > 0 && (
+            <span className="text-muted"> &nbsp;·&nbsp; {serves.join(', ')}</span>
           )}
           {identity.admin.portfolio && (
             <span className="text-muted"> &nbsp;·&nbsp; {identity.admin.portfolio}</span>
@@ -83,9 +82,6 @@ export default async function ProjectShell({
           )}
         </div>
         <div className="flex items-center justify-end gap-6 border-l border-rule py-3 pl-5 lg:pl-8 pr-5 lg:pr-16">
-          <Link href={`${base}/meeting`} className="lbl text-muted hover:text-ink">
-            Meeting
-          </Link>
           <Link href={`${base}/map`} className="lbl text-muted hover:text-ink">
             Map
           </Link>

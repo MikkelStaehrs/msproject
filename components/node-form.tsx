@@ -117,7 +117,7 @@ export function NodeForm({
           </select>
         </Field>
 
-        <Field label="Driver">
+        <Field label="Owner">
           <input
             name="owner"
             defaultValue={node?.owner ?? ''}

@@ -4,44 +4,105 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 /**
- * Five destinations, and nothing else.
- *
- * It carried nine before, and the nine were not the same kind of thing: places
- * you look, rituals that have a time, and tools. Nine peers in one voice means
- * you have to know the whole application before you can find anything in it.
- *
- * What left is not gone. Blockers, Friday and the spark inbox are cuts of the
- * log stream and are reached from where they belong; Templates and the Guide
- * are tools and sit with the account. Read, Work and Files are states of a
- * project and live in its left rail, never up here.
+ * The header navigation. Routes that are not built yet are muted and are not
+ * links, which is more honest than a button leading to an empty page.
  */
-const ITEMS: [string, string, (p: string) => boolean][] = [
-  ['/', 'Overview', (p) => p === '/'],
-  ['/projects', 'Projects', (p) => p.startsWith('/projects') || p.startsWith('/p/')],
-  ['/spark', 'Sparks', (p) => p.startsWith('/spark')],
-  ['/standup', 'Stand-up', (p) => p.startsWith('/standup')],
-  ['/strategy', 'Budget', (p) => p.startsWith('/strategy')],
-]
-
 export function Nav() {
   const pathname = usePathname()
+  const onProject = pathname.startsWith('/p/')
 
   return (
-    <nav className="flex w-max items-baseline gap-6 whitespace-nowrap text-[15px]">
-      {ITEMS.map(([href, label, isCurrent]) => (
-        <Link
-          key={href}
-          href={href}
-          aria-current={isCurrent(pathname) ? 'page' : undefined}
-          className={
-            isCurrent(pathname)
-              ? 'font-semibold text-green'
-              : 'text-ink hover:text-green'
-          }
-        >
-          {label}
-        </Link>
-      ))}
+    <nav className="flex w-max items-baseline gap-7 whitespace-nowrap text-xs">
+      <Link
+        href="/"
+        className={
+          pathname === '/'
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-muted hover:text-ink'
+        }
+      >
+        Overview
+      </Link>
+      <Link
+        href="/projects"
+        className={
+          onProject || pathname.startsWith('/projects')
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-muted hover:text-ink'
+        }
+      >
+        Projects
+      </Link>
+      <Link
+        href="/spark"
+        className={
+          pathname.startsWith('/spark')
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-muted hover:text-ink'
+        }
+      >
+        Sparks
+      </Link>
+      <Link
+        href="/strategy"
+        className={
+          pathname.startsWith('/strategy')
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-muted hover:text-ink'
+        }
+      >
+        Strategy
+      </Link>
+      <Link
+        href="/blockers"
+        className={
+          pathname.startsWith('/blockers')
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-muted hover:text-ink'
+        }
+      >
+        Blockers
+      </Link>
+      <Link
+        href="/standup"
+        className={
+          pathname.startsWith('/standup')
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-muted hover:text-ink'
+        }
+      >
+        Standup
+      </Link>
+      <Link
+        href="/friday"
+        className={
+          pathname.startsWith('/friday')
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-muted hover:text-ink'
+        }
+      >
+        Friday
+      </Link>
+      <Link
+        href="/templates"
+        className={
+          pathname.startsWith('/templates')
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-muted hover:text-ink'
+        }
+      >
+        Templates
+      </Link>
+      <Link
+        href="/guide"
+        className={
+          pathname.startsWith('/guide')
+            ? 'border-b border-ink pb-0.5 font-medium text-ink'
+            : 'text-rule-strong hover:text-ink'
+        }
+      >
+        Guide
+      </Link>
     </nav>
   )
 }

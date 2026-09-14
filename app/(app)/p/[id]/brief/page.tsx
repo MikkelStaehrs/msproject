@@ -319,7 +319,7 @@ export default async function BriefPage({
               }
             />
             {identity.location && <Line label="Location" value={identity.location} />}
-            {project.owner && <Line label="Driver" value={project.owner} />}
+            {project.owner && <Line label="Responsible" value={project.owner} />}
             {identity.admin.account && (
               <Line label="Account string" value={identity.admin.account} />
             )}

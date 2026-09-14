@@ -418,7 +418,7 @@ export default async function MeetingPage({
                       : `${selected.estimate_low_days ?? '?'} to ${selected.estimate_high_days ?? '?'} days`
                   }
                 />
-                <Fact label="Driver" value={selected.owner} />
+                <Fact label="Responsible" value={selected.owner} />
                 <Fact
                   label="Priced"
                   value={

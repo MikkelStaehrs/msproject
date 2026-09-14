@@ -136,7 +136,7 @@ export default async function AppLayout({
       <header className="no-print flex flex-wrap items-end justify-between px-5 pb-[18px] pt-6 lg:flex-nowrap lg:px-16 lg:pt-[34px]">
         <Link
           href="/"
-          className="font-display text-[24px] leading-none text-green lg:text-[26px]"
+          className="font-display text-[32px] font-medium leading-none tracking-[-0.02em] lg:text-[40px]"
         >
           Task Studio
         </Link>
@@ -158,11 +158,14 @@ export default async function AppLayout({
             It was reachable solely through an invitation link, which left the
             first account here unable to give itself a name at all.
           */}
-          <Link href="/guide" className="micro shrink-0 text-muted hover:text-ink">Guide</Link>
-          <Link href="/templates" className="micro shrink-0 text-muted hover:text-ink">Templates</Link>
-          <Link href="/auth/password" className="micro shrink-0 text-muted hover:text-ink">Account</Link>
+          <Link
+            href="/auth/password"
+            className="shrink-0 text-[10px] uppercase tracking-[0.16em] text-rule-strong hover:text-muted"
+          >
+            Account
+          </Link>
           <form action={logout} className="shrink-0">
-            <button className="micro text-muted hover:text-ink">
+            <button className="text-[10px] uppercase tracking-[0.16em] text-rule-strong hover:text-muted">
               Sign out
             </button>
           </form>

@@ -322,7 +322,7 @@ export function WhatWeAreDoing({
                   {relativeDays(daysBetween(today, selected.due_date))}
                 </span>
               )}
-              <Fact label="Driver" value={selected.owner} />
+              <Fact label="Responsible" value={selected.owner} />
               <Fact
                 label="Priced"
                 value={
