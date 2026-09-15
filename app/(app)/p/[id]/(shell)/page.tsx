@@ -8,8 +8,9 @@ import { StatusSelect } from '@/components/status-select'
 import { BlockerForm, ResolveBlockerForm } from '@/components/blocker-form'
 import { DecisionForm } from '@/components/decision-form'
 import { EntryForm } from '@/components/entry-form'
-import { ProjectFrame } from '@/components/project-frame'
 import { TaskSheet } from '@/components/task-sheet'
+import { LogStream, type LogItem } from '@/components/log-stream'
+import { addDependency } from '@/lib/dependency-actions'
 import { BoardShell } from '@/components/board-shell'
 import { QuickAddOn } from '@/components/quick-add-on'
 import { ReorderButtons } from '@/components/reorder-buttons'
@@ -55,7 +56,6 @@ export default async function TreePage({
     edit?: string
     new?: string
     focus?: string
-    scope?: string
     view?: string
     sc?: string
     task?: string
@@ -73,7 +73,6 @@ export default async function TreePage({
     edit: editId,
     new: newParent,
     focus: focusId,
-    scope,
     view: viewParam,
     sc: scParam,
     task: taskId,
@@ -202,17 +201,10 @@ export default async function TreePage({
   const treeRootId = treeRoot.id
 
   /*
-   * The frame follows the focus by default. `scope=project` switches it back
-   * to the project's own figures without leaving the part.
+   * The scope toggle went with the frame it belonged to: it existed so you
+   * could read the project's figures while standing on a part, and the rail
+   * names the project while the crumb says where you are.
    */
-  const showProjectFigures = scope === 'project'
-  const frameNodeId = focused && !showProjectFigures ? focused.id : id
-  const frameToggle = focused
-    ? showProjectFigures
-      ? { href: `${base}?focus=${focused.id}`, label: 'Show this part' }
-      : { href: `${base}?focus=${focused.id}&scope=project`, label: 'Show the project' }
-    : undefined
-
   const editing = editId ? nodes.find((n) => n.id === editId) : undefined
 
   const parentOptions: ParentOption[] = []
@@ -243,7 +235,6 @@ export default async function TreePage({
   const keep = (extra: string) => {
     const parts = [
       focusId ? `focus=${focusId}` : '',
-      scope ? `scope=${scope}` : '',
       viewParam ? `view=${viewParam}` : '',
       scParam ? `sc=${scParam}` : '',
       extra,
@@ -567,7 +558,79 @@ export default async function TreePage({
   gather(treeRootId)
   const boardWork = boardScope === 'here' ? here : below
 
+  const deps = (depRes.data ?? []) as NodeDependency[]
   const rootCount = progress.get(treeRootId) ?? { leaf_done: 0, leaf_total: 0 }
+
+  /*
+   * The pulse of this branch, as one stream. Four kinds, one list, date order.
+   * A relation carries no date of its own, so it sorts last rather than
+   * claiming a day nobody recorded.
+   */
+  const inBranch = new Set([treeRootId, ...(descendantsOf.get(treeRootId) ?? [])])
+  const titleOfNode = (nodeId: string) => byId.get(nodeId)?.title ?? 'a part you cannot open'
+
+  const stream: LogItem[] = [
+    ...entries
+      .filter((e) => inBranch.has(e.node_id))
+      .map((e) => ({
+        id: `e${e.id}`,
+        kind: 'work' as const,
+        date: e.entry_date,
+        when: formatDate(e.entry_date),
+        line: e.body,
+        note: e.node_id === treeRootId ? null : titleOfNode(e.node_id),
+        href: keep(`eedit=${e.id}`),
+      })),
+    ...blockers
+      .filter((b) => inBranch.has(b.node_id))
+      .map((b) => ({
+        id: `b${b.id}`,
+        kind: 'blocker' as const,
+        date: b.opened_at,
+        when: formatDate(b.opened_at),
+        line: b.title,
+        note: b.is_active
+          ? `${b.waiting_on}${b.expected_by ? `, expected by ${formatDate(b.expected_by)}` : ', no expected reply'}`
+          : `${b.waiting_on} · closed after ${b.days_blocked} days${b.resolution ? ` · ${b.resolution}` : ''}`,
+        rust: b.is_active,
+        right: b.is_active ? `${b.days_blocked}d` : null,
+        action: b.is_active ? { label: 'Close', href: keep(`bresolve=${b.id}`) } : null,
+        href: keep(`bedit=${b.id}`),
+      })),
+    ...decisions
+      .filter((d) => inBranch.has(d.node_id))
+      .map((d) => ({
+        id: `d${d.id}`,
+        kind: 'decision' as const,
+        date: d.decided_on,
+        when: formatDate(d.decided_on),
+        line: d.decision,
+        note: d.rationale ?? 'No rationale written down',
+        rust: !d.rationale,
+        href: keep(`dedit=${d.id}`),
+      })),
+    ...deps
+      .filter((d) => inBranch.has(d.node_id))
+      .map((d) => ({
+        id: `w${d.id}`,
+        kind: 'sequence' as const,
+        date: null,
+        when: null,
+        line: `${titleOfNode(d.node_id)} waits on ${titleOfNode(d.depends_on_id)}`,
+        note: d.note,
+        href: keep(`task=${d.depends_on_id}`),
+      })),
+  ].sort((a, b) => {
+    if (a.date === null && b.date === null) return 0
+    if (a.date === null) return 1
+    if (b.date === null) return -1
+    return a.date < b.date ? 1 : -1
+  })
+
+  /* Anything in the project that is not this node or under it. */
+  const depCandidates = nodes.filter(
+    (n) => n.id !== treeRootId && !(descendantsOf.get(treeRootId) ?? []).includes(n.id),
+  )
 
   /*
    * The open task. Only a leaf, and only one inside this project: a container
@@ -577,7 +640,6 @@ export default async function TreePage({
   const candidate = taskId ? byId.get(taskId) : undefined
   const openTask =
     candidate && (childrenOf.get(candidate.id) ?? []).length === 0 ? candidate : undefined
-  const deps = (depRes.data ?? []) as NodeDependency[]
   const taskPath = openTask
     ? pathTo(nodes, id, openTask.id)
         .slice(0, -1)
@@ -710,13 +772,8 @@ export default async function TreePage({
   }
 
   return (
-    <ProjectFrame
-      projectId={id}
-      frameNodeId={frameNodeId}
-      focusId={focusId}
-      toggle={frameToggle}
-    >
-    <div className="px-5 lg:px-10 py-7">
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] 2xl:grid-cols-[minmax(0,1fr)_460px]">
+    <div className="min-w-0 px-5 py-7 lg:px-8">
       {editId === project.id && editing && (
         <div className="mb-5">
           <NodeForm
@@ -996,6 +1053,69 @@ export default async function TreePage({
         />
       )}
     </div>
-    </ProjectFrame>
+
+      {/*
+        The pulse. One stream, four switches, and the three ways in that quick
+        entry cannot express on its own: an order between two pieces of work
+        needs a picker, because the other end is a node and not a sentence.
+      */}
+      <div className="min-w-0 border-t border-rule px-5 py-7 lg:px-8 xl:border-l xl:border-t-0">
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="text-[17px] font-semibold tracking-[-0.025em]">Log</h2>
+          <Link href={`${base}/rapporter`} className="lbl-tight text-green hover:text-oxblood">
+            → Friday
+          </Link>
+        </div>
+        {focused && <div className="lbl-tight mt-1 text-rule-strong">this part and below</div>}
+
+        <LogStream
+          items={stream}
+          empty={
+            focused
+              ? 'Nothing written on this part or anything under it.'
+              : 'Nothing written on this project yet. Press Ctrl+K and write a line.'
+          }
+        />
+
+        <div className="sec-gap flex flex-wrap items-baseline gap-5">
+          <Link href={keep(`bnew=${treeRootId}`)} className="act">
+            New blocker
+          </Link>
+          <Link href={keep(`dnew=${treeRootId}`)} className="act">
+            Record a decision
+          </Link>
+          {ready.get(treeRootId) && !ready.get(treeRootId)!.is_ready && (
+            <span
+              className={`lbl-tight ${
+                ready.get(treeRootId)!.overdue_count > 0 ? 'text-oxblood' : 'text-muted'
+              }`}
+            >
+              {ready.get(treeRootId)!.overdue_count > 0
+                ? `Held up, ${ready.get(treeRootId)!.overdue_count} late`
+                : `Waiting on ${ready.get(treeRootId)!.waiting_on_count}`}
+            </span>
+          )}
+        </div>
+
+        {depCandidates.length > 0 && (
+          <form action={addDependency} className="mt-4 flex flex-col gap-2">
+            <input type="hidden" name="node_id" value={treeRootId} />
+            <input type="hidden" name="redirectTo" value={keep('')} />
+            <select name="depends_on_id" defaultValue="" className="field" required>
+              <option value="" disabled>
+                Waits on...
+              </option>
+              {depCandidates.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.title}
+                </option>
+              ))}
+            </select>
+            <input name="note" placeholder="Why, in one line" className="field" />
+            <button className="act self-start">Add the order</button>
+          </form>
+        )}
+      </div>
+    </div>
   )
 }

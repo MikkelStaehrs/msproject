@@ -58,7 +58,6 @@ export function ProjectNav({
   nodes,
   counts,
   blocked,
-  currentId,
 }: {
   base: string
   projectId: string
@@ -69,12 +68,11 @@ export function ProjectNav({
   counts: RailCount[]
   /** Open waiting days per node, its own, so the rail can show where it hurts. */
   blocked: Record<string, number>
-  /** The node the page is standing on: the focus, or the project. */
-  currentId: string
 }) {
   const pathname = usePathname()
   const search = useSearchParams()
   const focus = search.get('focus')
+  const currentId = focus ?? projectId
 
   const count = new Map(counts.map((c) => [c.node_id, c]))
   const kids = new Map<string, RailNode[]>()
@@ -105,7 +103,7 @@ export function ProjectNav({
   const root = count.get(projectId)
 
   return (
-    <nav className="py-5 pl-5 pr-5 lg:py-7 lg:pl-16">
+    <nav className="px-5 py-5 lg:py-7 lg:pl-8 lg:pr-5">
       {/*
         The rail names the project, the page names what you are looking at. On a
         part those are two different things; on the project root they are the

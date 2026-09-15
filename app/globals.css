@@ -375,6 +375,7 @@ a {
 /* A filter row is a set of switches, never a set of actions. */
 .filterrow { display: flex; flex-wrap: wrap; align-items: baseline; }
 
+.filterrow a,
 .filterrow button {
   font-family: var(--font-mono);
   font-size: 9.5px;
@@ -388,8 +389,11 @@ a {
   border-left: 1px solid var(--color-line);
 }
 
+.filterrow a:first-child,
 .filterrow button:first-child { border-left: 0; padding-left: 0; }
+.filterrow a:hover,
 .filterrow button:hover { color: var(--color-ink); }
+.filterrow a[aria-pressed='true'],
 .filterrow button[aria-pressed='true'] { color: var(--color-green); }
 
 /* ---------------------------------------------------------------------------

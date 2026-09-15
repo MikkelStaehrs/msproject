@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { daysBetween, today as todayIso } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
-import { ProjectNav } from '@/components/project-nav'
 import { LogStream, type LogItem } from '@/components/log-stream'
 import { StatusSelect } from '@/components/status-select'
 import { PEOPLE_FIELDS, readIdentity } from '@/lib/identity'
@@ -500,20 +499,8 @@ export async function ProjectFrame({
       <Rule strong />
 
       {/* Body: sub navigation, the page, the pulse */}
-      <div className="frame min-h-[50vh]">
-        <ProjectNav
-          base={base}
-          projectId={projectId}
-          projectTitle={isProject ? node.title : (parent?.title ?? node.title)}
-          projectNo={(isProject ? identity : parentIdentity).admin.project_no}
-          place={(isProject ? identity : parentIdentity).admin.location}
-          nodes={chain}
-          counts={partCounts}
-          blocked={railBlocked}
-          currentId={frameNodeId}
-        />
-
-        <div className="border-l border-rule">{children}</div>
+      <div className="frame-pair min-h-[50vh] [--frame-label:minmax(0,1fr)]">
+        <div>{children}</div>
 
         {/*
           The pulse, as one stream.
