@@ -1,322 +1,326 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
-import { formatMoney } from '@/lib/cost'
-import { readIdentity } from '@/lib/identity'
-import { projectOf } from '@/lib/subtree'
+import { projectOf, subtreeSet } from '@/lib/subtree'
 import { NodeForm } from '@/components/node-form'
-import { QuickAddTrigger } from '@/components/quick-add-trigger'
-import { ProgressScale, Rule, StatusMark, formatDate } from '@/components/ui'
+import { formatDate } from '@/components/ui'
 import {
-  EFFECTIVE_STATUS_LABEL,
-  type EffectiveStatus,
-  type NodeCost,
-  type NodeState,
-  type ActiveBlocker,
-  type NextDate,
-  type Node,
-  type NodeProgress,
+  ProjectsTable,
+  SORT_KEYS,
+  STATE_LABEL,
+  type ProjectGroup,
+  type ProjectRow,
+  type SortKey,
+} from '@/components/projects-table'
+import type {
+  ActiveBlocker,
+  NextDate,
+  Node,
+  NodeProgress,
+  NodeStatus,
 } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
-
-type Filter = 'running' | 'closed' | 'all'
+export const metadata = { title: 'Projects' }
 
 /**
- * The whole portfolio, closed projects included. Without this page a finished
- * project can only be reached by knowing its URL, and the history is lost in
- * practice.
+ * Cut at a word, the way the concept does, so a description never ends in
+ * half a word. Trailing punctuation goes with the cut, because «and,…» reads
+ * as damage.
+ */
+function clip(text: string | null | undefined, n: number): string {
+  const t = String(text ?? '').replace(/\s+/g, ' ').trim()
+  if (t.length <= n) return t
+  const cut = t.slice(0, n)
+  const sp = cut.lastIndexOf(' ')
+  return (sp > n * 0.5 ? cut.slice(0, sp) : cut).replace(/[,;:.\-]$/, '') + '…'
+}
+
+/**
+ * Every project, whatever state it is in, grouped by what it serves.
+ *
+ * The browser is the one place a finished project can be found without
+ * knowing its address, and the one place two projects sit in the same row
+ * shape to be compared. The grouping is the strategy marking, because that is
+ * the question the portfolio is assembled against; a project nobody has
+ * marked lands in its own group in rust, since Budget cannot add up work that
+ * is not marked.
  */
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: Filter; new?: string }>
+  searchParams: Promise<{
+    state?: string
+    serves?: string
+    sort?: string
+    dir?: string
+    new?: string
+    edit?: string
+  }>
 }) {
-  const { filter = 'running', new: creating } = await searchParams
+  const params = await searchParams
   const supabase = await createClient()
 
-  const [nodeRes, progressRes, nextRes, blockerRes, stateRes, costRes, markRes, stratRes] =
-    await Promise.all([
+  const [nodeRes, progressRes, nextRes, blockerRes, markRes, stratRes] = await Promise.all([
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('v_node_progress').select('*'),
     supabase.from('v_next_date').select('*'),
     supabase.from('v_active_blocker').select('*'),
-    supabase.from('v_node_state').select('*'),
-    supabase.from('v_node_cost').select('*'),
     supabase.from('v_strategy_node').select('node_id, strategy_id'),
-    supabase.from('strategy').select('id, name').order('sort_order').order('name'),
+    supabase
+      .from('strategy')
+      .select('id, name, description, sort_order')
+      .order('sort_order')
+      .order('name'),
   ])
 
-  const failure = firstError([
-    nodeRes,
-    progressRes,
-    nextRes,
-    blockerRes,
-    stateRes,
-    costRes,
-    markRes,
-    stratRes,
-  ])
+  const failure = firstError([nodeRes, progressRes, nextRes, blockerRes, markRes, stratRes])
   if (failure) return <QueryFailure message={failure} />
 
-  /*
-   * What each project is for, which is the column this list was missing.
-   *
-   * `category` used to sit here saying «Production» on twenty five rows out of
-   * thirty, which separated nothing. The strategy marking is the answer to the
-   * same question and it is the one the work is actually assembled against.
-   */
-  const strategyName = new Map(
-    ((stratRes.data ?? []) as { id: string; name: string }[]).map((r) => [r.id, r.name]),
-  )
-  const servedBy = new Map<string, string[]>()
+  type StrategyRow = { id: string; name: string; description: string | null; sort_order: number }
+  const strategies = (stratRes.data ?? []) as StrategyRow[]
+  const strategyById = new Map(strategies.map((s) => [s.id, s]))
+
+  /* What each project is marked as serving, by id, in the strategies' order. */
+  const marks = new Map<string, string[]>()
   for (const m of (markRes.data ?? []) as { node_id: string; strategy_id: string }[]) {
-    const name = strategyName.get(m.strategy_id)
-    if (name) servedBy.set(m.node_id, [...(servedBy.get(m.node_id) ?? []), name])
+    if (!strategyById.has(m.strategy_id)) continue
+    marks.set(m.node_id, [...(marks.get(m.node_id) ?? []), m.strategy_id])
+  }
+  const order = new Map(strategies.map((s, i) => [s.id, i]))
+  for (const list of marks.values()) {
+    list.sort((a, b) => (order.get(a) ?? 99) - (order.get(b) ?? 99))
   }
 
   const nodes = (nodeRes.data ?? []) as Node[]
-  const state = new Map(((stateRes.data ?? []) as NodeState[]).map((s) => [s.node_id, s]))
-
-  // What the portfolio is committed to. Ordered and invoiced only: a quote you
-  // have not accepted has not spent anything.
-  const cost = new Map(((costRes.data ?? []) as NodeCost[]).map((c) => [c.node_id, c]))
+  const roots = nodes.filter((n) => n.parent_id === null)
   const progress = new Map(
     ((progressRes.data ?? []) as NodeProgress[]).map((p) => [p.node_id, p]),
   )
-  const nextDates = new Map(
-    ((nextRes.data ?? []) as NextDate[]).map((n) => [n.node_id, n]),
-  )
-  const blockers = (blockerRes.data ?? []) as ActiveBlocker[]
-  const roots = nodes.filter((n) => n.parent_id === null)
-  // Walked from the rows above rather than fetched. See lib/subtree.
-  const projectOfNode = projectOf(nodes)
-  const blockerCount = new Map<string, number>()
-  for (const b of blockers) {
-    const key = projectOfNode.get(b.node_id)
-    if (key) blockerCount.set(key, (blockerCount.get(key) ?? 0) + 1)
-  }
-
-  const closed = (n: Node) => n.status === 'done' || n.status === 'cancelled'
-  const shown =
-    filter === 'running'
-      ? roots.filter((n) => !closed(n))
-      : filter === 'closed'
-        ? roots.filter(closed)
-        : roots
+  const nextDates = new Map(((nextRes.data ?? []) as NextDate[]).map((n) => [n.node_id, n]))
 
   /*
-   * Grouped by the state a project is actually in, blocked included, so the
-   * heading and the row can never disagree. The order is what needs someone
-   * first, then what is live, then what has been put down.
+   * Open blockers anywhere in a project, gathered under its root. Walked from
+   * the rows above rather than fetched: see lib/subtree.
    */
-  const GROUPS: EffectiveStatus[] = [
-    'blocked',
-    'active',
-    'paused',
-    'planned',
-    'idea',
-    'done',
-    'cancelled',
-  ]
+  const projectOfNode = projectOf(nodes)
+  const openIn = new Map<string, ActiveBlocker[]>()
+  for (const b of (blockerRes.data ?? []) as ActiveBlocker[]) {
+    const key = projectOfNode.get(b.node_id)
+    if (key) openIn.set(key, [...(openIn.get(key) ?? []), b])
+  }
 
-  const effective = (n: Node): EffectiveStatus =>
-    state.get(n.id)?.status_effective ?? n.status
+  const rows: ProjectRow[] = roots.map((r) => {
+    const p = progress.get(r.id)
+    const nx = nextDates.get(r.id)
+    const open = openIn.get(r.id) ?? []
+    const people = (r.reporting?.people ?? {}) as Record<string, unknown>
+    const projectNo = r.reporting?.project_no
+    const servesIds = marks.get(r.id) ?? []
+    const owner = people.project_owner ?? people.creator
+    return {
+      id: r.id,
+      code: typeof projectNo === 'string' ? projectNo : '',
+      title: r.title,
+      line: clip((r.description ?? '').split('\n')[0], 96),
+      status: r.status,
+      progress: p && p.leaf_total > 0 ? p.leaf_done / p.leaf_total : 0,
+      done: p?.leaf_done ?? 0,
+      total: p?.leaf_total ?? 0,
+      next: nx ? nx.due_date : '9999',
+      nextLabel: nx ? formatDate(nx.due_date) : null,
+      wait: open.length ? Math.max(...open.map((b) => b.days_blocked)) : 0,
+      waitWho: [...new Set(open.map((b) => b.waiting_on))].join(', '),
+      serves: servesIds.length
+        ? servesIds.map((id) => strategyById.get(id)?.name ?? '').join(', ')
+        : null,
+      owner: typeof owner === 'string' ? owner : '',
+    }
+  })
 
-  const base = '/projects'
-  const href = (f: Filter) => (f === 'running' ? base : `${base}?filter=${f}`)
+  /* ---------------------------------------------------------------------- */
+  /* The two filters and the sort, all in the address.                       */
+  /* ---------------------------------------------------------------------- */
+
+  const STATES: NodeStatus[] = ['idea', 'planned', 'active', 'paused', 'done', 'cancelled']
+  const present = STATES.filter((s) => roots.some((r) => r.status === s))
+  const state: NodeStatus | 'all' = (STATES as string[]).includes(params.state ?? '')
+    ? (params.state as NodeStatus)
+    : 'all'
+  const serves: string =
+    params.serves === 'none' || strategyById.has(params.serves ?? '')
+      ? (params.serves as string)
+      : 'all'
+  const sort: SortKey = (SORT_KEYS as string[]).includes(params.sort ?? '')
+    ? (params.sort as SortKey)
+    : 'code'
+  const dir: 1 | -1 = params.dir === 'desc' ? -1 : 1
+
+  const shown = rows
+    .filter((x) => state === 'all' || x.status === state)
+    .filter((x) => {
+      if (serves === 'all') return true
+      if (serves === 'none') return x.serves === null
+      return (marks.get(x.id) ?? []).includes(serves)
+    })
+    .sort((a, b) => {
+      const x = a[sort] ?? ''
+      const y = b[sort] ?? ''
+      return (x < y ? -1 : x > y ? 1 : 0) * dir
+    })
+
+  /*
+   * Grouped by the joined marking, in the strategies' own order, the unmarked
+   * last. A project marked against two strategies makes a group of its own:
+   * it belongs to both, and listing it twice would count it twice.
+   */
+  const byKey = new Map<string, ProjectRow[]>()
+  for (const x of shown) {
+    const k = x.serves ?? '__none'
+    byKey.set(k, [...(byKey.get(k) ?? []), x])
+  }
+  const rank = (k: string) => {
+    if (k === '__none') return Number.MAX_SAFE_INTEGER
+    const s = strategies.find((z) => z.name === k)
+    return s ? s.sort_order : 99
+  }
+  const groups: ProjectGroup[] = [...byKey.keys()]
+    .sort((a, b) => rank(a) - rank(b))
+    .map((k) => {
+      const s = strategies.find((z) => z.name === k)
+      return k === '__none'
+        ? {
+            key: null,
+            name: 'Not marked against a strategy',
+            note: 'These projects are invisible on Budget: nothing can be added up from work that is not marked.',
+            rows: byKey.get(k) ?? [],
+          }
+        : {
+            key: k,
+            name: k,
+            note: s?.description ? clip(s.description, 120) : null,
+            rows: byKey.get(k) ?? [],
+          }
+    })
+
+  /** The address with the filters and sort kept, and one thing changed. */
+  const href = (change: Partial<Record<'state' | 'serves' | 'sort' | 'dir' | 'new' | 'edit', string | null>>) => {
+    const q: Record<string, string> = {}
+    if (state !== 'all') q.state = state
+    if (serves !== 'all') q.serves = serves
+    if (sort !== 'code') q.sort = sort
+    if (dir < 0) q.dir = 'desc'
+    for (const [k, v] of Object.entries(change)) {
+      if (v === null || v === undefined) delete q[k]
+      else q[k] = v
+    }
+    const s = new URLSearchParams(q).toString()
+    return s ? `/projects?${s}` : '/projects'
+  }
+  const here = href({})
+  const sortHref = (key: SortKey) =>
+    key === sort ? href({ dir: dir > 0 ? 'desc' : null }) : href({ sort: key, dir: null })
+
+  const creating = params.new === 'root'
+  const editing = params.edit ? roots.find((r) => r.id === params.edit) : undefined
 
   return (
     <main>
-      <div className="frame">
-        <div className="lbl pl-5 lg:pl-16 py-3 pr-5 text-muted">Portfolio</div>
-        <div className="flex items-center gap-3.5 border-l border-rule px-5 lg:px-10 py-3">
-          {(
-            [
-              ['running', 'RUNNING'],
-              ['closed', 'CLOSED'],
-              ['all', 'ALL'],
-            ] as const
-          ).map(([key, label], i) => (
-            <span key={key} className="flex items-center gap-3.5">
-              {i > 0 && <span className="text-rule">|</span>}
-              <Link
-                href={href(key)}
-                className={`lbl ${filter === key ? 'text-ink' : 'text-muted hover:text-ink'}`}
-              >
-                {label}
-              </Link>
-            </span>
-          ))}
+      {/* The band. Three cells, the frame running to the gutter. */}
+      <div className="grid grid-cols-1 border-b border-line-strong lg:grid-cols-[auto_1fr_auto]">
+        <div className="lbl px-[var(--gut)] py-2.5 text-muted">Projects</div>
+        <div className="lbl border-t border-line px-[var(--gut)] py-2.5 text-muted lg:border-l lg:border-t-0 lg:px-6">
+          Everything, whatever state it is in
         </div>
-        <div className="flex items-center justify-end gap-6 border-l border-rule py-3 pl-5 lg:pl-8 pr-5 lg:pr-16">
-          <Link href={`${base}?new=root`} className="lbl text-muted hover:text-ink">
-            New project
+        <div className="flex flex-wrap items-center gap-4 border-t border-line px-[var(--gut)] py-2.5 lg:border-l lg:border-t-0">
+          {/* Templates leaves the header and lives beside the thing it makes. */}
+          <Link href="/templates" className="act">
+            Templates
           </Link>
-          <QuickAddTrigger />
+          <Link href={creating ? here : href({ new: 'root' })} className={creating ? 'act' : 'btn'}>
+            {creating ? 'Close' : 'New project'}
+          </Link>
         </div>
       </div>
-      <Rule strong />
 
-      {creating === 'root' && (
-        <NodeForm parentId={null} redirectTo={base} cancelHref={href(filter)} />
-      )}
-
-      <div className="frame-pair min-h-[60vh]">
-        <div className="pl-5 lg:pl-16 py-8 pr-5">
-          <h1 className="font-display text-[30px] font-medium leading-[1.06] tracking-[-0.01em]">
-            Projects
-          </h1>
-          <div className="mt-4 text-[11px] leading-relaxed text-muted">
-            {roots.filter((n) => !closed(n)).length} running
-            <br />
-            {roots.filter(closed).length} closed
+      <div className="px-[var(--gut)] py-[26px]">
+        <div className="work mx-auto">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h1 className="text-[34px] font-semibold leading-[1.08] tracking-[-0.03em] text-green [text-wrap:balance]">
+              All projects
+            </h1>
+            <span className="micro text-muted">
+              {shown.length} of {roots.length}
+            </span>
           </div>
-        </div>
 
-        <div className="border-l border-rule py-8 pl-10 pr-5 lg:pr-16">
-          {shown.length === 0 ? (
-            <p className="text-sm text-muted">No projects in this selection.</p>
-          ) : (
-            <div>
-              <div className="hidden grid-cols-[1fr_150px_120px_92px_86px] items-baseline border-b border-rule-strong pb-2 lg:grid">
-                <span className="lbl text-muted">Project</span>
-                <span className="lbl text-muted">Progress</span>
-                <span className="lbl text-right text-muted">Committed</span>
-                <span className="lbl text-right text-muted">Next</span>
-                <span className="lbl text-right text-muted">Blocked</span>
-              </div>
-
-              {GROUPS.map((group) => {
-                const members = shown.filter((p) => effective(p) === group)
-                if (members.length === 0) return null
-
-                return (
-                  <section key={group}>
-                    {/* The status lives in the heading, so the rows stop repeating it. */}
-                    <div className="mt-7 flex items-center gap-2.5 border-b border-rule pb-1.5">
-                      <StatusMark
-                        status={group === 'blocked' ? 'active' : group}
-                        blocked={group === 'blocked'}
-                      />
-                      <span
-                        className={`lbl ${group === 'blocked' ? 'text-oxblood' : 'text-ink'}`}
-                      >
-                        {EFFECTIVE_STATUS_LABEL[group]}
-                      </span>
-                      <span className="lbl-tight tabular-nums text-rule-strong">
-                        {members.length}
-                      </span>
-                    </div>
-
-                    {members.map((p) => {
-                      const prog = progress.get(p.id)
-                      const next = nextDates.get(p.id)
-                      const open = blockerCount.get(p.id) ?? 0
-
-                      return (
-                        <div
-                          key={p.id}
-                          className="grid grid-cols-1 gap-y-3 border-b border-rule py-3.5 lg:grid-cols-[1fr_150px_120px_92px_86px] lg:items-center lg:gap-y-0"
-                        >
-                          <div className="lg:pr-6">
-                            <Link
-                              href={`/p/${p.id}`}
-                              className={`text-[15px] hover:text-green ${
-                                closed(p) ? 'text-muted' : ''
-                              }`}
-                            >
-                              {p.title}
-                            </Link>
-                            <div className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-muted">
-                              {(servedBy.get(p.id) ?? []).join(', ') || 'no strategy'}
-                              {/*
-                                An absent number is the signal, not a blank.
-                                It means the work exists here and has not been
-                                registered in the company system, which is a
-                                thing a project manager is asked about.
-                              */}
-                              {typeof p.reporting?.project_no === 'string' &&
-                              p.reporting.project_no !== '' ? (
-                                <> · {p.reporting.project_no}</>
-                              ) : (
-                                <span className="text-oxblood"> · not registered</span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/*
-                            The four measures. Their own line under the title on a
-                            phone, each carrying the label the header would have given
-                            it. `contents` at desk width, so the five column grid lays
-                            them out exactly as it did before.
-                          */}
-                          <div className="flex flex-wrap items-baseline gap-x-7 gap-y-2 lg:contents">
-                            <div className="flex items-center gap-3 lg:pr-6">
-                              <span className="lbl-tight text-muted lg:hidden">Progress</span>
-                              <ProgressScale
-                              done={prog?.leaf_done ?? 0}
-                              total={prog?.leaf_total ?? 0}
-                            />
-                            <span className="num min-w-[42px] text-right text-[15px]">
-                              {prog?.progress_pct ?? 0} %
-                            </span>
-                          </div>
-
-                          <div className="text-[11px] tabular-nums text-muted lg:text-right">
-                            <span className="lbl-tight mr-2 lg:hidden">Committed</span>
-                            {(() => {
-                              const c = cost.get(p.id)
-                              if (!c || Number(c.once_committed) === 0) {
-                                return <span className="text-rule-strong">-</span>
-                              }
-                              return (
-                                <>
-                                  {formatMoney(
-                                    Number(c.once_committed),
-                                    readIdentity(p.reporting).economics.currency,
-                                  )}
-                                  {Number(c.annual_priced) > 0 && (
-                                    <span className="block text-[10px] text-rule-strong">
-                                      +{' '}
-                                      {formatMoney(
-                                        Number(c.annual_priced),
-                                        readIdentity(p.reporting).economics.currency,
-                                      )}{' '}
-                                      a year
-                                    </span>
-                                  )}
-                                </>
-                              )
-                            })()}
-                          </div>
-
-                          <div
-                            className={`text-[11px] tabular-nums lg:text-right ${
-                              next && next.days_until < 0 ? 'text-oxblood' : 'text-muted'
-                            }`}
-                          >
-                            <span className="lbl-tight mr-2 text-muted lg:hidden">Next</span>
-                            {next ? formatDate(next.due_date) : '-'}
-                          </div>
-
-                          <div
-                            className={`num flex items-baseline gap-2 text-[17px] lg:block lg:text-right ${
-                              open > 0 ? 'text-oxblood' : 'text-rule-strong'
-                            }`}
-                          >
-                            <span className="lbl-tight text-muted lg:hidden">Blocked</span>
-                            {open > 0 ? open : '-'}
-                          </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </section>
-                )
-              })}
+          {creating && (
+            <div className="grp-gap">
+              <NodeForm parentId={null} redirectTo={here} cancelHref={here} />
             </div>
           )}
+          {editing && (
+            <div className="grp-gap">
+              <NodeForm
+                node={editing}
+                descendantCount={subtreeSet(nodes, editing.id).size - 1}
+                redirectTo={here}
+                cancelHref={here}
+              />
+            </div>
+          )}
+
+          {/* Two filters, mono switches, kept apart from the actions above. */}
+          <div className="grp-gap">
+            <div className="flex flex-wrap items-baseline gap-2.5">
+              <span className="lbl min-w-[64px] text-muted">State</span>
+              <div className="filterrow flex-1">
+                <Link href={href({ state: null })} aria-pressed={state === 'all'}>
+                  All
+                </Link>
+                {present.map((s) => (
+                  <Link key={s} href={href({ state: s })} aria-pressed={state === s}>
+                    {STATE_LABEL[s]}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap items-baseline gap-2.5">
+              <span className="lbl min-w-[64px] text-muted">Serves</span>
+              <div className="filterrow flex-1">
+                <Link href={href({ serves: null })} aria-pressed={serves === 'all'}>
+                  Any
+                </Link>
+                {strategies.map((s) => (
+                  <Link key={s.id} href={href({ serves: s.id })} aria-pressed={serves === s.id}>
+                    {s.name}
+                  </Link>
+                ))}
+                <Link href={href({ serves: 'none' })} aria-pressed={serves === 'none'}>
+                  Not marked
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Its own scroller at a narrow width: the page never scrolls sideways. */}
+          <div className="panel grp-gap max-w-[1360px] overflow-x-auto">
+            <ProjectsTable
+              groups={groups}
+              sort={sort}
+              dir={dir}
+              sortHref={sortHref}
+              editHref={(id) => href({ edit: id })}
+            />
+          </div>
+
+          <p className="grp-gap max-w-[64ch] text-[12px] leading-[1.5] text-muted">
+            Find and compare here. What the work is worth against the year is on{' '}
+            <Link href="/strategy" className="act">
+              Budget
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </main>

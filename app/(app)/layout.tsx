@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation'
 import { knownPeople } from '@/lib/people'
 import type { Profile } from '@/lib/types'
 import { PeopleList } from '@/components/people-list'
-import { logout } from '../login/actions'
+import { HeaderUtility } from '@/components/header-utility'
 
 type Flat = { id: string; parent_id: string | null; title: string; sort_order: number }
 
@@ -104,6 +104,14 @@ export default async function AppLayout({
     redirect('/auth/password')
   }
 
+  /*
+   * The header shows a first name, not a full one: it is a signature on a
+   * utility row, not a heading. The gate above guarantees a name exists for
+   * anyone with a profile row, so an empty first name only means there is no
+   * row yet.
+   */
+  const firstName = me?.full_name?.trim().split(/\s+/)[0] || null
+
   const targets = buildTargets((treeRes.data ?? []) as Flat[])
 
   /*
@@ -133,42 +141,26 @@ export default async function AppLayout({
 
   return (
     <>
-      <header className="no-print flex flex-wrap items-end justify-between px-5 pb-[18px] pt-6 lg:flex-nowrap lg:px-16 lg:pt-[34px]">
+      {/*
+        The concept's appbar: wordmark, the five destinations, and the
+        utility row, on one baseline with the gutter on both sides. Below
+        `lg` the nav takes a line of its own under the wordmark and utilities
+        and scrolls sideways rather than wrap into two ragged lines; the page
+        itself never scrolls sideways.
+      */}
+      <header className="no-print flex flex-wrap items-baseline justify-between gap-x-7 gap-y-3 px-[var(--gut)] py-[18px]">
         <Link
           href="/"
-          className="font-display text-[24px] leading-none text-green lg:text-[26px]"
+          className="font-display text-[24px] font-semibold leading-none tracking-[-0.03em] text-green"
         >
           Task Studio
         </Link>
-        {/*
-          A line of its own on a phone, because the title and seven links do not
-          share 390 pixels. On a wide screen it is the same baseline aligned
-          group at the right of the title that it always was.
-        */}
-        <div className="mt-3.5 flex w-full items-baseline gap-7 lg:mt-0 lg:w-auto">
-          {/*
-            The links scroll sideways rather than wrap into two ragged lines.
-            Sign out stays put beside them instead of scrolling away with them.
-          */}
-          <div className="min-w-0 flex-1 overflow-x-auto lg:flex-none lg:overflow-visible">
-            <Nav />
-          </div>
-          {/*
-            The only route to your own password and to the name colleagues see.
-            It was reachable solely through an invitation link, which left the
-            first account here unable to give itself a name at all.
-          */}
-          <Link href="/guide" className="micro shrink-0 text-muted hover:text-ink">Guide</Link>
-          <Link href="/templates" className="micro shrink-0 text-muted hover:text-ink">Templates</Link>
-          <Link href="/auth/password" className="micro shrink-0 text-muted hover:text-ink">Account</Link>
-          <form action={logout} className="shrink-0">
-            <button className="micro text-muted hover:text-ink">
-              Sign out
-            </button>
-          </form>
+        <div className="order-3 w-full min-w-0 overflow-x-auto lg:order-none lg:w-auto lg:overflow-visible">
+          <Nav />
         </div>
+        <HeaderUtility firstName={firstName} />
       </header>
-      <div className="no-print h-0.5 bg-ink" />
+      <div className="no-print h-px bg-line-strong" />
       {children}
       <QuickAdd targets={targets} recipients={recipients} />
       <PeopleList names={people} />
