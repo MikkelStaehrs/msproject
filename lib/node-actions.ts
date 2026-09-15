@@ -244,6 +244,93 @@ export async function setNodeStatus(fd: FormData) {
  * is a real answer - it says «not scheduled» - and refusing to express it would
  * leave the only way out being to invent one.
  */
+/**
+ * Moving a piece of work, and saying why, as one act.
+ *
+ * A status you can change without writing anything is a status nobody can
+ * report on: Friday assembles the weekly text out of `entry`, and this
+ * portfolio has proved the point by holding thirty nodes and two lines. So the
+ * move is not finished until it carries a line, and the line is refused if it
+ * is too short to say anything.
+ *
+ * Only a CHANGE of state asks. Nothing asks when the status is set to what it
+ * already was, because that says nothing new, and a question with no
+ * consequence asked at the worst possible moment is worse than no question.
+ *
+ * The line is written BEFORE the status. There is no transaction across two
+ * tables from PostgREST, so one of the two can fail alone; written in this
+ * order, the failure that is possible is a line about a move that did not
+ * happen, which is a record of an intention. The other order would produce
+ * exactly the thing this function exists to prevent.
+ */
+export async function setStatusWithLine(fd: FormData) {
+  const supabase = await createClient()
+  const id = required(fd, 'id')
+  const status = required(fd, 'status') as NodeStatus
+  const body = (text(fd, 'body') ?? '').trim()
+
+  const { data: existing } = await supabase
+    .from('node')
+    .select('status, completed_at')
+    .eq('id', id)
+    .single()
+
+  if (!existing) throw new Error('That part does not exist.')
+
+  if (existing.status !== status && body.length < 3) {
+    throw new Error(
+      'Say what changed, in one line. The weekly report is assembled from these ' +
+        'and never rewritten, so a move nobody wrote about is a week nobody can report.',
+    )
+  }
+
+  if (body.length >= 3) {
+    const { error: entryError } = await supabase
+      .from('entry')
+      .insert({ node_id: id, body, kind: 'work' })
+
+    if (entryError) {
+      throw new Error(`The line was not written, so nothing was moved: ${entryError.message}`)
+    }
+  }
+
+  if (existing.status !== status) {
+    const { error } = await supabase
+      .from('node')
+      .update({ status, completed_at: completedAt(status, existing.completed_at ?? null) })
+      .eq('id', id)
+
+    if (error) throw new Error(`The line was written but the move failed: ${error.message}`)
+  }
+
+  revalidatePath('/', 'layout')
+  redirect(String(fd.get('redirectTo') ?? '/'))
+}
+
+/**
+ * The three things on a task that are typed rather than derived: what it is
+ * called, when it is due, and who drives it. Everything else on the sheet is
+ * worked out from the tree or from the log.
+ */
+export async function editTaskBasics(fd: FormData) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('node')
+    .update({
+      title: required(fd, 'title'),
+      due_date: text(fd, 'due_date'),
+      owner: text(fd, 'owner'),
+      description: text(fd, 'description'),
+    })
+    .eq('id', required(fd, 'id'))
+
+  if (error) throw new Error(`Could not save it: ${error.message}`)
+
+  revalidatePath('/', 'layout')
+  redirect(String(fd.get('redirectTo') ?? '/'))
+}
+
 export async function setDueDate(fd: FormData) {
   const supabase = await createClient()
   const id = required(fd, 'id')

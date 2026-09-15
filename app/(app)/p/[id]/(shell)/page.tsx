@@ -9,6 +9,7 @@ import { BlockerForm, ResolveBlockerForm } from '@/components/blocker-form'
 import { DecisionForm } from '@/components/decision-form'
 import { EntryForm } from '@/components/entry-form'
 import { ProjectFrame } from '@/components/project-frame'
+import { TaskSheet } from '@/components/task-sheet'
 import { QuickAddOn } from '@/components/quick-add-on'
 import { ReorderButtons } from '@/components/reorder-buttons'
 import { canMove } from '@/lib/reorder'
@@ -24,6 +25,7 @@ import {
   type NodeProgress,
   type NodeReady,
   type NodeState,
+  type NodeDependency,
   type NodeStatus,
 } from '@/lib/types'
 
@@ -55,6 +57,7 @@ export default async function TreePage({
     scope?: string
     view?: string
     sc?: string
+    task?: string
     bedit?: string
     bresolve?: string
     bnew?: string
@@ -71,6 +74,7 @@ export default async function TreePage({
     scope,
     view: viewParam,
     sc: scParam,
+    task: taskId,
     bedit: editBlockerId,
     bresolve: resolveBlockerId,
     bnew: newBlockerNode,
@@ -89,7 +93,7 @@ export default async function TreePage({
    */
   const [
     nodesRes, allNodesRes, entryRes, blockerRes, decisionRes, progressRes,
-    stateRes, readyRes, markRes, strategyRes,
+    stateRes, readyRes, markRes, strategyRes, depRes,
   ] = await Promise.all([
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('node').select('id, parent_id, title, sort_order').order('sort_order'),
@@ -101,11 +105,12 @@ export default async function TreePage({
     supabase.from('v_node_ready').select('*'),
     supabase.from('v_strategy_node').select('node_id, strategy_id, is_top'),
     supabase.from('strategy').select('id, name'),
+    supabase.from('node_dependency').select('*'),
   ])
 
   const failure = firstError([
     nodesRes, allNodesRes, entryRes, blockerRes, decisionRes, progressRes, stateRes, readyRes,
-    markRes, strategyRes,
+    markRes, strategyRes, depRes,
   ])
   if (failure) return <QueryFailure message={failure} />
 
@@ -561,6 +566,22 @@ export default async function TreePage({
 
   const rootCount = progress.get(treeRootId) ?? { leaf_done: 0, leaf_total: 0 }
 
+  /*
+   * The open task. Only a leaf, and only one inside this project: a container
+   * is something you go into, and an id from somewhere else is not ours to
+   * show.
+   */
+  const candidate = taskId ? byId.get(taskId) : undefined
+  const openTask =
+    candidate && (childrenOf.get(candidate.id) ?? []).length === 0 ? candidate : undefined
+  const deps = (depRes.data ?? []) as NodeDependency[]
+  const taskPath = openTask
+    ? pathTo(nodes, id, openTask.id)
+        .slice(0, -1)
+        .map((nodeId) => byId.get(nodeId)?.title ?? '')
+        .join(' › ')
+    : ''
+
   const COLUMNS: [NodeStatus, string][] = [
     ['idea', 'Idea'],
     ['planned', 'Planned'],
@@ -600,7 +621,10 @@ export default async function TreePage({
 
     return (
       <div className="block border-b border-rule px-3.5 py-3 last:border-b-0 hover:bg-hover">
-        <Link href={keep(`focus=${node.id}`)} className="block font-medium leading-snug hover:text-green">
+        <Link
+          href={keep(`task=${node.id}`)}
+          className="block font-medium leading-snug hover:text-green"
+        >
           {node.title}
         </Link>
         <div className="mt-1 flex flex-wrap items-baseline gap-2">
@@ -928,6 +952,23 @@ export default async function TreePage({
         <div className="panel mt-6 px-4 py-4">
           <MapLevel parentId={treeRootId} />
         </div>
+      )}
+
+      {openTask && (
+        <TaskSheet
+          node={openTask}
+          code={codes.get(openTask.id) ?? ''}
+          path={taskPath}
+          closeHref={keep('')}
+          redirectTo={keep(`task=${openTask.id}`)}
+          blockers={blockers.filter((b) => b.node_id === openTask.id)}
+          decisions={decisions.filter((d) => d.node_id === openTask.id)}
+          entries={entries.filter((e) => e.node_id === openTask.id)}
+          waitsOn={deps.filter((d) => d.node_id === openTask.id)}
+          holdsUp={deps.filter((d) => d.depends_on_id === openTask.id)}
+          titleOf={(nodeId) => byId.get(nodeId)?.title ?? 'a part you cannot open'}
+          today={today}
+        />
       )}
     </div>
     </ProjectFrame>
