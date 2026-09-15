@@ -10,6 +10,7 @@ import { DecisionForm } from '@/components/decision-form'
 import { EntryForm } from '@/components/entry-form'
 import { ProjectFrame } from '@/components/project-frame'
 import { TaskSheet } from '@/components/task-sheet'
+import { BoardShell } from '@/components/board-shell'
 import { QuickAddOn } from '@/components/quick-add-on'
 import { ReorderButtons } from '@/components/reorder-buttons'
 import { canMove } from '@/lib/reorder'
@@ -58,6 +59,7 @@ export default async function TreePage({
     view?: string
     sc?: string
     task?: string
+    to?: string
     bedit?: string
     bresolve?: string
     bnew?: string
@@ -75,6 +77,7 @@ export default async function TreePage({
     view: viewParam,
     sc: scParam,
     task: taskId,
+    to: moveTo,
     bedit: editBlockerId,
     bresolve: resolveBlockerId,
     bnew: newBlockerNode,
@@ -620,7 +623,11 @@ export default async function TreePage({
     const rest = pathAbove(node)
 
     return (
-      <div className="block border-b border-rule px-3.5 py-3 last:border-b-0 hover:bg-hover">
+      <div
+        data-card={node.id}
+        draggable
+        className="block cursor-grab border-b border-rule px-3.5 py-3 last:border-b-0 hover:bg-hover active:cursor-grabbing"
+      >
         <Link
           href={keep(`task=${node.id}`)}
           className="block font-medium leading-snug hover:text-green"
@@ -872,6 +879,10 @@ export default async function TreePage({
               )}
             </p>
           ) : (
+            <BoardShell
+              openHref={keep('task={id}')}
+              moveHref={keep('task={id}&to={status}')}
+            >
             <div className="panel grid grid-flow-col auto-cols-[minmax(260px,1fr)] overflow-x-auto">
               {COLUMNS.map(([status, label]) => {
                 const inCol = boardWork.filter((n) => n.status === status)
@@ -884,7 +895,11 @@ export default async function TreePage({
                   }
                 }
                 return (
-                  <div key={status} className="min-w-0 border-l border-rule first:border-l-0">
+                  <div
+                    key={status}
+                    data-col={status}
+                    className="min-w-0 border-l border-rule first:border-l-0"
+                  >
                     <div className="flex items-baseline justify-between gap-2 border-b border-rule-strong px-3.5 py-2.5">
                       <span className="font-medium">{label}</span>
                       <span className="micro text-muted">{inCol.length}</span>
@@ -914,7 +929,14 @@ export default async function TreePage({
                 )
               })}
             </div>
+            </BoardShell>
           )}
+          <p className="mt-3 max-w-[64ch] text-[12px] leading-relaxed text-muted">
+            Drag a card to another column, or walk the board with{' '}
+            <span className="kbd">J</span> <span className="kbd">K</span> and open one with{' '}
+            <span className="kbd">Enter</span>. A drop does not move anything on its own: it
+            opens the task with the new state chosen and the line still to write.
+          </p>
         </div>
       )}
 
@@ -961,6 +983,9 @@ export default async function TreePage({
           path={taskPath}
           closeHref={keep('')}
           redirectTo={keep(`task=${openTask.id}`)}
+          preselect={
+            moveTo && COLUMNS.some(([c]) => c === moveTo) ? (moveTo as NodeStatus) : undefined
+          }
           blockers={blockers.filter((b) => b.node_id === openTask.id)}
           decisions={decisions.filter((d) => d.node_id === openTask.id)}
           entries={entries.filter((e) => e.node_id === openTask.id)}

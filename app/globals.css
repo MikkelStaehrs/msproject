@@ -434,6 +434,11 @@ a {
 .sec-gap { margin-top: var(--sec); }
 .grp-gap { margin-top: var(--grp); }
 
+
+/* Moving a card. No lift, no shadow, no rotation: only the landing place. */
+.droprow { height: 0; border-top: 1px solid var(--color-green); margin-left: 14px; }
+.dragging { background: var(--color-hover); color: var(--color-muted); }
+.cursor-card { outline: 1px solid var(--color-green); outline-offset: -1px; }
 /* ---------------------------------------------------------------------------
    Print: only the sheet itself goes on paper, and the paper is white.
    --------------------------------------------------------------------------- */

@@ -44,6 +44,7 @@ export function TaskSheet({
   holdsUp,
   titleOf,
   today,
+  preselect,
 }: {
   node: Node
   code: string
@@ -58,8 +59,11 @@ export function TaskSheet({
   holdsUp: NodeDependency[]
   titleOf: (id: string) => string
   today: string
+  /** The state a drop asked for. The move still has to be said out loud. */
+  preselect?: NodeStatus
 }) {
   const open = blockers.filter((b) => b.is_active)
+  const chosen = preselect ?? node.status
   const late =
     node.due_date !== null && node.status !== 'done' && daysBetween(today, node.due_date) < 0
 
@@ -232,14 +236,14 @@ export function TaskSheet({
                     <label
                       key={s}
                       className={`tag cursor-pointer ${
-                        node.status === s ? 'border-green text-green' : ''
+                        chosen === s ? 'border-green text-green' : ''
                       }`}
                     >
                       <input
                         type="radio"
                         name="status"
                         value={s}
-                        defaultChecked={node.status === s}
+                        defaultChecked={chosen === s}
                         className="sr-only"
                       />
                       {STATUS_LABEL[s]}
@@ -250,8 +254,14 @@ export function TaskSheet({
                 <input
                   name="body"
                   placeholder="Say what changed, in one line"
+                  autoFocus={preselect !== undefined}
                   className="field mt-3"
                 />
+                {preselect !== undefined && preselect !== node.status && (
+                  <p className="mt-2 text-[12px] leading-relaxed text-oxblood">
+                    Dropped into {STATUS_LABEL[preselect]}. Nothing has moved yet.
+                  </p>
+                )}
                 <button className="btn btn-ghost mt-3">Move it</button>
               </form>
 
