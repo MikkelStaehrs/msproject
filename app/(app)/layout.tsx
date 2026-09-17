@@ -57,7 +57,7 @@ export default async function AppLayout({
   const [treeRes, peopleRes, profileRes, authRes] = await Promise.all([
     supabase.from('node').select('id, parent_id, title, sort_order').order('sort_order'),
     supabase.from('node').select('reporting'),
-    supabase.from('profile').select('id, full_name, email, password_set_at'),
+    supabase.from('profile').select('id, full_name, email, password_set_at, is_admin'),
     supabase.auth.getUser(),
   ])
 
@@ -158,7 +158,7 @@ export default async function AppLayout({
         <div className="order-3 w-full min-w-0 overflow-x-auto lg:order-none lg:w-auto lg:overflow-visible">
           <Nav />
         </div>
-        <HeaderUtility firstName={firstName} />
+        <HeaderUtility firstName={firstName} isAdmin={me?.is_admin ?? false} />
       </header>
       <div className="no-print h-px bg-line-strong" />
       {children}

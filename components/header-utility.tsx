@@ -12,8 +12,20 @@ import { logout } from '@/app/login/actions'
  *
  * The name is the only route to your own password and to the name colleagues
  * see on a role, so it links to /auth/password rather than being a label.
+ *
+ * Admin joins them for the one or two accounts that hold it, and it belongs
+ * here rather than in the five destinations for the same reason Templates and
+ * the Guide do: it is a tool that sits with the account, not a place the work
+ * lives. An account without it is shown nothing, and /admin answers a 404 to
+ * anyone else, so this is a shortcut and never the gate.
  */
-export function HeaderUtility({ firstName }: { firstName: string | null }) {
+export function HeaderUtility({
+  firstName,
+  isAdmin,
+}: {
+  firstName: string | null
+  isAdmin: boolean
+}) {
   return (
     <div className="flex shrink-0 items-baseline gap-4">
       <Link
@@ -25,6 +37,11 @@ export function HeaderUtility({ firstName }: { firstName: string | null }) {
         <Search size={20} strokeWidth={1} aria-hidden="true" />
       </Link>
       <HeaderQuickKey />
+      {isAdmin && (
+        <Link href="/admin" className="micro text-muted hover:text-ink">
+          Admin
+        </Link>
+      )}
       {/*
         An account with no profile row yet has no name to show; the link still
         has to exist, because that account is exactly the one that needs to

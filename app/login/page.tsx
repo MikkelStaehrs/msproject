@@ -4,6 +4,7 @@ import { Suspense, useActionState, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { login } from './actions'
 import { requestReset } from '@/lib/auth-actions'
+import { requestAccess } from '@/lib/access-actions'
 
 export default function LoginPage() {
   return (
@@ -16,7 +17,16 @@ export default function LoginPage() {
 function Login() {
   const [error, formAction, pending] = useActionState(login, null)
   const [reset, resetAction, resetting] = useActionState(requestReset, null)
-  const [forgot, setForgot] = useState(false)
+  const [asked, askAction, asking] = useActionState(requestAccess, null)
+
+  /*
+   * Three things can be happening on this side of the page, and only one at a
+   * time. Signing in is the default; the other two are each one click away and
+   * each say plainly what they are, because the person reaching for them is
+   * either locked out or not in yet, and neither of those is the moment to
+   * make somebody guess.
+   */
+  const [mode, setMode] = useState<'in' | 'forgot' | 'ask'>('in')
 
   /*
    * A link that failed says so here.
@@ -51,10 +61,10 @@ function Login() {
 
       <div className="flex flex-col justify-center border-t border-rule-strong py-11 pl-5 pr-5 lg:border-l lg:border-t-0 lg:pl-10 lg:pr-16">
         <h2 className="font-display text-3xl font-medium">
-          {forgot ? 'Forgotten it' : 'Sign in'}
+          {mode === 'forgot' ? 'Forgotten it' : mode === 'ask' ? 'Request access' : 'Sign in'}
         </h2>
 
-        {linkProblem && !forgot && (
+        {linkProblem && mode === 'in' && (
           <p className="mt-5 border-l-2 border-oxblood pl-3 text-[12.5px] leading-relaxed text-oxblood">
             That link did not work: {linkProblem}
             <span className="mt-1 block text-muted">
@@ -64,7 +74,7 @@ function Login() {
           </p>
         )}
 
-        {forgot ? (
+        {mode === 'forgot' ? (
           <>
             <p className="mt-4 text-[13px] leading-relaxed text-muted">
               We will send a link that lets you choose a new password. It works
@@ -101,7 +111,81 @@ function Login() {
             )}
 
             <button
-              onClick={() => setForgot(false)}
+              onClick={() => setMode('in')}
+              className="lbl mt-9 self-start text-muted hover:text-ink"
+            >
+              Back to signing in
+            </button>
+          </>
+        ) : mode === 'ask' ? (
+          <>
+            <p className="mt-4 text-[13px] leading-relaxed text-muted">
+              There is no signing up here. Somebody who already works in this
+              portfolio reads what you write and decides, and you hear back by
+              email either way.
+            </p>
+
+            {asked === 'sent' ? (
+              <p className="mt-7 text-[13px] leading-relaxed">
+                That is with somebody now.
+                <span className="mt-1 block text-muted">
+                  Nothing else happens on your side. If you are let in, an
+                  invitation arrives at that address and it is the link that
+                  lets you choose a password.
+                </span>
+              </p>
+            ) : (
+              <form action={askAction} className="mt-7 flex flex-col gap-6">
+                <label className="block">
+                  <span className="lbl text-muted">Your name</span>
+                  <input
+                    name="full_name"
+                    required
+                    autoFocus
+                    autoComplete="name"
+                    className="field"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="lbl text-muted">E-mail</span>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    className="field"
+                  />
+                </label>
+
+                {/*
+                  Optional, and the label says what it is for rather than
+                  asking an open question. «Why do you need access» is a form
+                  field people leave empty; naming the work is something they
+                  can answer.
+                */}
+                <label className="block">
+                  <span className="lbl text-muted">What you work on</span>
+                  <textarea
+                    name="reason"
+                    rows={3}
+                    className="field resize-y"
+                    placeholder="Which project, and what you would be doing in it."
+                  />
+                </label>
+
+                <button type="submit" disabled={asking} className="btn mt-1.5 w-full">
+                  {asking ? 'Sending...' : 'Send the request'}
+                </button>
+
+                {asked && asked !== 'sent' && (
+                  <p className="text-[13px] leading-relaxed text-oxblood">{asked}</p>
+                )}
+              </form>
+            )}
+
+            <button
+              onClick={() => setMode('in')}
               className="lbl mt-9 self-start text-muted hover:text-ink"
             >
               Back to signing in
@@ -140,12 +224,20 @@ function Login() {
               {error && <p className="text-[13px] text-oxblood">{error}</p>}
             </form>
 
-            <button
-              onClick={() => setForgot(true)}
-              className="lbl mt-6 self-start text-muted hover:text-ink"
-            >
-              Forgotten your password
-            </button>
+            <div className="mt-6 flex flex-wrap items-baseline gap-x-7 gap-y-2">
+              <button
+                onClick={() => setMode('forgot')}
+                className="lbl text-muted hover:text-ink"
+              >
+                Forgotten your password
+              </button>
+              <button
+                onClick={() => setMode('ask')}
+                className="lbl text-muted hover:text-ink"
+              >
+                Request access
+              </button>
+            </div>
           </>
         )}
 

@@ -31,6 +31,12 @@ export type WaitingOnType =
 
 export type EntryKind = 'work' | 'note' | 'meeting' | 'risk'
 
+/**
+ * Where an ask for a login has got to. «new» is waiting for a human, which is
+ * the only state the login form can create; the other two are answers.
+ */
+export type AccessRequestState = 'new' | 'invited' | 'declined'
+
 export interface Node {
   id: string
   parent_id: string | null
@@ -333,7 +339,36 @@ export interface Profile {
    * about: until it is replaced, two people can sign in as one.
    */
   password_set_at: string | null
+  /**
+   * Whether this account may open the admin module. Readable by anyone signed
+   * in; writable by the service role alone, which the database enforces with a
+   * column privilege rather than a policy. See the migration for why a policy
+   * could not have done it.
+   */
+  is_admin: boolean
   created_at: string
+}
+
+/**
+ * Somebody asking for a way in.
+ *
+ * The one table in this schema a request without a session may write to. It is
+ * insert only from out there: no select policy reaches anon, so a form that
+ * can put a row in cannot read one back, which matters because the rows are a
+ * list of who has asked and that is nobody's business but the owner's.
+ */
+export interface AccessRequest {
+  id: string
+  full_name: string
+  email: string
+  /** Why they want in, in their words. Optional: an empty answer still asks. */
+  reason: string | null
+  requested_at: string
+  state: AccessRequestState
+  decided_at: string | null
+  decided_by: string | null
+  /** What the owner wrote when answering. Never sent back to the requester. */
+  note: string | null
 }
 
 /**

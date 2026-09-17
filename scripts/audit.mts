@@ -387,6 +387,7 @@ const PAIRS: [string, string, string][] = [
   // Same enum as on `spark`, and it has to be: node_origin is a copy of what a
   // spark claimed, read back by the same functions.
   ['node_origin', 'saving_kind', 'SAVING_KINDS'],
+  ['access_request', 'state', 'AccessRequestState'],
 ]
 const loose: string[] = []
 for (const [rel, col, name] of PAIRS) {
