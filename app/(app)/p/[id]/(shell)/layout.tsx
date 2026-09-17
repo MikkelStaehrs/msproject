@@ -74,7 +74,7 @@ export default async function ProjectShell({
           projectId={id}
           projectTitle={project.title}
           projectNo={identity.admin.project_no}
-          place={identity.admin.location}
+          place={identity.location}
           nodes={(treeRes.data ?? []) as RailNode[]}
           counts={(countRes.data ?? []) as RailCount[]}
           blocked={blocked}

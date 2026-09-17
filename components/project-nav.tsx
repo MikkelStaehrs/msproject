@@ -37,7 +37,8 @@ export type RailCount = { node_id: string; leaf_total: number; leaf_done: number
 const STATES: [string, string, string, [string, string][]][] = [
   // suffix, label, href suffix, sub links under it
   ['', 'Work', '', []],
-  ['/identitet', 'Read', '/identitet', [['/brief', 'Brief'], ['/rapporter', 'Reports']]],
+  // Read absorbed the report archive, so only the brief is a place of its own.
+  ['/identitet', 'Read', '/identitet', [['/brief', 'Brief']]],
   ['/dokumenter', 'Files', '/dokumenter', []],
   ['/cost', 'Economics', '/cost', [['/grundlag', 'Basis']]],
 ]
