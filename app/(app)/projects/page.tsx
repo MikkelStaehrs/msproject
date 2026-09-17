@@ -117,7 +117,7 @@ export default async function ProjectsPage({
     const people = (r.reporting?.people ?? {}) as Record<string, unknown>
     const projectNo = r.reporting?.project_no
     const servesIds = marks.get(r.id) ?? []
-    const owner = people.project_owner ?? people.creator
+    const owner = people.project_owner || people.creator
     return {
       id: r.id,
       code: typeof projectNo === 'string' ? projectNo : '',
@@ -153,7 +153,7 @@ export default async function ProjectsPage({
       : 'all'
   const sort: SortKey = (SORT_KEYS as string[]).includes(params.sort ?? '')
     ? (params.sort as SortKey)
-    : 'code'
+    : 'title'
   const dir: 1 | -1 = params.dir === 'desc' ? -1 : 1
 
   const shown = rows
@@ -208,7 +208,7 @@ export default async function ProjectsPage({
     const q: Record<string, string> = {}
     if (state !== 'all') q.state = state
     if (serves !== 'all') q.serves = serves
-    if (sort !== 'code') q.sort = sort
+    if (sort !== 'title') q.sort = sort
     if (dir < 0) q.dir = 'desc'
     for (const [k, v] of Object.entries(change)) {
       if (v === null || v === undefined) delete q[k]
@@ -228,7 +228,7 @@ export default async function ProjectsPage({
     <main>
       {/* The band. Three cells, the frame running to the gutter. */}
       <div className="grid grid-cols-1 border-b border-line-strong lg:grid-cols-[auto_1fr_auto]">
-        <div className="lbl px-[var(--gut)] py-2.5 text-muted">Projects</div>
+        <div className="lbl px-[var(--gut)] py-2.5 text-muted lg:pr-6">Projects</div>
         <div className="lbl border-t border-line px-[var(--gut)] py-2.5 text-muted lg:border-l lg:border-t-0 lg:px-6">
           Everything, whatever state it is in
         </div>
@@ -303,14 +303,19 @@ export default async function ProjectsPage({
             </div>
           </div>
 
-          {/* Its own scroller at a narrow width: the page never scrolls sideways. */}
-          <div className="panel grp-gap max-w-[1360px] overflow-x-auto">
+          {/*
+            No scroller. The row stacks below lg, so nothing here ever needs
+            to move sideways, and a box with overflow set cannot let the
+            overflow menu out of it.
+          */}
+          <div className="panel grp-gap max-w-[1360px]">
             <ProjectsTable
               groups={groups}
               sort={sort}
               dir={dir}
               sortHref={sortHref}
               editHref={(id) => href({ edit: id })}
+              here={here}
             />
           </div>
 
