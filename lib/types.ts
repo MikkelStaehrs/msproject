@@ -65,6 +65,11 @@ export interface Node {
    * progress is this row's own state rather than a second account of it.
    */
   standup_id: string | null
+  /**
+   * Who created this piece of work. Not its driver: that is `owner`, which is
+   * text, changes hands, and says who is doing it rather than who typed it.
+   */
+  created_by: string | null
   created_at: string
   updated_at: string
   /**
@@ -87,6 +92,12 @@ export interface Blocker {
   expected_by: string | null
   resolved_at: string | null
   resolution: string | null
+  /**
+   * Who wrote it. Null for everything written before the column existed, and
+   * for anything that arrived through /api/mcp, which carries a token and no
+   * user. Never derived: a name read by other people is never invented.
+   */
+  created_by: string | null
   created_at: string
 }
 
@@ -143,6 +154,12 @@ export interface Decision {
    * progress is this row's own state rather than a second account of it.
    */
   standup_id: string | null
+  /**
+   * Who wrote it. Null for everything written before the column existed, and
+   * for anything that arrived through /api/mcp, which carries a token and no
+   * user. Never derived: a name read by other people is never invented.
+   */
+  created_by: string | null
   created_at: string
 }
 
@@ -158,6 +175,12 @@ export interface Entry {
    * progress is this row's own state rather than a second account of it.
    */
   standup_id: string | null
+  /**
+   * Who wrote it. Null for everything written before the column existed, and
+   * for anything that arrived through /api/mcp, which carries a token and no
+   * user. Never derived: a name read by other people is never invented.
+   */
+  created_by: string | null
   created_at: string
 }
 
@@ -346,6 +369,12 @@ export interface Profile {
    * could not have done it.
    */
   is_admin: boolean
+  /**
+   * When they last marked the feed seen. Null means never, and the feed is
+   * then all of it. One boundary rather than read state per item: the feed is
+   * derived, so its items have no identity to hang a read flag on.
+   */
+  feed_seen_at: string | null
   created_at: string
 }
 

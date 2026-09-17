@@ -6,7 +6,8 @@ import { QueryFailure, firstError } from '@/lib/failure'
 import { readRecipients } from '@/lib/recipient-data'
 import { redirect } from 'next/navigation'
 import { knownPeople } from '@/lib/people'
-import type { Profile } from '@/lib/types'
+import { feedItems, unseenCount } from '@/lib/feed'
+import type { Blocker, Decision, Entry, Node, Profile } from '@/lib/types'
 import { PeopleList } from '@/components/people-list'
 import { HeaderUtility } from '@/components/header-utility'
 
@@ -54,12 +55,32 @@ export default async function AppLayout({
 }) {
   const supabase = await createClient()
 
-  const [treeRes, peopleRes, profileRes, authRes] = await Promise.all([
-    supabase.from('node').select('id, parent_id, title, sort_order').order('sort_order'),
-    supabase.from('node').select('reporting'),
-    supabase.from('profile').select('id, full_name, email, password_set_at, is_admin'),
-    supabase.auth.getUser(),
-  ])
+  const [treeRes, peopleRes, profileRes, authRes, feedNodeRes, entryRes, blockerRes, decisionRes] =
+    await Promise.all([
+      supabase.from('node').select('id, parent_id, title, sort_order').order('sort_order'),
+      supabase.from('node').select('reporting'),
+      supabase
+        .from('profile')
+        .select('id, full_name, email, password_set_at, is_admin, feed_seen_at'),
+      supabase.auth.getUser(),
+      /*
+       * The bell's count.
+       *
+       * Four more reads on every page in the application, which is the price of
+       * a derived feed and was paid knowingly: the alternative is a stored
+       * counter, and a counter is a number that can be wrong while everything
+       * around it is right. These run inside the Promise.all that was already
+       * here, so they cost one wait rather than four, and the portfolio is
+       * small enough to fetch whole.
+       *
+       * Entries are capped. The count only has to be right about what is new,
+       * and four hundred lines reaches a long way past anybody's last look.
+       */
+      supabase.from('node').select('*'),
+      supabase.from('entry').select('*').order('created_at', { ascending: false }).limit(400),
+      supabase.from('blocker').select('*'),
+      supabase.from('decision').select('*'),
+    ])
 
   /*
    * Read before anything is used, and on this page one of the three is not
@@ -112,6 +133,36 @@ export default async function AppLayout({
    */
   const firstName = me?.full_name?.trim().split(/\s+/)[0] || null
 
+  /*
+   * How much names you that you have not marked seen.
+   *
+   * Worked out here because the bell is in the header and the header is this
+   * layout. It is deliberately NOT checked for a read failure: a feed that
+   * cannot be counted should show no count, and a whole-page error because the
+   * bell could not be drawn would take out every screen in the application to
+   * report a number. The three reads above it are checked, because the page
+   * depends on them.
+   */
+  const unseen =
+    me === undefined
+      ? 0
+      : unseenCount(
+          feedItems({
+            nodes: (feedNodeRes.data ?? []) as Node[],
+            entries: (entryRes.data ?? []) as Entry[],
+            blockers: (blockerRes.data ?? []) as Blocker[],
+            decisions: (decisionRes.data ?? []) as Decision[],
+            nameOf: new Map(
+              ((profileRes.data ?? []) as Profile[]).map((p) => [
+                p.id,
+                p.full_name?.trim() || p.email,
+              ]),
+            ),
+            me: { id: me.id, name: me.full_name },
+          }),
+          me.feed_seen_at,
+        )
+
   const targets = buildTargets((treeRes.data ?? []) as Flat[])
 
   /*
@@ -158,7 +209,11 @@ export default async function AppLayout({
         <div className="order-3 w-full min-w-0 overflow-x-auto lg:order-none lg:w-auto lg:overflow-visible">
           <Nav />
         </div>
-        <HeaderUtility firstName={firstName} isAdmin={me?.is_admin ?? false} />
+        <HeaderUtility
+          firstName={firstName}
+          isAdmin={me?.is_admin ?? false}
+          unseen={unseen}
+        />
       </header>
       <div className="no-print h-px bg-line-strong" />
       {children}

@@ -28,8 +28,17 @@
  * both halves here rather than being flattened to a string by the caller.
  */
 
-/** Same person, different typing. Case and stray spacing do not make a new one. */
-const fold = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase()
+/**
+ * Same person, different typing. Case and stray spacing do not make a new one.
+ *
+ * Exported because lib/feed.ts has to answer the same question about the same
+ * columns: whether the name on a task is the name on an account. Two copies of
+ * this rule would drift, and the day they drifted somebody would quietly stop
+ * being told about their own work.
+ */
+export const foldName = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase()
+
+const fold = foldName
 
 const clean = (value: unknown) =>
   typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
