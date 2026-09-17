@@ -810,7 +810,7 @@ export default function GuidePage() {
           </div>
           <P>
             The distinction matters because only blockers feed the waiting days on{' '}
-            <Link href="/blockers" className="text-green">Blockers</Link>. That number exists
+            the <span className="text-ink">! Blocked</span> filter on a project's log. That number exists
             so you can say &laquo;27 days on IT&raquo; to IT. Your own sequencing does not
             belong in it, or the number stops being an argument.
           </P>

@@ -274,7 +274,7 @@ export function WhatWeAreDoing({
                   {editId === selected.id ? 'Close' : 'Edit'}
                 </Link>
                 <Link
-                  href={`/p/${projectOfNode.get(selected.id) ?? selected.id}/meeting?task=${selected.id}`}
+                  href={`/p/${projectOfNode.get(selected.id) ?? selected.id}?task=${selected.id}`}
                   className="lbl-tight text-rule-strong hover:text-ink"
                 >
                   Open in project

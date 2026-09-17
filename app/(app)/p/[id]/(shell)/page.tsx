@@ -1062,7 +1062,7 @@ export default async function TreePage({
       <div className="min-w-0 border-t border-rule px-5 py-7 lg:px-8 xl:border-l xl:border-t-0">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-[17px] font-semibold tracking-[-0.025em]">Log</h2>
-          <Link href={`${base}/rapporter`} className="lbl-tight text-green hover:text-oxblood">
+          <Link href="/friday" className="lbl-tight text-green hover:text-oxblood">
             → Friday
           </Link>
         </div>
