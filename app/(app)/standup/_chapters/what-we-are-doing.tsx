@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { AGENDA_LABEL, type AgendaItem } from '@/lib/standup'
-import { moveInStandupQueue, setNodeStatus } from '@/lib/node-actions'
+import { moveInStandupQueue, setDriver, setNodeStatus } from '@/lib/node-actions'
 import { formatMoney } from '@/lib/cost'
 import { daysBetween } from '@/lib/date'
 import { BlockerForm, ResolveBlockerForm } from '@/components/blocker-form'
@@ -53,6 +53,7 @@ export type Row = { nodeId: string; lead: AgendaItem; also: AgendaItem[] }
  */
 export function WhatWeAreDoing({
   queue,
+  undriven,
   liveCount,
   selected,
   prev,
@@ -79,6 +80,8 @@ export function WhatWeAreDoing({
 }: {
   /** Every live piece, in the order the room takes it. */
   queue: { node: Node; project: Node }[]
+  /** The agenda's «no driver» items, so the room can answer them in place. */
+  undriven: AgendaItem[]
   liveCount: number
   selected: Node | undefined
   prev: Node | undefined
@@ -120,6 +123,56 @@ export function WhatWeAreDoing({
           </p>
         </div>
 
+        {/*
+          Before the queue: the work nobody has put a name on.
+
+          It sits above the queue and not inside it because it is a different
+          kind of question. The queue asks «what do we take first», which is
+          answered by ordering; this asks «who», which is answered by saying a
+          name out loud, and a room can answer it in ten seconds a task.
+
+          One field, no form to open, and the suggestions are the same names
+          every role field in the application offers, so the list does not
+          quietly grow a second spelling of the same person.
+
+          It disappears by being answered. That is the whole design: a block
+          that is empty most weeks and, on the week it is not, is the first
+          thing the room sees.
+        */}
+        {undriven.length > 0 && (
+          <div className="border-b border-rule-strong px-5 lg:pl-16 lg:pr-7 py-5">
+            <div className="lbl text-rust">
+              {undriven.length} with no driver
+            </div>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+              In flight with nobody on it, which is the quietest way for a task to
+              stop moving: nothing is late, because nothing was promised.
+            </p>
+            <div className="mt-3.5 flex flex-col gap-3.5">
+              {undriven.map((i) => (
+                <div key={i.nodeId}>
+                  <Link href={at(i.nodeId)} className="block text-[13px] leading-snug hover:text-green">
+                    {i.title}
+                  </Link>
+                  <div className="mt-0.5 text-[10.5px] text-muted">
+                    {projectTitle(i.nodeId)}
+                  </div>
+                  <form action={setDriver} className="mt-1.5 flex items-end gap-2">
+                    <input type="hidden" name="id" value={i.nodeId} />
+                    <input type="hidden" name="redirectTo" value={at(i.nodeId)} />
+                    <input
+                      name="owner"
+                      list="known-people"
+                      placeholder="Who is driving it"
+                      className="field min-w-0 flex-1 text-[12px]"
+                    />
+                    <button className="btn btn-ghost shrink-0">Set</button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/*
           Everything else that is alive. Not a second screen and not behind a

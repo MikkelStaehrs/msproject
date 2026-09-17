@@ -33,16 +33,26 @@ export const CADENCE_DAYS = 7
  *   someone is waiting                                they may be in the room
  *   work whose date has passed                        it did not happen
  *   work due before the next stand-up                 it is about to
+ *   work in flight with nobody driving it             it will not move
  *   something happened and nobody wrote a line        the record, not the work
  *
  * Waiting outranks lateness because a wait needs a person and a late task needs
  * a decision, and the person is the one who might walk out of the room.
+ *
+ * «Nobody driving it» sits under the dated kinds and above the unwritten one,
+ * and that placement is the argument for it. It is below the dates because a
+ * date is a promise already made and this is one nobody has made yet. It is
+ * above the record because a task with no name on it does not move at all,
+ * whereas a task nobody wrote about has at least been done. It is the one item
+ * on this list that is answered by saying a name out loud, which is exactly
+ * what a room full of people is for.
  */
 export const AGENDA_ORDER = [
   'overdue_blocker',
   'blocker',
   'overdue',
   'due_soon',
+  'no_driver',
   'loose_end',
 ] as const
 export type AgendaKind = (typeof AGENDA_ORDER)[number]
@@ -52,6 +62,7 @@ export const AGENDA_LABEL: Record<AgendaKind, string> = {
   blocker: 'Waiting',
   overdue: 'Past its date',
   due_soon: 'Before next time',
+  no_driver: 'No driver',
   loose_end: 'Unwritten',
 }
 
@@ -84,6 +95,8 @@ export type AgendaInput = {
     status: string
     due_date: string | null
     completed_at: string | null
+    /** Whose work it is. Null or empty means nobody has said. */
+    owner: string | null
   }[]
   blockers: {
     id: string
@@ -133,6 +146,19 @@ export function agenda(input: AgendaInput): AgendaItem[] {
 
   const byId = new Map(input.nodes.map((n) => [n.id, n]))
 
+  /*
+   * Which nodes are containers. «No driver» is asked of a TASK and not of the
+   * thing a task sits in: a subproject's driver is whoever runs the project,
+   * and putting containers on this list would fill it with the answer «the
+   * project manager, obviously» and teach the room to skip it.
+   */
+  const hasChildren = new Set(
+    input.nodes.map((n) => n.parent_id).filter((p): p is string => p !== null),
+  )
+
+  /** Nobody has said. An empty field is not a name. */
+  const undriven = (owner: string | null) => owner === null || owner.trim() === ''
+
   for (const b of input.blockers) {
     if (b.resolved_at !== null) continue
     /*
@@ -171,7 +197,15 @@ export function agenda(input: AgendaInput): AgendaItem[] {
           who: null,
           days: daysBetween(n.due_date, today),
           on: n.due_date,
-          why: `Its date was ${n.due_date}. Either it moves or it is finished.`,
+          /*
+            A late task with nobody on it is one row and not two. The dated
+            kind wins, because the date is the more urgent thing to talk
+            about, and the missing name rides along in the line rather than
+            disappearing.
+          */
+          why:
+            `Its date was ${n.due_date}. Either it moves or it is finished.` +
+            (undriven(n.owner) ? ' Nobody is driving it either.' : ''),
         })
         continue
       }
@@ -183,7 +217,9 @@ export function agenda(input: AgendaInput): AgendaItem[] {
           who: null,
           days: daysBetween(today, n.due_date),
           on: n.due_date,
-          why: `Due ${n.due_date}, before the next stand-up.`,
+          why:
+            `Due ${n.due_date}, before the next stand-up.` +
+            (undriven(n.owner) ? ' And nobody is driving it.' : ''),
         })
         continue
       }
@@ -201,6 +237,31 @@ export function agenda(input: AgendaInput): AgendaItem[] {
      * putting the status filter behind a choice rather than by reinstating the
      * rule underneath one.
      */
+
+    /*
+     * Nobody is driving it.
+     *
+     * Reached only by a task that produced no dated item above, because the
+     * two `continue`s mean a dated task has already been reported once and
+     * carries the missing name in its own line. So this is the work in flight
+     * that has no date AND no name, which is the quietest way for a task to
+     * stop existing: nothing is late, because nothing was promised, and
+     * nobody is waiting, because nobody was asked.
+     *
+     * It is the one item on the agenda with no number worth showing, so days
+     * is zero and the row reads on its title alone.
+     */
+    if (!hasChildren.has(n.id) && undriven(n.owner)) {
+      items.push({
+        kind: 'no_driver',
+        nodeId: n.id,
+        title: n.title,
+        who: null,
+        days: 0,
+        on: null,
+        why: 'In flight with nobody on it. Say a name, or it is not really in flight.',
+      })
+    }
   }
 
   for (const l of input.looseEnds) {

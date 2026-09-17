@@ -490,6 +490,7 @@ export default async function StandupPage({
       {part === '2' && (
         <WhatWeAreDoing
           queue={queue}
+          undriven={items.filter((i) => i.kind === 'no_driver')}
           liveCount={liveCount}
           selected={selected}
           prev={prev}
@@ -518,15 +519,73 @@ export default async function StandupPage({
 
       {/* ================= 3. What is next ================= */}
       {part === '3' && (
-        <WhatIsNext
-          weighed={weighed}
-          unweighed={unweighed}
-          reference={reference}
-          target={target}
-          held={held}
-          at={at}
-          here={here}
-        />
+        <>
+          <WhatIsNext
+            weighed={weighed}
+            unweighed={unweighed}
+            reference={reference}
+            target={target}
+            held={held}
+            at={at}
+            here={here}
+          />
+
+          {/*
+            The end of the meeting, at the end of the meeting.
+
+            «We held it» has always been in the band, and the band is at the
+            top of a page you have just spent ten minutes scrolling down. So
+            the one action that closes the ritual sat three chapters above the
+            place the ritual finishes, and the stand-up went unstamped: with
+            no stamp there is no «since last time», and chapter one then
+            reports everything ever written as though it all happened this
+            week. The quietest possible failure, and the one that makes the
+            whole screen wrong.
+
+            It is the same two forms, said once more where the room actually
+            is. Not a second way of doing it: the same action, the same stamp.
+          */}
+          <div className="border-t border-line-strong px-[var(--gut)] py-7">
+            <div className="work mx-auto">
+              <h2 className="text-[17px] font-semibold tracking-[-0.025em]">
+                That is the stand-up
+              </h2>
+              {heldToday ? (
+                <>
+                  <p className="prose-measure grp-gap text-green-soft">
+                    Stamped {formatDateLong(heldToday.held_on)}. From here on, «since last
+                    time» means since today, and chapter one starts again from an empty
+                    week.
+                  </p>
+                  <form action={reopenStandup} className="grp-gap flex items-center gap-4">
+                    <input type="hidden" name="id" value={heldToday.id} />
+                    <input type="hidden" name="redirectTo" value={here('3')} />
+                    <span className="tag">Held today</span>
+                    <button className="act text-muted">Undo, it did not happen</button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <p className="prose-measure grp-gap text-green-soft">
+                    Closing it puts today's date on the record, and that date is the only
+                    thing this meeting stores. Everything chapter one shows next week is
+                    measured from it, so a stand-up that is held and never closed reads
+                    next week as a week where nothing happened.
+                  </p>
+                  <p className="prose-measure grp-gap text-[13px] text-muted">
+                    {needsAction > 0
+                      ? `${needsAction} ${needsAction === 1 ? 'thing still needs' : 'things still need'} action. Closing does not clear them, and it is not supposed to: they carry over and they carry their age with them.`
+                      : 'Nothing is waiting for a person. Close it.'}
+                  </p>
+                  <form action={holdStandup} className="grp-gap">
+                    <input type="hidden" name="redirectTo" value={here('3')} />
+                    <button className="btn">We held it</button>
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </main>
   )

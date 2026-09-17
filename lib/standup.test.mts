@@ -28,6 +28,7 @@ const node = (over: Partial<AgendaInput['nodes'][number]> = {}) => ({
   status: 'active',
   due_date: null,
   completed_at: null,
+  owner: 'Mikkel',
   ...over,
 })
 
@@ -55,6 +56,7 @@ const oneOfEach = agenda({
     node({ id: 'n1', title: 'The blocked one' }),
     node({ id: 'late', title: 'Late one', due_date: '2026-09-01' }),
     node({ id: 'soon', title: 'Soon one', due_date: '2026-09-12' }),
+    node({ id: 'nobody', title: 'Nobody one', owner: null }),
   ],
   blockers: [
     blocker({ id: 'b-late', title: 'Overdue answer', expected_by: '2026-09-05' }),
@@ -269,6 +271,85 @@ check(
   }).length,
   1,
 )
+
+// --- Nobody is driving it ---------------------------------------------------
+/*
+ * The quietest way for a task to stop existing: nothing is late, because
+ * nothing was promised, and nobody is waiting, because nobody was asked.
+ */
+const undriven = agenda({
+  ...blank,
+  nodes: [node({ id: 'free', title: 'Nobody on it', owner: null })],
+})
+check('a task with no driver is on the agenda', undriven.map((i) => i.kind), ['no_driver'])
+check('and it shows no number, because there is none', undriven[0].days, 0)
+
+check(
+  'an empty owner is not a name',
+  agenda({ ...blank, nodes: [node({ owner: '   ' })] }).map((i) => i.kind),
+  ['no_driver'],
+)
+check(
+  'a task with a driver is not on it',
+  agenda({ ...blank, nodes: [node({ owner: 'Mikkel' })] }).length,
+  0,
+)
+
+/* Only work in flight, the same cut every other kind on this list obeys. */
+for (const status of ['idea', 'planned', 'paused', 'done', 'cancelled']) {
+  check(
+    `${status} work with no driver is not on the agenda`,
+    agenda({ ...blank, nodes: [node({ status, owner: null })] }).length,
+    0,
+  )
+}
+
+/*
+ * A container is not asked who is driving it. Its driver is whoever runs the
+ * project, and a list full of that answer is a list the room learns to skip.
+ */
+check(
+  'a subproject with tasks under it is not asked',
+  agenda({
+    ...blank,
+    nodes: [
+      node({ id: 'sub', parent_id: 'p1', title: 'A subproject', owner: null }),
+      node({ id: 'kid', parent_id: 'sub', title: 'Its task', owner: 'Mikkel' }),
+    ],
+  }).map((i) => i.kind),
+  [],
+)
+check(
+  'and neither is a project',
+  agenda({ ...blank, nodes: [node({ id: 'root', parent_id: null, owner: null })] }).length,
+  0,
+)
+
+/*
+ * One row, not two. A late task with nobody on it is reported once under the
+ * date, which is the more urgent thing to talk about, and the missing name
+ * rides along in the line rather than disappearing.
+ */
+const lateAndFree = agenda({
+  ...blank,
+  nodes: [node({ id: 'both', due_date: '2026-09-01', owner: null })],
+})
+check('a late task with no driver is one row', lateAndFree.map((i) => i.kind), ['overdue'])
+check(
+  'and the line says both things',
+  lateAndFree[0].why.includes('Nobody is driving it either.'),
+  true,
+)
+
+const soonAndFree = agenda({
+  ...blank,
+  nodes: [node({ id: 'both', due_date: '2026-09-12', owner: null })],
+})
+check('one due soon with no driver is one row too', soonAndFree.map((i) => i.kind), ['due_soon'])
+check('and it says so', soonAndFree[0].why.includes('And nobody is driving it.'), true)
+
+/* Nobody is waiting on it, so it puts nobody in the room. */
+check('it names nobody to be in the room', attendees(undriven).length, 0)
 
 console.log(failed === 0 ? '\nAll tests passed.' : `\n${failed} test(s) failed.`)
 process.exitCode = failed === 0 ? 0 : 1

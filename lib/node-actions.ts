@@ -10,7 +10,7 @@ import { purgeDocumentsForSubtree } from '@/lib/document-actions'
 import { PEOPLE_FIELDS } from '@/lib/identity'
 import { reorder, type Sortable } from '@/lib/reorder'
 import type { NodeStatus, NodeType } from '@/lib/types'
-import { required, text, number } from '@/lib/form'
+import { back, required, text, number } from '@/lib/form'
 
 /**
  * The fields the company system requires that cannot be derived. They belong
@@ -329,6 +329,33 @@ export async function editTaskBasics(fd: FormData) {
 
   revalidatePath('/', 'layout')
   redirect(String(fd.get('redirectTo') ?? '/'))
+}
+
+/**
+ * Putting a name on a piece of work, and nothing else.
+ *
+ * The same shape as `setDueDate` and for the same reason: the stand-up asks
+ * this one question about a dozen tasks in a row, and answering it through the
+ * whole edit form means opening a form, finding one field among four, saving,
+ * and losing your place in the meeting. One field, one press, back where you
+ * were.
+ *
+ * An empty value clears it, which is not an accident. «Actually nobody is on
+ * this» is a true answer, and a field that refuses it would be answered with a
+ * name nobody means.
+ */
+export async function setDriver(fd: FormData) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('node')
+    .update({ owner: text(fd, 'owner') })
+    .eq('id', required(fd, 'id'))
+
+  if (error) throw new Error(`Could not set the driver: ${error.message}`)
+
+  revalidatePath('/', 'layout')
+  back(fd)
 }
 
 export async function setDueDate(fd: FormData) {
