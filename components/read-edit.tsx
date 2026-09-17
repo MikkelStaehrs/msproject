@@ -115,11 +115,31 @@ export function ReadEdit({
    * Roles and access are two lists on purpose, and this is the only place they
    * are held against each other.
    */
+  const memberIds = new Set(members.map((m) => m.user_id))
+
   const lockedOut = namedButLockedOut({
     roles: PEOPLE_FIELDS.map((f) => ({ label: f.label, value: identity.people[f.key] })),
     accounts,
-    members: new Set(members.map((m) => m.user_id)),
+    members: memberIds,
   })
+
+  /*
+   * Everyone with a login who is not already on this project.
+   *
+   * The field below takes an email because an email is what `addMember`
+   * resolves, and typing one from memory is how a colleague gets added as
+   * nobody. So it suggests, in the same shape the role fields do: a datalist,
+   * which leaves the field free text. A new account appears here the moment it
+   * exists, by address until they have chosen a name.
+   *
+   * Members are left out rather than shown greyed. Adding somebody twice is
+   * already harmless, and a list of people you cannot pick is a list you have
+   * to read past.
+   */
+  const addable = accounts
+    .filter((a) => a.id !== undefined && a.email && !memberIds.has(a.id))
+    .map((a) => ({ email: a.email as string, label: a.full_name?.trim() || null }))
+    .sort((a, b) => (a.label ?? a.email).localeCompare(b.label ?? b.email))
 
   const projects = everyNode.filter((n) => n.parent_id === null)
   const projectTitle = new Map(projects.map((p) => [p.id, p.title]))
@@ -528,7 +548,7 @@ export function ReadEdit({
           <input type="hidden" name="redirectTo" value={readHref} />
           <label className="block min-w-[240px] flex-1">
             <span className="lbl text-muted">
-              <Hint text="They need an account here already. Create the user in Supabase first: a pending invitation would be a door left open on a guess about who ends up with that address.">
+              <Hint text="They need an account here already. Somebody with no login asks for one on the sign-in screen, and an administrator invites them from Admin; a membership waiting for an address to exist would be a door left open on a guess about who ends up with it.">
                 Add somebody by email
               </Hint>
             </span>
@@ -536,9 +556,23 @@ export function ReadEdit({
               name="email"
               type="email"
               required
-              placeholder="colleague@unitedbeetseeds.com"
+              list="addable-accounts"
+              placeholder={addable[0]?.email ?? 'colleague@unitedbeetseeds.com'}
               className="field"
             />
+            {/*
+              The suggestions. A datalist rather than a select, for the same
+              reason the role fields use one: the field keeps accepting
+              anything typed into it, and the list is a shortcut rather than a
+              gate.
+            */}
+            <datalist id="addable-accounts">
+              {addable.map((a) => (
+                <option key={a.email} value={a.email}>
+                  {a.label ?? 'has not chosen a name yet'}
+                </option>
+              ))}
+            </datalist>
           </label>
           <button className="btn btn-ghost">Add</button>
         </form>
@@ -546,6 +580,11 @@ export function ReadEdit({
         <p className="mt-3 text-[12px] leading-relaxed text-muted">
           Names under People are text on a report. This is the list that decides what anyone
           can actually open.
+          {addable.length === 0 && members.length > 0 && (
+            <span className="block">
+              Everyone with a login here is already on this project.
+            </span>
+          )}
         </p>
       </Section>
 
