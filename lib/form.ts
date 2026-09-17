@@ -21,6 +21,24 @@ export function required(fd: FormData, key: string): string {
   return value
 }
 
+/**
+ * Every value under one name, cleaned, deduplicated and in the order given.
+ *
+ * What a person picker submits. A single-person field sends one value and a
+ * multi-person one sends several under the same name, so both are read the
+ * same way and a field that holds one person is simply a list of one. An empty
+ * option is how «nobody» is said, and it disappears here rather than being
+ * stored as a blank id.
+ */
+export function ids(fd: FormData, key: string): string[] {
+  const out: string[] = []
+  for (const raw of fd.getAll(key)) {
+    const value = String(raw).trim()
+    if (value !== '' && !out.includes(value)) out.push(value)
+  }
+  return out
+}
+
 /** A number written with a comma is still a number. */
 export function number(fd: FormData, key: string): number | null {
   const raw = text(fd, key)

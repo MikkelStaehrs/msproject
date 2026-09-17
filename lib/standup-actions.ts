@@ -120,7 +120,7 @@ export async function agreeHere(fd: FormData) {
       // the thing, and asking for a title as well would be asking twice.
       title: body,
       status: 'planned',
-      owner,
+      owner_id: owner,
       due_date: due,
       standup_id: standupId,
     })
@@ -129,7 +129,7 @@ export async function agreeHere(fd: FormData) {
     const patch: Record<string, unknown> = {}
     // Blank leaves what is there. Agreeing a date must not wipe a name nobody
     // discussed.
-    if (owner !== null) patch.owner = owner
+    if (owner !== null) patch.owner_id = owner
     if (due !== null) patch.due_date = due
 
     if (Object.keys(patch).length > 0) {

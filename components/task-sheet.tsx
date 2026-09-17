@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { daysBetween } from '@/lib/date'
 import { editTaskBasics, setStatusWithLine } from '@/lib/node-actions'
 import { QuickAddOn } from '@/components/quick-add-on'
+import { PersonPicker, WasNamed } from '@/components/person-picker'
+import { createClient } from '@/lib/supabase/server'
+import { readPeople } from '@/lib/person-data'
 import { formatDate, relativeDays } from '@/components/ui'
 import { STATUS_LABEL } from '@/lib/types'
 import type {
@@ -31,7 +34,7 @@ import type {
 
 const COLUMNS: NodeStatus[] = ['idea', 'planned', 'active', 'paused', 'done']
 
-export function TaskSheet({
+export async function TaskSheet({
   node,
   code,
   path,
@@ -62,6 +65,10 @@ export function TaskSheet({
   /** The state a drop asked for. The move still has to be said out loud. */
   preselect?: NodeStatus
 }) {
+  /* Read here rather than threaded down: this is a server component, and the
+     sheet is opened from three views of the same page. */
+  const people = await readPeople(await createClient())
+
   const open = blockers.filter((b) => b.is_active)
   const chosen = preselect ?? node.status
   const late =
@@ -125,13 +132,14 @@ export function TaskSheet({
                   )}
                   <label className="flex flex-1 items-baseline gap-2">
                     <span className="lbl shrink-0 text-muted">Driver</span>
-                    <input
-                      name="owner"
-                      defaultValue={node.owner ?? ''}
-                      placeholder="who it waits on"
-                      list="known-people"
-                      className="field"
-                    />
+                    <span className="min-w-0 flex-1">
+                      <PersonPicker
+                        name="owner_id"
+                        people={people}
+                        value={node.owner_id ? [node.owner_id] : []}
+                      />
+                      <WasNamed name={node.owner_name} />
+                    </span>
                   </label>
                 </div>
 

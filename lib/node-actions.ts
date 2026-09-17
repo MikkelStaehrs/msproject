@@ -10,7 +10,7 @@ import { purgeDocumentsForSubtree } from '@/lib/document-actions'
 import { PEOPLE_FIELDS } from '@/lib/identity'
 import { reorder, type Sortable } from '@/lib/reorder'
 import type { NodeStatus, NodeType } from '@/lib/types'
-import { back, required, text, number } from '@/lib/form'
+import { back, ids, required, text, number } from '@/lib/form'
 
 /**
  * The fields the company system requires that cannot be derived. They belong
@@ -40,16 +40,25 @@ function mergeReporting(
   // subproject is rarely led by whoever leads the digitalisation around it.
   // Fields that are not submitted are left standing.
   const people = { ...((current.people ?? {}) as Record<string, unknown>) }
+  const named = { ...((current.people_named ?? {}) as Record<string, unknown>) }
   let touched = false
   for (const f of PEOPLE_FIELDS) {
     const name = `people_${f.key}`
     if (!fd.has(name)) continue
     touched = true
-    const value = text(fd, name)
-    if (value === null) delete people[f.key]
-    else people[f.key] = value
+    // Account ids, not names. Answering a role also clears the leftover name
+    // that role used to hold, and only that role's.
+    const picked = ids(fd, name)
+    if (picked.length === 0) delete people[f.key]
+    else {
+      people[f.key] = picked
+      delete named[f.key]
+    }
   }
-  if (touched) next.people = people
+  if (touched) {
+    next.people = people
+    next.people_named = named
+  }
 
   return next
 }
@@ -66,7 +75,7 @@ function nodeFields(fd: FormData) {
     title: required(fd, 'title'),
     description: text(fd, 'description'),
     status: required(fd, 'status') as NodeStatus,
-    owner: text(fd, 'owner'),
+    owner_id: text(fd, 'owner_id'),
     start_date: text(fd, 'start_date'),
     due_date: text(fd, 'due_date'),
     // Whole days only, and never negative. Nothing reads these yet; they are
@@ -320,7 +329,7 @@ export async function editTaskBasics(fd: FormData) {
     .update({
       title: required(fd, 'title'),
       due_date: text(fd, 'due_date'),
-      owner: text(fd, 'owner'),
+      owner_id: text(fd, 'owner_id'),
       description: text(fd, 'description'),
     })
     .eq('id', required(fd, 'id'))
@@ -341,15 +350,18 @@ export async function editTaskBasics(fd: FormData) {
  * were.
  *
  * An empty value clears it, which is not an accident. «Actually nobody is on
- * this» is a true answer, and a field that refuses it would be answered with a
- * name nobody means.
+ * this» is a true answer, and a picker that refused it would be answered with
+ * whoever is first in the list.
+ *
+ * What it takes is an account id. The database will refuse anything else, which
+ * is the point: a driver who cannot open the task is not driving it.
  */
 export async function setDriver(fd: FormData) {
   const supabase = await createClient()
 
   const { error } = await supabase
     .from('node')
-    .update({ owner: text(fd, 'owner') })
+    .update({ owner_id: text(fd, 'owner_id') })
     .eq('id', required(fd, 'id'))
 
   if (error) throw new Error(`Could not set the driver: ${error.message}`)

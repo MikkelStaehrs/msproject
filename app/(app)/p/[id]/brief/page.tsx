@@ -20,6 +20,7 @@ import {
   splitList,
 } from '@/lib/identity'
 import { readStage } from '@/lib/report'
+import { nameOf, namesOf, readPeopleById } from '@/lib/person-data'
 import { ProgressScale, Prose, Rule, formatDate, formatDateLong } from '@/components/ui'
 import {
   DECISION_TOPICS,
@@ -141,6 +142,11 @@ export default async function BriefPage({
   const state = new Map(((stateRes.data ?? []) as NodeState[]).map((s) => [s.node_id, s]))
 
   const identity = readIdentity(project.reporting)
+  const peopleById = await readPeopleById(supabase)
+  /* The driver: an account, or the name that used to be typed there. */
+  const driver = project.owner_id
+    ? nameOf(peopleById, project.owner_id)
+    : project.owner_name
   const stage = readStage(project.reporting)
   const progress = progressRes.data as NodeProgress | null
   // Fetched whole, cut here. See lib/subtree.
@@ -195,7 +201,9 @@ export default async function BriefPage({
   const variance = approvalVariance(identity.approval, identity.economics)
   const goal = identity.pid.goal
   const body = PID_FIELDS.filter((f) => f.key !== 'goal' && identity.pid[f.key])
-  const people = PEOPLE_FIELDS.filter((f) => identity.people[f.key])
+  const people = PEOPLE_FIELDS.filter(
+    (f) => (identity.people[f.key]?.length ?? 0) > 0 || identity.peopleNamed[f.key],
+  )
   /*
    * Parts that carry their own roles. A subproject run by someone other than
    * the project lead is exactly what a handover document has to say out loud.
@@ -209,18 +217,21 @@ export default async function BriefPage({
     .filter((n) => inProject.has(n.id))
     .map((n) => ({
       title: n.title,
-      roles: PEOPLE_FIELDS.map((f) => ({
-        label: f.label,
-        value: ((n.reporting?.people ?? {}) as Record<string, string>)[f.key],
-      })).filter((r) => r.value),
+      roles: PEOPLE_FIELDS.map((f) => {
+        const role = readIdentity(n.reporting)
+        return {
+          label: f.label,
+          value: namesOf(peopleById, role.people[f.key]) || role.peopleNamed[f.key],
+        }
+      }).filter((r) => r.value),
     }))
     .filter((n) => n.roles.length > 0)
 
   const dependsOnPeople = [
     ...new Set([
       ...blockers.map((b) => b.waiting_on),
-      ...(project.owner ? [project.owner] : []),
-      ...splitList(identity.people.stakeholders),
+      ...(driver ? [driver] : []),
+      ...(identity.people.stakeholders ?? []).map((id) => nameOf(peopleById, id)),
     ]),
   ]
 
@@ -319,7 +330,7 @@ export default async function BriefPage({
               }
             />
             {identity.location && <Line label="Location" value={identity.location} />}
-            {project.owner && <Line label="Driver" value={project.owner} />}
+            {driver && <Line label="Driver" value={driver} />}
             {identity.admin.account && (
               <Line label="Account string" value={identity.admin.account} />
             )}
@@ -332,7 +343,14 @@ export default async function BriefPage({
             <h2 className="font-display text-[22px] font-medium">People</h2>
             <div className="mt-3">
               {people.map((f) => (
-                <Line key={f.key} label={f.label} value={identity.people[f.key]} />
+                <Line
+                  key={f.key}
+                  label={f.label}
+                  value={
+                    namesOf(peopleById, identity.people[f.key]) ||
+                    identity.peopleNamed[f.key]
+                  }
+                />
               ))}
             </div>
           </section>

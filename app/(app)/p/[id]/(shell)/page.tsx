@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { daysBetween, today as todayIso } from '@/lib/date'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { nameOf, readPeopleById } from '@/lib/person-data'
+import { readIdentity } from '@/lib/identity'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { NodeForm, type ParentOption } from '@/components/node-form'
 import { StatusSelect } from '@/components/status-select'
@@ -245,8 +247,18 @@ export default async function TreePage({
     return parts.length === 0 ? base : `${base}?${parts.join('&')}`
   }
 
-  const leadOf = (n: Node) =>
-    ((n.reporting?.people ?? {}) as Record<string, string>).project_manager ?? n.owner
+  /*
+   * Who to put on a part's line: its project manager if a role says so, and
+   * otherwise its driver. Both are account ids now, so both are looked up
+   * rather than read as text.
+   */
+  const leadOf = (n: Node) => {
+    const roles = readIdentity(n.reporting).people
+    const id = roles.project_manager?.[0] ?? n.owner_id
+    return id ? nameOf(peopleById, id) : n.owner_name
+  }
+
+  const peopleById = await readPeopleById(supabase)
 
   const today = todayIso()
 

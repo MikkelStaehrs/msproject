@@ -12,9 +12,36 @@ import {
   type Currency,
   type FieldDef,
 } from '@/lib/identity'
-import { number, required, text } from '@/lib/form'
+import { ids, number, required, text } from '@/lib/form'
 
 /** Fields that are not submitted are left standing in the jsonb. */
+/**
+ * The same, for the fields that hold people.
+ *
+ * Answering a role clears the leftover name for that role and only that role:
+ * picking a project manager says nothing about who the old product owner was.
+ */
+function collectIds(
+  fd: FormData,
+  prefix: string,
+  fields: FieldDef[],
+  current: Record<string, unknown>,
+  named: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = { ...current }
+  for (const f of fields) {
+    const name = `${prefix}${f.key}`
+    if (!fd.has(name)) continue
+    const picked = ids(fd, name)
+    if (picked.length === 0) delete next[f.key]
+    else {
+      next[f.key] = picked
+      delete named[f.key]
+    }
+  }
+  return next
+}
+
 function collect(
   fd: FormData,
   prefix: string,
@@ -59,12 +86,22 @@ export async function saveIdentity(fd: FormData) {
    */
   delete reporting.priority
 
-  reporting.people = collect(
+  /*
+   * Roles hold account ids now, so they are collected as lists rather than as
+   * strings. `people_named`, the names that matched no account when the roles
+   * were converted, is left exactly as it is: nothing writes it, and saving
+   * this form must not quietly erase the one record of who used to be on a
+   * project. It goes per role, when that role gets a real account.
+   */
+  const named = { ...((reporting.people_named ?? {}) as Record<string, unknown>) }
+  reporting.people = collectIds(
     fd,
     'people_',
     PEOPLE_FIELDS,
     (reporting.people ?? {}) as Record<string, unknown>,
+    named,
   )
+  reporting.people_named = named
   reporting.pid = collect(
     fd,
     'pid_',
@@ -103,7 +140,7 @@ export async function saveIdentity(fd: FormData) {
     .update({
       title: required(fd, 'title'),
       description: text(fd, 'description'),
-      owner: text(fd, 'owner'),
+      owner_id: text(fd, 'owner_id'),
       start_date: text(fd, 'start_date'),
       due_date: text(fd, 'due_date'),
       reporting,

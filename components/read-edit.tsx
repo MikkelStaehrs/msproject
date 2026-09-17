@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { costPicture, formatMoney, payback as paybackOf, unpricedShare } from '@/lib/cost'
 import { addMember, removeMember } from '@/lib/member-actions'
-import { knownPeople, namedButLockedOut } from '@/lib/people'
-import { PeopleHint } from '@/components/people-list'
-import { PersonField } from '@/components/person-field'
+import { namedButLockedOut } from '@/lib/people'
+import { PersonPicker, WasNamed } from '@/components/person-picker'
+import { createClient } from '@/lib/supabase/server'
+import { namesOf, readPeople, readPeopleById } from '@/lib/person-data'
 import { saveIdentity } from '@/lib/identity-actions'
 import { addDependency, removeDependency } from '@/lib/dependency-actions'
 import {
@@ -78,7 +79,7 @@ function Field({
   )
 }
 
-export function ReadEdit({
+export async function ReadEdit({
   project,
   everyNode,
   members,
@@ -102,13 +103,14 @@ export function ReadEdit({
   const identity = readIdentity(project.reporting)
   const emailOf = new Map(accounts.map((p) => [p.id, p.email]))
 
-  // The same names the picker offers, written out for the fields that hold
-  // several people, where a suggestion would replace the list rather than
-  // extend it.
-  const knownHere = knownPeople({
-    accounts,
-    roles: everyNode.map((n) => (n.reporting?.people ?? {}) as Record<string, unknown>),
-  })
+  /*
+   * Everybody who can be picked, and the lookup for showing a name. Read here
+   * because this component is the whole Read screen and already sits inside a
+   * page waiting on the database.
+   */
+  const supabase = await createClient()
+  const people = await readPeople(supabase)
+  const peopleById = await readPeopleById(supabase)
 
   /*
    * Named in a role here, has a login, and still cannot open the project.
@@ -118,7 +120,7 @@ export function ReadEdit({
   const memberIds = new Set(members.map((m) => m.user_id))
 
   const lockedOut = namedButLockedOut({
-    roles: PEOPLE_FIELDS.map((f) => ({ label: f.label, value: identity.people[f.key] })),
+    roles: PEOPLE_FIELDS.map((f) => ({ label: f.label, ids: identity.people[f.key] ?? [] })),
     accounts,
     members: memberIds,
   })
@@ -395,21 +397,13 @@ export function ReadEdit({
           <div className={grid}>
             {PEOPLE_FIELDS.map((f) => (
               <Field key={f.key} label={f.label} hint={f.hint} wide={!f.one}>
-                {f.one ? (
-                  <PersonField
-                    name={`people_${f.key}`}
-                    defaultValue={identity.people[f.key] ?? ''}
-                  />
-                ) : (
-                  <>
-                    <input
-                      name={`people_${f.key}`}
-                      defaultValue={identity.people[f.key] ?? ''}
-                      className="field"
-                    />
-                    <PeopleHint names={knownHere} />
-                  </>
-                )}
+                <PersonPicker
+                  name={`people_${f.key}`}
+                  people={people}
+                  value={identity.people[f.key] ?? []}
+                  many={!f.one}
+                />
+                <WasNamed name={identity.peopleNamed[f.key]} />
               </Field>
             ))}
           </div>
@@ -440,7 +434,12 @@ export function ReadEdit({
               label="Driver"
               hint="Who drives this forward. The same field as the driver on every node in the tree, so it is also used when a task is waiting on someone."
             >
-              <input name="owner" defaultValue={project.owner ?? ''} className="field" />
+              <PersonPicker
+                name="owner_id"
+                people={people}
+                value={project.owner_id ? [project.owner_id] : []}
+              />
+              <WasNamed name={project.owner_name} />
             </Field>
             <Field
               label="Location"
@@ -668,9 +667,9 @@ export function ReadEdit({
         to be listed here as «Waiting on». The blockers now speak for
         themselves under «Where it stands», and the names are in People.
       */}
-      {splitList(identity.people.stakeholders).length > 0 && (
+      {(identity.people.stakeholders?.length ?? 0) > 0 && (
         <p className="grp-gap text-[12px] text-muted">
-          Other stakeholders: {splitList(identity.people.stakeholders).join(', ')}.
+          Other stakeholders: {namesOf(peopleById, identity.people.stakeholders)}.
         </p>
       )}
     </div>

@@ -1,5 +1,3 @@
-import { foldName } from './people.ts'
-
 /**
  * What has happened, and which of it is about you.
  *
@@ -26,16 +24,16 @@ import { foldName } from './people.ts'
  * And never, in either case, when you did it yourself. A notification about
  * your own typing is noise with your name on it.
  *
- * The match is on a NAME and not on an account, because `node.owner` and
- * `blocker.waiting_on` are text. That is not an oversight in those columns: the
- * product owner of a real project is often somebody who will never log in here,
- * and the party a blocker waits on is usually an organisation. The cost lands
- * exactly here: somebody whose profile name is not spelled the way their tasks
- * spell it is not told about their own work. The application already pushes
- * against that with one shared list of suggestions everywhere a person is
- * typed, and the folding below takes care of case and stray spacing, but a
- * «Mikkel S» on a task will not match a «Mikkel Stæhr» on a profile and nothing
- * here pretends otherwise.
+ * A DRIVER IS MATCHED BY KEY. This used to fold names and compare spellings,
+ * which made the bell a thing that silently stopped ringing the day somebody
+ * typed «Mikkel S» on a task. `node.owner_id` is a reference now, so the
+ * question «is this mine» is an equality and not a guess.
+ *
+ * `blocker.waiting_on` is still text and still matched by name, and that is
+ * not an oversight left behind: the party a blocker waits on is «Internal IT»
+ * or a supplier far more often than it is a colleague. It is the one place
+ * here where a spelling still decides something, and the only cost of a miss
+ * is a notification you do not get about a wait you can see on the work.
  */
 
 export const FEED_ORDER = [
@@ -97,7 +95,7 @@ export type FeedInput = {
     parent_id: string | null
     title: string
     type: string
-    owner: string | null
+    owner_id: string | null
     status: string
     completed_at: string | null
     created_at: string
@@ -131,7 +129,7 @@ export type FeedInput = {
   }[]
   /** id to name, for the author. An account with no name shows as its email. */
   nameOf: Map<string, string>
-  /** The account reading the feed. */
+  /** The account reading the feed. The name is only for blocker recipients. */
   me: { id: string; name: string | null }
 }
 
@@ -147,15 +145,27 @@ export type FeedInput = {
  * «this is the newest thing I know about that day», which is the reading a feed
  * is for.
  */
+/** Case and stray spacing do not make a new person. */
+const fold = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase()
+
 const sortable = (at: string) => (at.length === 10 ? `${at}T23:59:59.999Z` : at)
 
 export function feedItems(input: FeedInput): FeedItem[] {
   const byId = new Map(input.nodes.map((n) => [n.id, n]))
-  const myName = input.me.name === null ? null : foldName(input.me.name)
+  const myName = input.me.name === null ? null : fold(input.me.name)
 
-  /** A name that is mine. Null on either side is nobody, and nobody is not me. */
-  const isMe = (written: string | null) =>
-    myName !== null && written !== null && foldName(written) === myName
+  /**
+   * A name that is mine, for the one field that is still a name.
+   * Null on either side is nobody, and nobody is not me.
+   */
+  const isMyName = (written: string | null) =>
+    myName !== null && written !== null && fold(written) === myName
+
+  /** Work I drive. An equality, because a driver is an account. */
+  const iDrive = (nodeId: string) => {
+    const owner = byId.get(nodeId)?.owner_id ?? null
+    return owner !== null && owner === input.me.id
+  }
 
   const titleOf = (nodeId: string) => byId.get(nodeId)?.title ?? 'work you cannot open'
 
@@ -170,7 +180,7 @@ export function feedItems(input: FeedInput): FeedItem[] {
   const isMine = (author: string | null) => author !== null && author === input.me.id
 
   const aboutMe = (nodeId: string, author: string | null) =>
-    !isMine(author) && isMe(byId.get(nodeId)?.owner ?? null)
+    !isMine(author) && iDrive(nodeId)
 
   const out: FeedItem[] = []
 
@@ -197,7 +207,7 @@ export function feedItems(input: FeedInput): FeedItem[] {
      * somebody did, and this one tells you that something is waiting, which
      * goes on being true and goes on being yours no matter who typed it.
      */
-    const waitingOnMe = isMe(b.waiting_on)
+    const waitingOnMe = isMyName(b.waiting_on)
     out.push({
       id: `stuck:${b.id}`,
       kind: 'blocker_opened',
@@ -222,7 +232,7 @@ export function feedItems(input: FeedInput): FeedItem[] {
         sortKey: sortable(b.resolved_at),
         /* Nothing records who closed it, and the opener is a bad guess. */
         who: null,
-        mine: waitingOnMe || isMe(byId.get(b.node_id)?.owner ?? null),
+        mine: waitingOnMe || iDrive(b.node_id),
         rust: false,
       })
     }
@@ -255,7 +265,7 @@ export function feedItems(input: FeedInput): FeedItem[] {
         sortKey: sortable(n.completed_at),
         /* `created_by` made it; nothing recorded who finished it. */
         who: null,
-        mine: isMe(n.owner),
+        mine: iDrive(n.id),
         rust: false,
       })
     }
@@ -275,7 +285,7 @@ export function feedItems(input: FeedInput): FeedItem[] {
       at: n.created_at,
       sortKey: sortable(n.created_at),
       who: n.created_by === null ? null : (input.nameOf.get(n.created_by) ?? null),
-      mine: !isMine(n.created_by) && isMe(n.owner),
+      mine: !isMine(n.created_by) && iDrive(n.id),
       rust: false,
     })
   }

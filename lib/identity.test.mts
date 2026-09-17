@@ -39,9 +39,34 @@ check(
   null,
 )
 check(
-  'people are read from their own space',
-  readIdentity({ people: { project_owner: 'Kvalitet', ukendt: 'x' } }).people,
-  { project_owner: 'Kvalitet' },
+  'roles are read from their own space, and hold account ids',
+  readIdentity({ people: { project_owner: ['u-1'], ukendt: ['u-2'] } }).people,
+  { project_owner: ['u-1'] },
+)
+/*
+ * A leftover string is read as one id rather than throwing the identity away.
+ * The migration rewrote every row, but `reporting` is jsonb and this
+ * application is not the only thing that has ever written one: /api/mcp writes
+ * nodes, and a row fixed by hand in the Supabase editor has happened here.
+ */
+check(
+  'a leftover string is read as a single id',
+  readIdentity({ people: { project_owner: 'u-1' } }).people,
+  { project_owner: ['u-1'] },
+)
+check(
+  'and an empty role is absent rather than empty',
+  readIdentity({ people: { project_owner: [], process_owner: '  ' } }).people,
+  {},
+)
+/*
+ * The names that matched no account when roles were converted. Read only, and
+ * shown in rust until somebody answers them.
+ */
+check(
+  'the leftover names are read beside the roles',
+  readIdentity({ people_named: { product_owner: 'Jan T. Hansen', ukendt: 'x' } }).peopleNamed,
+  { product_owner: 'Jan T. Hansen' },
 )
 
 // --- Formatting -----------------------------------------------------------

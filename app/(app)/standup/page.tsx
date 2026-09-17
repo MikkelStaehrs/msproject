@@ -4,6 +4,7 @@ import { QueryFailure, firstError } from '@/lib/failure'
 import { addDays, today as todayIso } from '@/lib/date'
 import { looseEnds } from '@/lib/loose-ends'
 import { projectOf } from '@/lib/subtree'
+import { readPeople } from '@/lib/person-data'
 import {
   agenda,
   attendees,
@@ -133,6 +134,9 @@ export default async function StandupPage({
   const decisions = (decisionRes.data ?? []) as Decision[]
   const lines = (lineRes.data ?? []) as Cost[]
   const held = (standupRes.data ?? []) as Standup[]
+
+  const people = await readPeople(supabase)
+  const peopleById = new Map(people.map((p) => [p.id, p.label]))
 
   const state = new Map(((stateRes.data ?? []) as NodeState[]).map((s) => [s.node_id, s]))
   const readyBy = new Map(((readyRes.data ?? []) as NodeReady[]).map((r) => [r.node_id, r]))
@@ -491,6 +495,8 @@ export default async function StandupPage({
         <WhatWeAreDoing
           queue={queue}
           undriven={items.filter((i) => i.kind === 'no_driver')}
+          people={people}
+          peopleById={peopleById}
           liveCount={liveCount}
           selected={selected}
           prev={prev}

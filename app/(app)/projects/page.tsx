@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { nameOf, readPeopleById } from '@/lib/person-data'
+import { readIdentity } from '@/lib/identity'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { projectOf, subtreeSet } from '@/lib/subtree'
 import { NodeForm } from '@/components/node-form'
@@ -110,14 +112,26 @@ export default async function ProjectsPage({
     if (key) openIn.set(key, [...(openIn.get(key) ?? []), b])
   }
 
+  const peopleById = await readPeopleById(supabase)
+
   const rows: ProjectRow[] = roots.map((r) => {
     const p = progress.get(r.id)
     const nx = nextDates.get(r.id)
     const open = openIn.get(r.id) ?? []
-    const people = (r.reporting?.people ?? {}) as Record<string, unknown>
+    const roles = readIdentity(r.reporting).people
     const projectNo = r.reporting?.project_no
     const servesIds = marks.get(r.id) ?? []
-    const owner = people.project_owner || people.creator
+    /*
+     * The project owner if a role says so, otherwise whoever created it, and
+     * otherwise the driver on the project itself. Three answers to «whose is
+     * this» and the column wants the most specific one that exists.
+     *
+     * All three are account ids now, so this reads a name out of `profile`
+     * rather than out of the jsonb. The type checker did not catch this one
+     * when the shape changed, because the blob was read through an `unknown`
+     * cast: the column would simply have started showing a uuid.
+     */
+    const driverId = roles.project_owner?.[0] ?? roles.creator?.[0] ?? r.owner_id
     return {
       id: r.id,
       code: typeof projectNo === 'string' ? projectNo : '',
@@ -134,7 +148,7 @@ export default async function ProjectsPage({
       serves: servesIds.length
         ? servesIds.map((id) => strategyById.get(id)?.name ?? '').join(', ')
         : null,
-      owner: typeof owner === 'string' ? owner : '',
+      owner: driverId ? nameOf(peopleById, driverId) : (r.owner_name ?? ''),
     }
   })
 

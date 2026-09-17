@@ -44,7 +44,19 @@ export interface Node {
   title: string
   description: string | null
   status: NodeStatus
-  owner: string | null
+  /**
+   * Who is driving this work: an account here, because a driver who cannot
+   * open the task is not driving it. Null is nobody, which the stand-up asks
+   * about every week.
+   */
+  owner_id: string | null
+  /**
+   * READ ONLY, and almost always null. What the driver field held before a
+   * driver became an account, for the rows whose name matched nobody. Shown in
+   * rust so it gets answered. Nothing in the application writes it, and the
+   * database refuses to hold it alongside an owner_id.
+   */
+  owner_name: string | null
   start_date: string | null
   due_date: string | null
   completed_at: string | null

@@ -193,7 +193,19 @@ export type Identity = {
   admin: Record<string, string>
   /** Hall, line or plant: where it physically happens. */
   location: string | null
-  people: Record<string, string>
+  /**
+   * Account ids per role. An array even where the field holds one person: one
+   * shape for all eight beats a byte saved on five of them, and splitting a
+   * typed string on commas is how the same person got into this database under
+   * two spellings.
+   */
+  people: Record<string, string[]>
+  /**
+   * What was typed into a role before a role became an account, for the names
+   * that matched nobody. Read only, shown in rust, and it disappears by being
+   * answered. See migration 20260917000004.
+   */
+  peopleNamed: Record<string, string>
   pid: Record<string, string>
   economics: Economics
   approval: Approval
@@ -204,6 +216,31 @@ function readRecord(value: unknown, fields: FieldDef[]): Record<string, string> 
   const out: Record<string, string> = {}
   for (const f of fields) {
     if (typeof src[f.key] === 'string') out[f.key] = src[f.key] as string
+  }
+  return out
+}
+
+/**
+ * Account ids for each role.
+ *
+ * Tolerant of the old shape on purpose. The migration rewrote every row, but
+ * `reporting` is jsonb and this application is not the only thing that has ever
+ * written one: /api/mcp writes nodes, and a row fixed by hand in the Supabase
+ * editor is a thing that has happened here. A leftover string is read as a
+ * single id rather than throwing the whole identity away, and an id naming no
+ * account simply shows as nobody.
+ */
+function readIds(value: unknown, fields: FieldDef[]): Record<string, string[]> {
+  const src = (value ?? {}) as Record<string, unknown>
+  const out: Record<string, string[]> = {}
+  for (const f of fields) {
+    const raw = src[f.key]
+    if (Array.isArray(raw)) {
+      const ids = raw.filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+      if (ids.length > 0) out[f.key] = ids
+    } else if (typeof raw === 'string' && raw.trim() !== '') {
+      out[f.key] = [raw.trim()]
+    }
   }
   return out
 }
@@ -226,7 +263,8 @@ export function readIdentity(reporting: unknown): Identity {
   return {
     admin: readRecord(r, ADMIN_FIELDS),
     location: readText(r.location),
-    people: readRecord(r.people, PEOPLE_FIELDS),
+    people: readIds(r.people, PEOPLE_FIELDS),
+    peopleNamed: readRecord(r.people_named, PEOPLE_FIELDS),
     pid: readRecord(r.pid, PID_FIELDS),
     approval: {
       state: (APPROVAL_STATES as readonly string[]).includes(String(appr.state))

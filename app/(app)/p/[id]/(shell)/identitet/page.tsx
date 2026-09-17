@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { namesOf, readPeopleById } from '@/lib/person-data'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { subtreeSet } from '@/lib/subtree'
 import { paragraphs } from '@/lib/prose'
@@ -239,7 +240,11 @@ export default async function ReadPage({
     identity.location,
     stage,
   ].filter(Boolean)
-  const roles = ROLES.filter(([key]) => identity.people[key])
+  const peopleById = await readPeopleById(supabase)
+  /* A role counts as filled by an account OR by a name still to be answered. */
+  const roles = ROLES.filter(
+    ([key]) => (identity.people[key]?.length ?? 0) > 0 || identity.peopleNamed[key],
+  )
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
@@ -339,7 +344,13 @@ export default async function ReadPage({
                     {roles.map(([key, name]) => (
                       <tr key={key}>
                         <td className="lbl text-muted">{name}</td>
-                        <td className="grow">{identity.people[key]}</td>
+                        <td className="grow">
+                          {namesOf(peopleById, identity.people[key]) || (
+                            <span className="text-rust">
+                              {identity.peopleNamed[key]}, who has no account here
+                            </span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                     <tr>

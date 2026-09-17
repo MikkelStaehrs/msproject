@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { agreeHere } from '@/lib/standup-actions'
-import { PersonField } from '@/components/person-field'
+import { PersonPicker } from '@/components/person-picker'
+import { createClient } from '@/lib/supabase/server'
+import { readPeople } from '@/lib/person-data'
 import { Hint } from '@/components/ui'
 
 /**
@@ -17,7 +19,7 @@ import { Hint } from '@/components/ui'
  * commitment means: by the time we meet again. It is a default and not a rule -
  * some things take a month, and typing over it is the whole of saying so.
  */
-export function AgreedHere({
+export async function AgreedHere({
   nodeId,
   nextOn,
   open,
@@ -33,6 +35,9 @@ export function AgreedHere({
   closeHref: string
   redirectTo: string
 }) {
+  /* Read after the closed case below, which draws no form and needs nobody. */
+  const people = open ? await readPeople(await createClient()) : []
+
   if (!open) {
     return (
       <Link href={openHref} className="lbl-tight text-green hover:text-oxblood">
@@ -66,7 +71,12 @@ export function AgreedHere({
       <div className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-3">
         <label className="block">
           <span className="lbl-tight text-muted">Who takes it</span>
-          <PersonField name="owner" defaultValue="" />
+          <PersonPicker
+            name="owner"
+            people={people}
+            value={[]}
+            emptyLabel="Nobody yet"
+          />
         </label>
 
         <label className="block">

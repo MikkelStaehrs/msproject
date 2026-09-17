@@ -95,8 +95,8 @@ export type AgendaInput = {
     status: string
     due_date: string | null
     completed_at: string | null
-    /** Whose work it is. Null or empty means nobody has said. */
-    owner: string | null
+    /** The account driving it. Null means nobody has said. */
+    owner_id: string | null
   }[]
   blockers: {
     id: string
@@ -156,8 +156,14 @@ export function agenda(input: AgendaInput): AgendaItem[] {
     input.nodes.map((n) => n.parent_id).filter((p): p is string => p !== null),
   )
 
-  /** Nobody has said. An empty field is not a name. */
-  const undriven = (owner: string | null) => owner === null || owner.trim() === ''
+  /*
+   * Nobody has said.
+   *
+   * It used to also have to rule out «   », because the field was free text and
+   * a field of spaces is not a name. A driver is an account now, so null is the
+   * whole of it and the database will not hold anything else.
+   */
+  const undriven = (ownerId: string | null) => ownerId === null
 
   for (const b of input.blockers) {
     if (b.resolved_at !== null) continue
@@ -205,7 +211,7 @@ export function agenda(input: AgendaInput): AgendaItem[] {
           */
           why:
             `Its date was ${n.due_date}. Either it moves or it is finished.` +
-            (undriven(n.owner) ? ' Nobody is driving it either.' : ''),
+            (undriven(n.owner_id) ? ' Nobody is driving it either.' : ''),
         })
         continue
       }
@@ -219,7 +225,7 @@ export function agenda(input: AgendaInput): AgendaItem[] {
           on: n.due_date,
           why:
             `Due ${n.due_date}, before the next stand-up.` +
-            (undriven(n.owner) ? ' And nobody is driving it.' : ''),
+            (undriven(n.owner_id) ? ' And nobody is driving it.' : ''),
         })
         continue
       }
@@ -251,7 +257,7 @@ export function agenda(input: AgendaInput): AgendaItem[] {
      * It is the one item on the agenda with no number worth showing, so days
      * is zero and the row reads on its title alone.
      */
-    if (!hasChildren.has(n.id) && undriven(n.owner)) {
+    if (!hasChildren.has(n.id) && undriven(n.owner_id)) {
       items.push({
         kind: 'no_driver',
         nodeId: n.id,

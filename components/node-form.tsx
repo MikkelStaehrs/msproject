@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { createNode, updateNode } from '@/lib/node-actions'
 import { DeleteNodeButton } from '@/components/delete-node-button'
-import { PersonField } from '@/components/person-field'
-import { PEOPLE_FIELDS } from '@/lib/identity'
+import { PersonPicker, WasNamed } from '@/components/person-picker'
+import { createClient } from '@/lib/supabase/server'
+import { readPeople } from '@/lib/person-data'
+import { PEOPLE_FIELDS, readIdentity } from '@/lib/identity'
 import { Hint } from '@/components/ui'
 import {
   STATUS_LABEL,
@@ -14,9 +16,6 @@ import {
 } from '@/lib/types'
 
 export type ParentOption = { id: string; title: string; depth: number }
-
-/** One list, shared by every single-person field on the form. */
-const PEOPLE_LIST = 'known-people'
 
 function Field({
   label,
@@ -39,7 +38,7 @@ function Field({
  * One form for both create and edit. Derived fields, progress, day counts and
  * next date, do not appear here and therefore cannot be edited.
  */
-export function NodeForm({
+export async function NodeForm({
   node,
   parentId,
   parentOptions,
@@ -54,6 +53,16 @@ export function NodeForm({
   cancelHref: string
   descendantCount?: number
 }) {
+  /*
+   * The accounts are read here rather than handed down.
+   *
+   * This form is rendered from eleven places and every one of them would
+   * otherwise have to fetch the same rows and pass them through. It is a server
+   * component, so it can simply ask; the read is one small table and it sits
+   * inside a page that is already waiting on the database.
+   */
+  const people = await readPeople(await createClient())
+
   const editing = node !== undefined
   const defaultType: NodeType = editing ? node.type : parentId ? 'task' : 'project'
   const formId = `node-form-${node?.id ?? 'ny'}`
@@ -61,9 +70,14 @@ export function NodeForm({
   // Master data, project number, account string, goal, people and economics,
   // belongs on the identity page. Only what applies to any node is here.
   const isRoot = editing ? node.parent_id === null : (parentId ?? null) === null
-  const people = (node?.reporting?.people ?? {}) as Record<string, string | undefined>
+  const identity = readIdentity(node?.reporting)
+  const roles = identity.people
+  const rolesNamed = identity.peopleNamed
   const reporting = (node?.reporting ?? {}) as Record<string, string | undefined>
-  const filledRoles = PEOPLE_FIELDS.filter((f) => people[f.key]).length
+  /* A role counts as filled by an account OR by a name still to be answered. */
+  const filledRoles = PEOPLE_FIELDS.filter(
+    (f) => (roles[f.key]?.length ?? 0) > 0 || rolesNamed[f.key],
+  ).length
 
   return (
     <div className="border-y border-rule-strong bg-sheet px-6 py-5">
@@ -118,12 +132,12 @@ export function NodeForm({
         </Field>
 
         <Field label="Driver">
-          <input
-            name="owner"
-            defaultValue={node?.owner ?? ''}
-            placeholder="IT, Vendor, Management..."
-            className="field"
+          <PersonPicker
+            name="owner_id"
+            people={people}
+            value={node?.owner_id ? [node.owner_id] : []}
           />
+          <WasNamed name={node?.owner_name} />
         </Field>
 
         <Field label="Start">
@@ -242,19 +256,13 @@ export function NodeForm({
                   <span className="lbl block text-muted">
                     {f.hint ? <Hint text={f.hint}>{f.label}</Hint> : f.label}
                   </span>
-                  {f.one ? (
-                    <PersonField
-                      name={`people_${f.key}`}
-                      defaultValue={people[f.key] ?? ''}
-                      listId={PEOPLE_LIST}
-                    />
-                  ) : (
-                    <input
-                      name={`people_${f.key}`}
-                      defaultValue={people[f.key] ?? ''}
-                      className="field"
-                    />
-                  )}
+                  <PersonPicker
+                    name={`people_${f.key}`}
+                    people={people}
+                    value={roles[f.key] ?? []}
+                    many={!f.one}
+                  />
+                  <WasNamed name={rolesNamed[f.key]} />
                 </label>
               ))}
             </div>

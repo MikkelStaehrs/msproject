@@ -5,10 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { readRecipients } from '@/lib/recipient-data'
 import { redirect } from 'next/navigation'
-import { knownPeople } from '@/lib/people'
 import { feedItems, unseenCount } from '@/lib/feed'
 import type { Blocker, Decision, Entry, Node, Profile } from '@/lib/types'
-import { PeopleList } from '@/components/people-list'
 import { HeaderUtility } from '@/components/header-utility'
 
 type Flat = { id: string; parent_id: string | null; title: string; sort_order: number }
@@ -166,25 +164,18 @@ export default async function AppLayout({
   const targets = buildTargets((treeRes.data ?? []) as Flat[])
 
   /*
-   * Everyone this portfolio already knows about, rendered once here as a
-   * datalist the role fields on every page point at. It sits in the layout
-   * rather than being handed down through five components, and it is cheap:
-   * these are rows already being read to build the quick entry targets.
+   * The datalist of names that used to live here is gone.
    *
-   * The names TYPED INTO ROLES are cut by RLS without being asked, so a
-   * colleague never sees who is named on work they have no access to. The
-   * ACCOUNTS are not: `profile` is readable by anyone signed in, on purpose,
-   * because you cannot add a colleague to a project without being able to name
-   * them. Which is to say the picker knows every account here and only the
-   * roles you may see, and that asymmetry is deliberate rather than an
-   * oversight.
+   * It existed so a role field could suggest without constraining, which was
+   * the right shape while a role held typed text. Every role is an account now
+   * and every field that holds one is a picker over `profile`, so a second
+   * list of the same people, assembled differently, would be a second answer
+   * to the same question.
+   *
+   * The one place a person is still typed is a blocker's recipient, and that
+   * list is `recipients` below: derived from the blockers themselves, because
+   * the party you wait on is «Internal IT» far more often than a colleague.
    */
-  const people = knownPeople({
-    accounts: (profileRes.data ?? []) as Profile[],
-    roles: ((peopleRes.data ?? []) as { reporting: Record<string, unknown> }[]).map(
-      (n) => (n.reporting?.people ?? {}) as Record<string, unknown>,
-    ),
-  })
 
   // Travels with the header for the same reason the targets do: the overlay
   // needs it the instant it opens, and the list is tiny.
@@ -218,7 +209,6 @@ export default async function AppLayout({
       <div className="no-print h-px bg-line-strong" />
       {children}
       <QuickAdd targets={targets} recipients={recipients} />
-      <PeopleList names={people} />
     </>
   )
 }

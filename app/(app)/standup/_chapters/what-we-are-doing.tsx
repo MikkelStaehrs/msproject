@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { AGENDA_LABEL, type AgendaItem } from '@/lib/standup'
 import { moveInStandupQueue, setDriver, setNodeStatus } from '@/lib/node-actions'
+import { nameOf } from '@/lib/person-data'
+import { PersonPicker, type Person } from '@/components/person-picker'
 import { formatMoney } from '@/lib/cost'
 import { daysBetween } from '@/lib/date'
 import { BlockerForm, ResolveBlockerForm } from '@/components/blocker-form'
@@ -54,6 +56,8 @@ export type Row = { nodeId: string; lead: AgendaItem; also: AgendaItem[] }
 export function WhatWeAreDoing({
   queue,
   undriven,
+  people,
+  peopleById,
   liveCount,
   selected,
   prev,
@@ -82,6 +86,9 @@ export function WhatWeAreDoing({
   queue: { node: Node; project: Node }[]
   /** The agenda's «no driver» items, so the room can answer them in place. */
   undriven: AgendaItem[]
+  /** Everybody who can be put on work, and the lookup for showing a name. */
+  people: Person[]
+  peopleById: Map<string, string>
   liveCount: number
   selected: Node | undefined
   prev: Node | undefined
@@ -160,12 +167,15 @@ export function WhatWeAreDoing({
                   <form action={setDriver} className="mt-1.5 flex items-end gap-2">
                     <input type="hidden" name="id" value={i.nodeId} />
                     <input type="hidden" name="redirectTo" value={at(i.nodeId)} />
-                    <input
-                      name="owner"
-                      list="known-people"
-                      placeholder="Who is driving it"
-                      className="field min-w-0 flex-1 text-[12px]"
-                    />
+                    <span className="min-w-0 flex-1">
+                      <PersonPicker
+                        name="owner_id"
+                        people={people}
+                        value={[]}
+                        emptyLabel="Who is driving it"
+                        className="text-[12px]"
+                      />
+                    </span>
                     <button className="btn btn-ghost shrink-0">Set</button>
                   </form>
                 </div>
@@ -380,7 +390,14 @@ export function WhatWeAreDoing({
                   {relativeDays(daysBetween(today, selected.due_date))}
                 </span>
               )}
-              <Fact label="Driver" value={selected.owner} />
+              <Fact
+                label="Driver"
+                value={
+                  selected.owner_id
+                    ? nameOf(peopleById, selected.owner_id)
+                    : (selected.owner_name ?? null)
+                }
+              />
               <Fact
                 label="Priced"
                 value={

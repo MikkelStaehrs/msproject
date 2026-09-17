@@ -31,7 +31,7 @@ const node = (over: Partial<FeedInput['nodes'][number]> = {}) => ({
   parent_id: 'p1',
   title: 'Master data',
   type: 'task',
-  owner: null as string | null,
+  owner_id: null as string | null,
   status: 'active',
   completed_at: null as string | null,
   created_at: '2026-09-01T09:00:00Z',
@@ -74,27 +74,27 @@ const mine = (input: Partial<FeedInput>) =>
 // --- What names you ---------------------------------------------------------
 check(
   'a line on work I drive is mine',
-  mine({ nodes: [node({ owner: 'Mikkel Stæhr' })], entries: [entry()] }).map((i) => i.kind),
+  mine({ nodes: [node({ owner_id: ME })], entries: [entry()] }).map((i) => i.kind),
   ['line'],
 )
 check(
   'and so is the task itself, when somebody else made it for me',
-  mine({ nodes: [node({ owner: 'Mikkel Stæhr', created_by: OTHER })] }).map((i) => i.kind),
+  mine({ nodes: [node({ owner_id: ME, created_by: OTHER })] }).map((i) => i.kind),
   ['created'],
 )
 check(
   'a task I made for myself is not',
-  mine({ nodes: [node({ owner: 'Mikkel Stæhr' })] }).length,
+  mine({ nodes: [node({ owner_id: ME })] }).length,
   0,
 )
 check(
   'a line on work somebody else drives is not',
-  mine({ nodes: [node({ owner: 'Anna Berg' })], entries: [entry()] }).length,
+  mine({ nodes: [node({ owner_id: OTHER })], entries: [entry()] }).length,
   0,
 )
 check(
   'and neither is a line on work nobody drives',
-  mine({ nodes: [node({ owner: null })], entries: [entry()] }).length,
+  mine({ nodes: [node({ owner_id: null })], entries: [entry()] }).length,
   0,
 )
 
@@ -106,7 +106,7 @@ check(
 check(
   'my own line on my own work is not a notification',
   mine({
-    nodes: [node({ owner: 'Mikkel Stæhr' })],
+    nodes: [node({ owner_id: ME })],
     entries: [entry({ created_by: ME })],
   }).length,
   0,
@@ -115,7 +115,7 @@ check(
   'but it is still in the feed',
   feedItems({
     ...blank,
-    nodes: [node({ owner: 'Mikkel Stæhr' })],
+    nodes: [node({ owner_id: ME })],
     entries: [entry({ created_by: ME })],
   }).filter((i) => i.kind === 'line').length,
   1,
@@ -123,27 +123,42 @@ check(
 
 // --- Spelling ---------------------------------------------------------------
 check(
-  'case and stray spacing do not make a different person',
+  'work I drive is matched by key, not by spelling',
   mine({
-    nodes: [node({ owner: '  mikkel   stæhr ' })],
+    nodes: [node({ owner_id: ME })],
     entries: [entry()],
   }).length,
   1,
 )
 check(
-  'a different spelling is a different person, and is not guessed at',
-  mine({ nodes: [node({ owner: 'Mikkel S' })], entries: [entry()] }).length,
+  'a task driven by somebody else is not mine',
+  mine({ nodes: [node({ owner_id: 'u-nobody' })], entries: [entry()] }).length,
   0,
 )
+/*
+ * A driver is a key now, so a person with no name set still gets told about
+ * their own work. The name only decides blocker recipients, which are still
+ * text because they are usually organisations.
+ */
 check(
-  'an account with no name is named by nothing',
+  'an account with no name is still told about work it drives',
   feedItems({
     ...blank,
     me: { id: ME, name: null },
-    nodes: [node({ owner: 'Mikkel Stæhr' })],
+    nodes: [node({ owner_id: ME })],
     entries: [entry()],
   }).filter((i) => i.mine).length,
-  0,
+  1,
+)
+check(
+  'but a blocker recipient is still matched by name, so it finds nobody',
+  feedItems({
+    ...blank,
+    me: { id: ME, name: null },
+    nodes: [node()],
+    blockers: [blocker({ waiting_on: 'Mikkel Stæhr' })],
+  }).some((i) => i.rust),
+  false,
 )
 
 // --- Blockers ---------------------------------------------------------------
@@ -155,7 +170,7 @@ check(
 check(
   'a blocker waiting on me is mine even though I opened it',
   mine({
-    nodes: [node({ owner: 'Anna Berg' })],
+    nodes: [node({ owner_id: OTHER })],
     blockers: [blocker({ waiting_on: 'Mikkel Stæhr', created_by: ME })],
   }).map((i) => i.kind),
   ['blocker_opened'],
@@ -241,7 +256,7 @@ check(
 // --- The number on the bell -------------------------------------------------
 const forCounting = feedItems({
   ...blank,
-  nodes: [node({ owner: 'Mikkel Stæhr' })],
+  nodes: [node({ owner_id: ME })],
   entries: [
     entry({ id: 'old', created_at: '2026-09-01T09:00:00Z' }),
     entry({ id: 'new', created_at: '2026-09-15T09:00:00Z' }),
@@ -253,7 +268,7 @@ check('looked since means none', unseenCount(forCounting, '2026-09-20T00:00:00Z'
 check(
   'and it only ever counts what names me',
   unseenCount(
-    feedItems({ ...blank, nodes: [node({ owner: 'Anna Berg' })], entries: [entry()] }),
+    feedItems({ ...blank, nodes: [node({ owner_id: OTHER })], entries: [entry()] }),
     null,
   ),
   0,
