@@ -58,6 +58,7 @@ export default async function TreePage({
     focus?: string
     view?: string
     sc?: string
+    part?: string
     task?: string
     to?: string
     bedit?: string
@@ -75,6 +76,7 @@ export default async function TreePage({
     focus: focusId,
     view: viewParam,
     sc: scParam,
+    part: partParam,
     task: taskId,
     to: moveTo,
     bedit: editBlockerId,
@@ -237,6 +239,7 @@ export default async function TreePage({
       focusId ? `focus=${focusId}` : '',
       viewParam ? `view=${viewParam}` : '',
       scParam ? `sc=${scParam}` : '',
+      partParam ? `part=${partParam}` : '',
       extra,
     ].filter(Boolean)
     return parts.length === 0 ? base : `${base}?${parts.join('&')}`
@@ -556,7 +559,49 @@ export default async function TreePage({
     }
   }
   gather(treeRootId)
-  const boardWork = boardScope === 'here' ? here : below
+
+  /*
+   * One part at a time.
+   *
+   * «Everything below» is the reading you want on arrival and the one that
+   * stops being readable first: a project whose five subprojects each carry
+   * the same three tasks puts «2D mapping» in the same column five times, and
+   * the column then says twenty-three without saying twenty-three of what.
+   *
+   * The group heads answer that where the eye lands. This answers it where the
+   * eye does not have to: pick a part and the board is that part's board, in
+   * the same three columns, with everything else out of the way. It is a
+   * filter and not a scope, so the counts either side of it still describe the
+   * whole branch and the rail still says where you are standing.
+   *
+   * Only the parts that actually carry work are offered. A subproject with no
+   * tasks under it is a switch that empties the board, which is not a filter
+   * but a trap.
+   */
+  const partsWithWork: Node[] = []
+  {
+    const seen = new Set<string>()
+    for (const n of below) {
+      const parentId = n.parent_id ?? treeRootId
+      if (parentId === treeRootId || seen.has(parentId)) continue
+      const parent = byId.get(parentId)
+      if (parent) {
+        seen.add(parentId)
+        partsWithWork.push(parent)
+      }
+    }
+  }
+
+  /* An id that no longer names a part is ignored rather than obeyed: a stale
+     link should show the board, never an empty one. */
+  const partFilter =
+    partParam && partsWithWork.some((p) => p.id === partParam) ? partParam : null
+
+  const belowShown = partFilter
+    ? below.filter((n) => (n.parent_id ?? treeRootId) === partFilter)
+    : below
+
+  const boardWork = boardScope === 'here' ? here : belowShown
 
   const deps = (depRes.data ?? []) as NodeDependency[]
   const rootCount = progress.get(treeRootId) ?? { leaf_done: 0, leaf_total: 0 }
@@ -885,7 +930,12 @@ export default async function TreePage({
               ).map(([s, label]) => (
                 <Link
                   key={s}
-                  href={viewHref('board', focusId ? `focus=${focusId}&sc=${s}` : `sc=${s}`)}
+                  href={viewHref(
+                    'board',
+                    [focusId ? `focus=${focusId}` : '', `sc=${s}`, s === 'below' && partFilter ? `part=${partFilter}` : '']
+                      .filter(Boolean)
+                      .join('&'),
+                  )}
                   aria-pressed={boardScope === s}
                   className={boardScope === s ? 'text-green' : 'text-muted hover:text-ink'}
                 >
@@ -916,23 +966,66 @@ export default async function TreePage({
         rail and the map already draw, and then every card is a different kind
         of thing. Only a task counts as work, so only a task is a card.
       */}
+      {view === 'board' && boardScope === 'below' && partsWithWork.length > 1 && (
+        <div className="filterrow mt-5 gap-x-5 gap-y-1.5">
+          <span className="micro mr-1 text-rule-strong">Part</span>
+          <Link
+            href={viewHref('board', focusId ? `focus=${focusId}&sc=below` : 'sc=below')}
+            aria-pressed={partFilter === null}
+            className={partFilter === null ? 'text-green' : 'text-muted hover:text-ink'}
+          >
+            All {partsWithWork.length}
+          </Link>
+          {partsWithWork.map((p) => (
+            <Link
+              key={p.id}
+              href={viewHref(
+                'board',
+                [focusId ? `focus=${focusId}` : '', 'sc=below', `part=${p.id}`]
+                  .filter(Boolean)
+                  .join('&'),
+              )}
+              aria-pressed={partFilter === p.id}
+              className={partFilter === p.id ? 'text-green' : 'text-muted hover:text-ink'}
+            >
+              {p.title}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {view === 'board' && (
         <div className="mt-6">
           {boardWork.length === 0 ? (
             <p className="panel px-3.5 py-3 text-[13px] text-muted">
-              No task sits directly under {treeRoot.title}.{' '}
-              {below.length > 0 ? (
+              {partFilter !== null ? (
                 <>
-                  {below.length} sit further down.{' '}
+                  Nothing under {byId.get(partFilter)?.title ?? 'that part'} is in any
+                  of these three states.{' '}
                   <Link
                     href={viewHref('board', focusId ? `focus=${focusId}&sc=below` : 'sc=below')}
                     className="act"
                   >
-                    Show everything below
+                    Show every part
                   </Link>
                 </>
               ) : (
-                'Nothing under it has been broken down into tasks yet.'
+                <>
+                  No task sits directly under {treeRoot.title}.{' '}
+                  {below.length > 0 ? (
+                    <>
+                      {below.length} sit further down.{' '}
+                      <Link
+                        href={viewHref('board', focusId ? `focus=${focusId}&sc=below` : 'sc=below')}
+                        className="act"
+                      >
+                        Show everything below
+                      </Link>
+                    </>
+                  ) : (
+                    'Nothing under it has been broken down into tasks yet.'
+                  )}
+                </>
               )}
             </p>
           ) : (
@@ -964,12 +1057,37 @@ export default async function TreePage({
                     {inCol.length === 0 ? (
                       <p className="px-3.5 py-3 text-[12px] text-muted">Nothing here.</p>
                     ) : boardScope === 'below' ? (
+                      /*
+                        A part's cards have to read as that part's.
+                        The group used to end in the same hairline a card ends
+                        in, and its name was a small label in the same rhythm
+                        as a card's own «TASK». So five subprojects each
+                        carrying «2D mapping», «Master data» and «Maintenance
+                        history» drew fifteen identical cards in one column
+                        with nothing saying where one part stopped.
+                        The head sits on the page ground rather than the
+                        panel's now, in the weight a name deserves and with its
+                        own count, which is the same treatment the groups on
+                        Projects get; and the group closes on the strong rule,
+                        the one the columns and the band are drawn with. Two
+                        weights of line already exist in this design. The
+                        quiet one separates cards, the strong one separates
+                        parts, and that is the whole of it.
+                      */
                       groups.map((g, gi) => (
-                        <div key={gi} className="border-b border-rule last:border-b-0">
-                          <div className="micro flex flex-wrap items-baseline gap-2 px-3.5 pb-1 pt-2.5 text-green-soft">
-                            {g.parent?.title ?? treeRoot.title}
+                        <div
+                          key={gi}
+                          className="border-b-2 border-line-strong last:border-b-0"
+                        >
+                          <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 border-b border-line-strong bg-paper px-3.5 py-2">
+                            <span className="min-w-0 text-[13px] font-semibold leading-snug tracking-[-0.01em] text-green">
+                              {g.parent?.title ?? treeRoot.title}
+                            </span>
+                            <span className="mono ml-auto shrink-0 text-[11px] text-muted">
+                              {g.items.length}
+                            </span>
                             {g.parent && pathAbove(g.parent) && (
-                              <span className="text-[10px] normal-case tracking-normal text-rule-strong">
+                              <span className="w-full text-[10.5px] leading-snug text-rule-strong">
                                 {pathAbove(g.parent)}
                               </span>
                             )}
