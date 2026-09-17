@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AGENDA_LABEL } from '@/lib/standup'
+import { AGENDA_LABEL, type AgendaItem } from '@/lib/standup'
 import { moveInStandupQueue, setNodeStatus } from '@/lib/node-actions'
 import { formatMoney } from '@/lib/cost'
 import { daysBetween } from '@/lib/date'
@@ -26,7 +26,12 @@ import {
   type Standup,
 } from '@/lib/types'
 import { Room, type Attendee } from './room'
-import type { Row } from './what-is-in-the-way'
+/**
+ * One piece of work on the agenda, with whatever else is also true of it.
+ * It lived in the chapter that has gone; it is the agenda's own shape, so it
+ * belongs to the chapter that walks the agenda.
+ */
+export type Row = { nodeId: string; lead: AgendaItem; also: AgendaItem[] }
 
 /**
  * Chapter two: what we are doing.

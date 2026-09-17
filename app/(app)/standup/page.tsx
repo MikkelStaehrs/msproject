@@ -22,7 +22,7 @@ import {
 import { priorityScore, quadrant } from '@/lib/priority'
 import { QuickAddTrigger } from '@/components/quick-add-trigger'
 import { Rule, formatDate, formatDateLong } from '@/components/ui'
-import { WhatIsInTheWay } from './_chapters/what-is-in-the-way'
+import { StandupSince } from '@/components/standup-since'
 import { WhatWeAreDoing } from './_chapters/what-we-are-doing'
 import { WhatIsNext } from './_chapters/what-is-next'
 import type {
@@ -393,69 +393,42 @@ export default async function StandupPage({
 
   return (
     <main>
-      {/* Context band */}
-      <div className="frame [--frame-label:360px] [--frame-margin:330px]">
-        <div className="lbl pl-5 lg:pl-16 py-3 pr-5 text-muted">
-          {weekday.format(new Date())}
+      {/* The date, whether it has ever been held, and the one thing it stores */}
+      <div className="grid grid-cols-1 border-b border-line-strong lg:grid-cols-[auto_1fr_auto]">
+        <div className="lbl px-[var(--gut)] py-2.5 text-muted lg:pr-6">Stand-up</div>
+        <div className="lbl border-t border-line px-[var(--gut)] py-2.5 text-muted lg:border-l lg:border-t-0 lg:px-6">
+          <span className="text-ink">{weekday.format(new Date())}</span>
+          {since
+            ? ` · since ${formatDate(since)} · ${needsAction} ${needsAction === 1 ? 'thing needs' : 'things need'} action`
+            : ' · never held before, so chapter one is everything'}
+          {room.length > 0 &&
+            ` · in the room: ${room.map((r) => r.who).join(', ')}`}
         </div>
-        <div className="lbl border-l border-rule px-5 lg:px-10 py-3 text-muted">
-          {since ? `Since ${formatDate(since)}` : 'First stand-up'} · {needsAction}{' '}
-          {needsAction === 1 ? 'thing needs' : 'things need'} action · {room.length}{' '}
-          {room.length === 1 ? 'person' : 'people'} needed
-        </div>
-        <div className="flex items-center justify-end gap-6 border-l border-rule py-3 pl-5 lg:pl-8 pr-5 lg:pr-16">
+        <div className="flex items-center justify-end gap-6 border-t border-line px-[var(--gut)] py-2.5 lg:border-l lg:border-t-0">
           {heldToday ? (
             <form action={reopenStandup} className="flex items-center gap-3">
               <input type="hidden" name="id" value={heldToday.id} />
               <input type="hidden" name="redirectTo" value={here(part)} />
               <span className="lbl-tight text-green">Held today</span>
-              <button className="lbl text-rule-strong hover:text-ink">Undo</button>
+              <button className="act text-muted">Undo</button>
             </form>
           ) : (
             <form action={holdStandup}>
               <input type="hidden" name="redirectTo" value={here(part)} />
-              <button className="lbl text-muted hover:text-ink">We held it</button>
+              <button className="btn">We held it</button>
             </form>
           )}
           <QuickAddTrigger />
         </div>
-      </div>
-      <Rule strong />
-
-      {/*
-        The retrospective, in one line.
-        
-        It had the whole first chapter: what finished, what came unstuck, what
-        got stuck, and how much was written down. Useful to know and a READ
-        rather than a working surface, so it was a third of a meeting spent not
-        deciding anything.
-        
-        It stays here rather than going altogether, because `movement()` is the
-        only thing that reads the meeting boundary. Delete it and «We held it»
-        becomes a button that records a date nobody looks at, and standup.held_on
-        stops earning its place.
-      */}
-      <div className="px-5 lg:px-16 pt-3.5 text-[11.5px] leading-relaxed text-muted">
-        {since ? `Since ${formatDateLong(since)}: ` : 'Never held before, so this is everything: '}
-        <span className="text-ink">{moved.completed.length} finished</span>
-        {', '}
-        <span className="text-ink">{moved.resolved.length} came unstuck</span>
-        {', '}
-        <span className={moved.opened.length > 0 ? 'text-oxblood' : 'text-ink'}>
-          {moved.opened.length} got stuck
-        </span>
-        {', '}
-        <span className="text-ink">{moved.written} written down</span>
-        {'.'}
       </div>
 
       {/* The three chapters, in the order the room walks them */}
       <nav className="flex flex-wrap items-baseline gap-x-9 gap-y-2 px-5 lg:px-16 py-3.5">
         {(
           [
-            ['1', 'What is in the way', waitingRows.length],
-            ['2', 'What we are doing', liveCount],
-            ['3', 'What is next', weighed.length],
+            ['1', 'Since last time', moved.completed.length + moved.resolved.length + moved.opened.length + moved.written],
+            ['2', 'Ahead', liveCount],
+            ['3', 'Sparks', weighed.length],
           ] as [Part, string, number][]
         ).map(([n, label, count]) => (
           <Link
@@ -481,20 +454,22 @@ export default async function StandupPage({
       </nav>
       <Rule />
 
-      {/* ================= 1. What is in the way ================= */}
+      {/* ================= 1. Since last time ================= */}
       {part === '1' && (
-        <WhatIsInTheWay
-          waitingRows={waitingRows}
-          room={room}
+        <StandupSince
+          since={since}
           moved={moved}
-          agreedLast={agreedLast}
-          lastStandup={lastStandup}
+          sparksCaught={sparks.length}
+          blockers={blockers}
+          entries={entries}
+          nodes={nodes}
           byId={byId}
-          state={state}
+          childrenOf={childrenOf}
           today={today}
-          projectTitle={projectTitle}
-          at={at}
-          here={here}
+          titleOf={(nodeId) => byId.get(nodeId)?.title ?? 'a part you cannot open'}
+          writeHref={(nodeId) =>
+            `/p/${projectOf(nodes).get(nodeId) ?? nodeId}?focus=${nodeId}`
+          }
         />
       )}
 
