@@ -7,22 +7,24 @@ import {
   savingFrom,
   stagesFrom,
   strategyTarget,
+  targetAnnual,
 } from '@/lib/cogs'
-import { formatMoney } from '@/lib/cost'
-import { notStartedShare, strategyPicture, type Marking } from '@/lib/strategy'
-import { createStrategy, deleteStrategy, updateStrategy } from '@/lib/strategy-actions'
-import { Hint, Rule, formatDate } from '@/components/ui'
+import { contributionOf, strategyPicture, type Marking } from '@/lib/strategy'
+import { subtreeSet } from '@/lib/subtree'
+import { StrategyForm } from '@/components/budget-strategy-form'
+import { formatDate } from '@/components/ui'
 import type {
   Node,
   NodeCost,
   StageVolume,
+  Spark,
   Strategy,
   StrategyNode,
   Yardstick,
 } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Strategy' }
+export const metadata = { title: 'Budget' }
 
 /**
  * What the work is FOR, one level above the projects.
@@ -40,16 +42,17 @@ export default async function StrategyPage({
   const { edit: editId, new: creating } = await searchParams
   const supabase = await createClient()
 
-  const [strategyRes, markRes, nodeRes, costRes, yardRes, stageRes] = await Promise.all([
+  const [strategyRes, markRes, nodeRes, costRes, yardRes, stageRes, sparkRes] = await Promise.all([
     supabase.from('strategy').select('*').order('sort_order').order('name'),
     supabase.from('v_strategy_node').select('*'),
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('v_node_cost').select('*'),
     supabase.from('yardstick').select('*').maybeSingle(),
     supabase.from('stage_volume').select('fiscal_year, stage, units, scope'),
+    supabase.from('spark').select('*').eq('state', 'new'),
   ])
 
-  const failure = firstError([strategyRes, markRes, nodeRes, costRes])
+  const failure = firstError([strategyRes, markRes, nodeRes, costRes, sparkRes])
   if (failure) return <QueryFailure message={failure} />
 
   /*
@@ -71,6 +74,7 @@ export default async function StrategyPage({
   const nodes = (nodeRes.data ?? []) as Node[]
   const rolls = new Map(((costRes.data ?? []) as NodeCost[]).map((r) => [r.node_id, r]))
   const byId = new Map(nodes.map((n) => [n.id, n]))
+  const sparks = (sparkRes.data ?? []) as Spark[]
 
   /**
    * The expected annual benefit is typed on the PROJECT under Identity, so only
@@ -116,283 +120,407 @@ export default async function StrategyPage({
     }
   }
 
+  /*
+   * The picture per strategy, and the portfolio's own sum.
+   *
+   * `strategyPicture` is the one place the arithmetic lives, so the page never
+   * adds a euro of its own. A project can be marked against two strategies, so
+   * the portfolio total is taken over the markings that count rather than by
+   * adding the per-strategy sums, which would count that project twice.
+   */
+  const picture = new Map(
+    strategies.map((s) => [
+      s.id,
+      strategyPicture(
+        marks.filter((m) => m.strategy_id === s.id).map(markingFor),
+        strategyTarget(s, reference),
+      ),
+    ]),
+  )
+
+  const counted = marks.filter((m) => m.is_top)
+  const seen = new Set<string>()
+  let promised = 0
+  let delivered = 0
+  let unquantified = 0
+  for (const m of counted) {
+    if (seen.has(m.node_id)) continue
+    seen.add(m.node_id)
+    const mk = markingFor(m)
+    const c = contributionOf(mk)
+    if (c === null) {
+      unquantified++
+      continue
+    }
+    promised += c
+    if (mk.status === 'done') delivered += c
+  }
+
+  /*
+   * What is sitting in the inbox, worked out but not yet work. A spark with no
+   * saving contributes nothing rather than nought: the two are different, and
+   * this portfolio is entirely the first kind.
+   */
+  let inSparks = 0
+  let sparksWithout = 0
+  for (const s of sparks) {
+    const stage = stages.find((v) => v.stage === s.saving_stage)
+    const saving = savingFrom(s.saving_kind, s.saving_value, stage?.units ?? null)
+    const eur = saving === null || reference === null ? null : annualEur(saving, reference)
+    if (eur === null) sparksWithout++
+    else inSparks += eur
+  }
+
+  const target = reference === null ? null : targetAnnual(reference)
+  const unitEur = yard === null ? null : Number(yard.unit_cost_dkk) / Number(yard.eur_rate)
+
+  /** What each project promises, over every marking inside it. */
+  const projectClaim = (projectId: string) => {
+    const inside = subtreeSet(nodes, projectId)
+    const mine = counted.filter((m) => inside.has(m.node_id))
+    if (mine.length === 0) return { eur: null as number | null, unknown: 0 }
+    let eur: number | null = null
+    let unknown = 0
+    for (const m of mine) {
+      const c = contributionOf(markingFor(m))
+      if (c === null) unknown++
+      else eur = (eur ?? 0) + c
+    }
+    return { eur, unknown }
+  }
+
+  const servesOf = (projectId: string) => {
+    const inside = subtreeSet(nodes, projectId)
+    const names = strategies
+      .filter((s) => marks.some((m) => m.strategy_id === s.id && inside.has(m.node_id)))
+      .map((s) => s.name)
+    return names.length === 0 ? null : names.join(', ')
+  }
+
+  const roots = nodes.filter((n) => n.parent_id === null)
   const editing = editId ? strategies.find((s) => s.id === editId) : undefined
+
+  const eur = (v: number) =>
+    `${Math.round(v).toLocaleString('en-GB').replace(/,/g, ' ')} EUR`
 
   return (
     <main>
-      <div className="frame [--frame-margin:340px] items-baseline">
-        <div className="lbl pl-5 lg:pl-16 py-3 pr-5 text-muted">Strategy</div>
-        <div className="lbl border-l border-rule px-5 lg:px-10 py-3 text-muted">
-          What the work is for, across the projects
-        </div>
-        <div className="border-l border-rule py-3 pl-5 lg:pl-8 pr-5 lg:pr-16 text-right">
-          {!creating && !editing && (
-            <Link href="/strategy?new=1" className="lbl text-muted hover:text-ink">
-              New strategy
-            </Link>
+      {/* The yardstick everything on this page is divided by */}
+      <div className="grid grid-cols-1 border-b border-line-strong lg:grid-cols-[auto_1fr_auto]">
+        <div className="lbl px-[var(--gut)] py-2.5 text-muted lg:pr-6">Budget</div>
+        <div className="lbl border-t border-line px-[var(--gut)] py-2.5 lg:border-l lg:border-t-0 lg:px-6">
+          {yard === null ? (
+            <span className="text-oxblood">no yardstick recorded, so nothing can be divided</span>
+          ) : (
+            <span className="text-ink">
+              {yard.fiscal_year} &middot;{' '}
+              {Number(yard.cost_basis_units).toLocaleString('en-GB').replace(/,/g, ' ')} units
+              &middot; {String(yard.unit_cost_dkk).replace('.', ',')} kr a unit &middot; 1 EUR ={' '}
+              {String(yard.eur_rate).replace('.', ',')} kr
+            </span>
           )}
         </div>
+        <div className="flex items-center justify-end gap-5 border-t border-line px-[var(--gut)] py-2.5 lg:border-l lg:border-t-0">
+          <span className="micro text-muted">Rolled up from the nodes</span>
+          <Link href="/strategy?new=1" className="act">
+            New strategy
+          </Link>
+        </div>
       </div>
-      <Rule strong />
 
-      <div className="px-5 lg:px-16 py-8">
-        {(creating || editing) && (
-          <div className="mb-10 max-w-3xl border border-rule bg-sheet px-6 py-5">
-            <div className="lbl mb-4 text-muted">
-              {editing ? 'Edit strategy' : 'New strategy'}
-            </div>
-            <form
-              action={editing ? updateStrategy : createStrategy}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4"
-            >
-              {editing && <input type="hidden" name="id" value={editing.id} />}
-              <input type="hidden" name="redirectTo" value="/strategy" />
+      {(creating || editing) && (
+        <div className="px-[var(--gut)] py-6">
+          <StrategyForm strategy={editing} reference={reference} />
+        </div>
+      )}
 
-              <label className="col-span-1 sm:col-span-2 block">
-                <span className="lbl text-muted">Name</span>
-                <input
-                  name="name"
-                  required
-                  autoFocus
-                  defaultValue={editing?.name ?? ''}
-                  placeholder="COGS saving"
-                  className="field text-base"
-                />
-              </label>
-
-              {/*
-                A strategy whose target is the yardstick's is not offered a box
-                to type one into. The database refuses both at once, and a form
-                that lets you type a value it will then reject is a form that
-                teaches you to distrust it. Shown instead, so the figure is
-                still visible and still derived.
-              */}
-              <label className="block">
-                <span className="lbl text-muted">
-                  <Hint text="What the strategy is measured against, per year, in euro. Leave it empty where the strategy carries no number: an invented target is worse than none.">
-                    Target a year
-                  </Hint>
-                </span>
-                {editing?.target_from_yardstick ? (
-                  <div className="border-b border-rule py-[7px] text-[13px] tabular-nums text-muted">
-                    {strategyTarget(editing, reference)?.toLocaleString('en-GB', {
-                      maximumFractionDigits: 0,
-                    }) ?? 'no yardstick'}{' '}
-                    <span className="lbl-tight">from the yardstick</span>
-                  </div>
-                ) : (
-                <input
-                  name="target_annual"
-                  inputMode="decimal"
-                  defaultValue={editing?.target_annual ?? ''}
-                  placeholder="250000"
-                  className="field tabular-nums"
-                />
-                )}
-              </label>
-
-              <label className="block">
-                <span className="lbl text-muted">Owner</span>
-                <input
-                  name="owner"
-                  defaultValue={editing?.owner ?? ''}
-                  className="field"
-                />
-              </label>
-
-              <label className="block">
-                <span className="lbl text-muted">Started</span>
-                <input
-                  type="date"
-                  name="started_on"
-                  defaultValue={editing?.started_on ?? ''}
-                  className="field"
-                />
-              </label>
-
-              <label className="block">
-                <span className="lbl text-muted">
-                  <Hint text="Leave empty while it runs. A finished strategy stays on the page: what it delivered is the evidence for the next one.">
-                    Ended
-                  </Hint>
-                </span>
-                <input
-                  type="date"
-                  name="ended_on"
-                  defaultValue={editing?.ended_on ?? ''}
-                  className="field"
-                />
-              </label>
-
-              <label className="col-span-1 sm:col-span-2 lg:col-span-4 block">
-                <span className="lbl text-muted">What it is</span>
-                <textarea
-                  name="description"
-                  rows={2}
-                  defaultValue={editing?.description ?? ''}
-                  className="field resize-y"
-                />
-              </label>
-
-              <div className="col-span-1 sm:col-span-2 lg:col-span-4 mt-1 flex items-center gap-3">
-                <button className="btn">{editing ? 'Save' : 'Create'}</button>
-                <Link href="/strategy" className="btn btn-ghost">
-                  Cancel
-                </Link>
-                {editing && (
-                  <form action={deleteStrategy} className="ml-auto">
-                    <input type="hidden" name="id" value={editing.id} />
-                    <input type="hidden" name="redirectTo" value="/strategy" />
-                    <button className="btn btn-danger">Delete</button>
-                  </form>
-                )}
-              </div>
-            </form>
-          </div>
-        )}
-
-        {strategies.length === 0 ? (
-          <p className="max-w-prose text-[13px] leading-relaxed text-muted">
-            No strategies yet. A strategy is what several unrelated projects are
-            all for: cost of goods, uptime, a compliance deadline. Mark the part
-            of the tree that actually delivers it, which is not always the whole
-            project.
+      <div className="px-[var(--gut)] py-7">
+        <div className="work">
+          <h1 className="font-display text-[34px] leading-[1.08] text-green">
+            One euro out of every unit
+          </h1>
+          <p className="prose-measure grp-gap text-green-soft">
+            Take a euro of cost out of every unit sold, every year.{' '}
+            {yard === null ? (
+              <>
+                No yardstick has been recorded, so there is no target to divide by and no
+                figure on this page can be worked out.
+              </>
+            ) : (
+              <>
+                {yard.fiscal_year} counts{' '}
+                {Number(yard.cost_basis_units).toLocaleString('en-GB').replace(/,/g, ' ')} units
+                at {String(yard.unit_cost_dkk).replace('.', ',')} kr all in, so the target is{' '}
+                {target === null ? 'unknown' : eur(target.eur)} a year and{' '}
+                {unitEur === null ? 'an unknown share' : `${(100 / unitEur).toFixed(1).replace('.', ',')} %`}{' '}
+                of what a unit costs. Nothing on this page is typed in.
+              </>
+            )}
           </p>
-        ) : (
-          <div className="flex flex-col gap-12">
-            {strategies.map((s) => {
-              const mine = marks.filter((m) => m.strategy_id === s.id).map(markingFor)
-              const p = strategyPicture(mine, strategyTarget(s, reference))
-              const ahead = notStartedShare(mine)
-              const counted = marks.filter((m) => m.strategy_id === s.id && m.is_top)
+        </div>
+      </div>
 
-              return (
-                <section key={s.id}>
-                  <div className="flex items-baseline gap-4">
-                    <h2 className="font-display text-[26px] leading-tight">
-                      <Link href={`/strategy/${s.id}`} className="hover:text-green">
-                        {s.name}
-                      </Link>
-                    </h2>
-                    {s.ended_on && (
-                      <span className="lbl-tight text-rule-strong">
-                        ended {formatDate(s.ended_on)}
-                      </span>
-                    )}
-                    {s.owner && <span className="lbl-tight text-muted">{s.owner}</span>}
-                    <Link
-                      href={`/strategy?edit=${s.id}`}
-                      className="lbl-tight ml-auto text-rule-strong hover:text-ink"
-                    >
-                      Edit
-                    </Link>
-                  </div>
+      {/* Five figures, and four of them are rust because nothing has been marked */}
+      <div className="grid grid-cols-2 border-y border-line-strong lg:grid-cols-5">
+        <Figure
+          value={target === null ? null : Math.round(target.eur)}
+          label="Target a year, EUR"
+        />
+        <Figure value={Math.round(promised)} label="Promised by live work" rust={promised === 0} />
+        <Figure value={Math.round(delivered)} label="Delivered" rust={delivered === 0} />
+        <Figure value={Math.round(inSparks)} label="Worked out in sparks" rust={inSparks === 0} />
+        <Figure
+          value={target === null ? null : Math.round(target.eur - promised)}
+          label="Still to find"
+          rust
+        />
+      </div>
 
-                  {s.description && (
-                    <p className="mt-2 max-w-prose text-[13px] leading-relaxed text-muted">
-                      {s.description}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0 px-[var(--gut)] py-7">
+          <div className="work">
+            <h2 className="text-[17px] font-semibold tracking-[-0.025em]">
+              Where the euro comes from
+            </h2>
+            <div className="panel grp-gap max-w-[1120px]">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th className="grow">Project</th>
+                    <th>Serves</th>
+                    <th className="num">EUR a year</th>
+                    <th className="num">EUR a unit</th>
+                    <th className="num">Share</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {roots.map((r) => {
+                    const claim = projectClaim(r.id)
+                    const serves = servesOf(r.id)
+                    const perUnit =
+                      claim.eur === null || yard === null
+                        ? null
+                        : claim.eur / Number(yard.cost_basis_units)
+                    const share =
+                      claim.eur === null || target === null ? null : (100 * claim.eur) / target.eur
+                    return (
+                      <tr key={r.id}>
+                        <td className="grow">
+                          <Link href={`/p/${r.id}/identitet`} className="font-medium hover:text-green">
+                            {r.title}
+                          </Link>
+                          <div className="mt-1 text-[12px] text-muted">
+                            {(r.reporting?.project_no as string | undefined) ?? ''}
+                          </div>
+                        </td>
+                        <td>
+                          {serves ? (
+                            serves
+                          ) : (
+                            <span className="text-oxblood">Not marked</span>
+                          )}
+                        </td>
+                        <td className="num mono">
+                          {claim.eur === null ? (
+                            <span className="text-oxblood">Nothing claimed</span>
+                          ) : (
+                            eur(claim.eur)
+                          )}
+                        </td>
+                        <td className="num mono text-muted">
+                          {perUnit === null ? '-' : perUnit.toFixed(3).replace('.', ',')}
+                        </td>
+                        <td className="num mono text-muted">
+                          {share === null ? '-' : `${share.toFixed(1).replace('.', ',')} %`}
+                        </td>
+                        <td>
+                          <Link href={`/p/${r.id}`} className="act">
+                            Work
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {counted.length === 0 && (
+              <p className="prose-measure grp-gap text-[12px] text-muted">
+                No piece of work is marked against a strategy, so this table has nothing to add
+                up. The {strategies.length} strategies exist; the link from work to strategy has
+                never been made. It is made on a part, under Read, which is where somebody can
+                say what that part is for.
+              </p>
+            )}
+
+            <h2 className="sec-gap text-[17px] font-semibold tracking-[-0.025em]">
+              What a unit costs
+            </h2>
+            <div className="panel grp-gap max-w-[1120px]">
+              <table className="tbl">
+                <tbody>
+                  {yard === null || unitEur === null ? (
+                    <tr>
+                      <td className="grow text-oxblood">
+                        No yardstick, so a unit has no recorded cost here.
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      <tr>
+                        <td className="grow">Unit cost, all in</td>
+                        <td className="num mono">
+                          {unitEur.toFixed(2).replace('.', ',')} EUR
+                        </td>
+                        <td className="num mono text-muted">100 %</td>
+                      </tr>
+                      <tr>
+                        <td className="grow">The target, one euro</td>
+                        <td className="num mono">1,00 EUR</td>
+                        <td className="num mono text-muted">
+                          {(100 / unitEur).toFixed(1).replace('.', ',')} %
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className={`grow ${promised === 0 ? 'text-oxblood' : ''}`}>
+                          Promised so far
+                        </td>
+                        <td className={`num mono ${promised === 0 ? 'text-oxblood' : ''}`}>
+                          {(promised / Number(yard.cost_basis_units)).toFixed(2).replace('.', ',')}{' '}
+                          EUR
+                        </td>
+                        <td className={`num mono ${promised === 0 ? 'text-oxblood' : 'text-muted'}`}>
+                          {target === null
+                            ? '-'
+                            : `${((100 * promised) / target.eur).toFixed(1).replace('.', ',')} %`}
+                        </td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div className="min-w-0 border-t border-line px-[var(--gut)] py-7 xl:border-l xl:border-t-0">
+          {yard !== null && yard.confirmed_at === null && (
+            <>
+              <h2 className="text-[15px] font-semibold text-oxblood">The figure is unconfirmed</h2>
+              <div className="panel grp-gap border-oxblood">
+                <div className="panel-b">
+                  {yard.cost_basis_scope && yard.target_scope && (
+                    <p className="prose-measure text-[13px]">
+                      Basis: {yard.cost_basis_scope}. The strategy covers {yard.target_scope}. The
+                      two do not match, so the denominator is too small, the target too small with
+                      it, and every share of that target too large. This page says floor, not
+                      figure.
                     </p>
                   )}
+                  <p className="prose-measure mt-3 text-[13px]">
+                    The euro rate of {String(yard.eur_rate).replace('.', ',')} was raised and
+                    accepted rather than verified. It multiplies into every conversion on this
+                    page.
+                  </p>
+                  <p className="prose-measure mt-3 text-[13px]">
+                    Nobody has confirmed the row. Last touched{' '}
+                    {formatDate(yard.updated_at.slice(0, 10))}.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
 
-                  <div className="mt-5 grid max-w-4xl grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 border-y border-rule py-4">
-                    <Figure
-                      label="Promised a year"
-                      value={formatMoney(Math.round(p.promised), 'EUR')}
-                      note={
-                        p.unquantified > 0
-                          ? `${p.unquantified} of ${p.counted} carry no figure`
-                          : `from ${p.counted} ${p.counted === 1 ? 'part' : 'parts'}`
-                      }
-                      warn={p.unquantified > 0}
-                    />
-                    <Figure
-                      label="Of that, delivered"
-                      value={formatMoney(Math.round(p.delivered), 'EUR')}
-                      note={
-                        p.promised > 0
-                          ? `${Math.round((p.delivered / p.promised) * 100)}% of what is promised`
-                          : 'nothing finished yet'
-                      }
-                    />
-                    {/*
-                      The one figure here that is still what YOU can see.
-                      Promised and delivered are computed over the whole tree so
-                      the strategy reports the same number to everyone; spend is
-                      left per-viewer, and says so, rather than repeating the
-                      currency conversion in a third place to make it whole.
-                    */}
-                    <Figure
-                      label="Invested so far"
-                      value={formatMoney(Math.round(p.invested), 'EUR')}
-                      note="ordered or invoiced, in projects you can open"
-                    />
-                    <Figure
-                      label={p.target === null ? 'No target' : 'Still to find'}
-                      value={
-                        p.target === null
-                          ? '—'
-                          : p.shortfall === null
-                            ? '—'
-                            : formatMoney(Math.round(p.shortfall), 'EUR')
-                      }
-                      note={
-                        p.target === null
-                          ? 'the strategy carries no number'
-                          : p.shortfall === null
-                            ? 'not while something counted has no figure'
-                            : p.shortfall <= 0
-                              ? `target of ${formatMoney(Math.round(p.target), 'EUR')} covered`
-                              : `against ${formatMoney(Math.round(p.target), 'EUR')}`
-                      }
-                      warn={p.shortfall !== null && p.shortfall > 0}
-                    />
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-1 text-[11px] text-rule-strong">
-                    {p.stalled > 0 && (
-                      <span className="text-oxblood">
-                        {p.stalled} {p.stalled === 1 ? 'part is' : 'parts are'} blocked
-                        or on hold
-                      </span>
-                    )}
-                    {ahead !== null && ahead > 0 && (
-                      <span>
-                        {Math.round(ahead * 100)}% of the promise rests on work not
-                        started
-                      </span>
-                    )}
-                    <Link href={`/strategy/${s.id}`} className="ml-auto hover:text-ink">
-                      The {counted.length} {counted.length === 1 ? 'part' : 'parts'} &rsaquo;
-                    </Link>
-                  </div>
-                </section>
-              )
-            })}
+          <h2 className={`text-[15px] font-semibold ${yard !== null && yard.confirmed_at === null ? 'sec-gap' : ''}`}>
+            The {strategies.length} strategies
+          </h2>
+          <div className="panel grp-gap">
+            <table className="tbl">
+              <tbody>
+                {strategies.map((s) => {
+                  const p = picture.get(s.id)
+                  return (
+                    <tr key={s.id}>
+                      <td className="grow">
+                        <Link href={`/strategy/${s.id}`} className="font-medium hover:text-green">
+                          {s.name}
+                        </Link>
+                        <div className="mt-1 text-[12px] leading-snug text-muted">
+                          {clip(s.description, 120)}
+                        </div>
+                      </td>
+                      <td
+                        className={`num mono ${
+                          s.target_from_yardstick ? '' : 'text-muted'
+                        }`}
+                      >
+                        {s.target_from_yardstick
+                          ? target === null
+                            ? 'no yardstick'
+                            : eur(target.eur)
+                          : s.target_annual === null
+                            ? 'No number'
+                            : eur(Number(s.target_annual))}
+                      </td>
+                      <td
+                        className={`num mono ${
+                          (p?.counted ?? 0) === 0 ? 'text-oxblood' : 'text-muted'
+                        }`}
+                      >
+                        {p?.counted ?? 0} parts
+                      </td>
+                      <td>
+                        <Link href={`/strategy?edit=${s.id}`} className="act">
+                          Edit
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
-        )}
+          <p className="prose-measure grp-gap text-[12px] text-muted">
+            {strategies.filter((s) => !s.target_from_yardstick).length} of them are headings
+            rather than promises, which is deliberate: a heading carries no annual number of its
+            own.{' '}
+            {unquantified > 0 &&
+              `${unquantified} marked ${unquantified === 1 ? 'part carries' : 'parts carry'} no figure, so the total above is a floor.`}
+            {sparksWithout > 0 &&
+              ` ${sparksWithout} ${sparksWithout === 1 ? 'spark has' : 'sparks have'} never been assessed.`}
+          </p>
+        </div>
       </div>
     </main>
   )
 }
 
+/** A key figure: the number in mono, the label under it, a rule between them. */
 function Figure({
-  label,
   value,
-  note,
-  warn = false,
+  label,
+  rust = false,
 }: {
+  value: number | null
   label: string
-  value: string
-  note: string
-  warn?: boolean
+  rust?: boolean
 }) {
   return (
-    <div>
-      <div className="lbl text-muted">{label}</div>
-      <div className="num mt-1 text-[19px] leading-none">{value}</div>
-      <div className={`mt-1.5 text-[10.5px] leading-snug ${warn ? 'text-oxblood' : 'text-rule-strong'}`}>
-        {note}
-      </div>
+    <div className="border-l border-line px-6 py-[18px] first:border-l-0 lg:[&:nth-child(3)]:border-l">
+      <b className={`fig-num block ${rust ? 'text-oxblood' : ''}`}>
+        {value === null ? '-' : value.toLocaleString('en-GB').replace(/,/g, ' ')}
+      </b>
+      <span className="mt-2 block text-[12px] text-muted">{label}</span>
     </div>
   )
+}
+
+/** Cut at a word boundary, so a description never breaks mid-word. */
+function clip(text: string | null, max: number) {
+  const t = (text ?? '').replace(/\s+/g, ' ').trim()
+  if (t.length <= max) return t
+  const cut = t.slice(0, max)
+  const space = cut.lastIndexOf(' ')
+  return `${(space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[,;:.-]$/, '')}…`
 }
