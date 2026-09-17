@@ -5,7 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 import { QueryFailure, firstError } from '@/lib/failure'
 import { readRecipients } from '@/lib/recipient-data'
 import { redirect } from 'next/navigation'
-import { feedItems, unseenCount } from '@/lib/feed'
+import { feedItems, unseenCount, FEED_GLYPH } from '@/lib/feed'
+import { projectOf } from '@/lib/subtree'
+import { formatDate } from '@/components/ui'
+import type { BellItem } from '@/components/notification-bell'
 import type { Blocker, Decision, Entry, Node, Profile } from '@/lib/types'
 import { HeaderUtility } from '@/components/header-utility'
 
@@ -141,25 +144,44 @@ export default async function AppLayout({
    * report a number. The three reads above it are checked, because the page
    * depends on them.
    */
-  const unseen =
+  const feedNodes = (feedNodeRes.data ?? []) as Node[]
+  const mineInFeed =
     me === undefined
-      ? 0
-      : unseenCount(
-          feedItems({
-            nodes: (feedNodeRes.data ?? []) as Node[],
-            entries: (entryRes.data ?? []) as Entry[],
-            blockers: (blockerRes.data ?? []) as Blocker[],
-            decisions: (decisionRes.data ?? []) as Decision[],
-            nameOf: new Map(
-              ((profileRes.data ?? []) as Profile[]).map((p) => [
-                p.id,
-                p.full_name?.trim() || p.email,
-              ]),
-            ),
-            me: { id: me.id, name: me.full_name },
-          }),
-          me.feed_seen_at,
-        )
+      ? []
+      : feedItems({
+          nodes: feedNodes,
+          entries: (entryRes.data ?? []) as Entry[],
+          blockers: (blockerRes.data ?? []) as Blocker[],
+          decisions: (decisionRes.data ?? []) as Decision[],
+          nameOf: new Map(
+            ((profileRes.data ?? []) as Profile[]).map((p) => [
+              p.id,
+              p.full_name?.trim() || p.email,
+            ]),
+          ),
+          me: { id: me.id, name: me.full_name },
+        }).filter((i) => i.mine)
+
+  const unseen = unseenCount(mineInFeed, me?.feed_seen_at ?? null)
+
+  /*
+   * What the panel under the bell shows: the eight most recent that name you,
+   * not only the unseen ones. A panel that empties itself the moment you open
+   * it has nothing to say the second time you press it, and «what happened»
+   * with nothing under it reads as broken rather than as quiet.
+   */
+  const projectOfNode = projectOf(feedNodes)
+  const seenAt = me?.feed_seen_at ?? null
+  const bell: BellItem[] = mineInFeed.slice(0, 8).map((i) => ({
+    id: i.id,
+    href: `/p/${projectOfNode.get(i.nodeId) ?? i.nodeId}?task=${i.nodeId}`,
+    line: i.line,
+    where: i.where,
+    when: formatDate(i.at.slice(0, 10)),
+    glyph: FEED_GLYPH[i.kind],
+    rust: i.rust,
+    isNew: seenAt === null || i.sortKey > seenAt,
+  }))
 
   const targets = buildTargets((treeRes.data ?? []) as Flat[])
 
@@ -204,6 +226,7 @@ export default async function AppLayout({
           firstName={firstName}
           isAdmin={me?.is_admin ?? false}
           unseen={unseen}
+          bell={bell}
         />
       </header>
       <div className="no-print h-px bg-line-strong" />

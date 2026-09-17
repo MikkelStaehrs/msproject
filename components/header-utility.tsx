@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { Bell, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { HeaderQuickKey } from '@/components/header-quick-key'
+import { NotificationBell, type BellItem } from '@/components/notification-bell'
 import { logout } from '@/app/login/actions'
 
 /**
@@ -23,11 +24,14 @@ export function HeaderUtility({
   firstName,
   isAdmin,
   unseen,
+  bell,
 }: {
   firstName: string | null
   isAdmin: boolean
   /** How much names you that you have not marked seen. Zero draws no count. */
   unseen: number
+  /** The handful the panel under the bell shows. */
+  bell: BellItem[]
 }) {
   return (
     <div className="flex shrink-0 items-baseline gap-4">
@@ -40,34 +44,7 @@ export function HeaderUtility({
         <Search size={20} strokeWidth={1} aria-hidden="true" />
       </Link>
       <HeaderQuickKey />
-      {/*
-        The bell.
-
-        A link and not a popover, which is the whole design decision here. A
-        panel hanging off this row would be a second, shorter copy of /feed
-        that has to be kept saying the same thing, and it would need
-        JavaScript to open. The count is the notification; the page is the
-        feed. One press, no state.
-
-        It counts only what NAMES you, so it can be zero and usually is.
-        A bell that always shows a number is a bell nobody reads.
-      */}
-      <Link
-        href="/feed"
-        aria-label={unseen === 0 ? 'What happened' : `What happened, ${unseen} new for you`}
-        title="What happened"
-        className="relative self-center leading-none text-muted hover:text-green"
-      >
-        <Bell size={19} strokeWidth={1} aria-hidden="true" />
-        {unseen > 0 && (
-          <span
-            aria-hidden="true"
-            className="mono absolute -right-2 -top-1.5 min-w-[15px] rounded-full bg-rust px-[3px] text-center text-[9px] leading-[15px] text-inset"
-          >
-            {unseen > 9 ? '9+' : unseen}
-          </span>
-        )}
-      </Link>
+      <NotificationBell unseen={unseen} items={bell} />
       {isAdmin && (
         <Link href="/admin" className="micro text-muted hover:text-ink">
           Admin

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { back } from '@/lib/form'
+import { redirect } from 'next/navigation'
 
 /**
  * Marking the feed seen.
@@ -21,7 +21,7 @@ import { back } from '@/lib/form'
  * about themselves, so a missing grant here would fail with «permission denied
  * for table profile», which reads as RLS and is not.
  */
-export async function markFeedSeen(fd: FormData) {
+export async function markFeedSeen(fd?: FormData) {
   const supabase = await createClient()
 
   const { data: auth } = await supabase.auth.getUser()
@@ -35,5 +35,12 @@ export async function markFeedSeen(fd: FormData) {
   if (error) throw new Error(`Could not mark it seen: ${error.message}`)
 
   revalidatePath('/', 'layout')
-  back(fd)
+
+  /*
+   * Called two ways, and only one of them goes anywhere. The panel under the
+   * bell calls this directly and stays where it is; the button on /feed posts
+   * a form and comes back to the page it was pressed on.
+   */
+  const to = fd?.get('redirectTo')
+  if (typeof to === 'string' && to !== '') redirect(to)
 }

@@ -61,6 +61,7 @@ export default async function TreePage({
     view?: string
     sc?: string
     part?: string
+    log?: string
     task?: string
     to?: string
     bedit?: string
@@ -79,6 +80,7 @@ export default async function TreePage({
     view: viewParam,
     sc: scParam,
     part: partParam,
+    log: logParam,
     task: taskId,
     to: moveTo,
     bedit: editBlockerId,
@@ -242,6 +244,7 @@ export default async function TreePage({
       viewParam ? `view=${viewParam}` : '',
       scParam ? `sc=${scParam}` : '',
       partParam ? `part=${partParam}` : '',
+      logParam === 'off' ? 'log=off' : '',
       extra,
     ].filter(Boolean)
     return parts.length === 0 ? base : `${base}?${parts.join('&')}`
@@ -555,7 +558,40 @@ export default async function TreePage({
   const boardScope: 'here' | 'below' = scParam === 'here' ? 'here' : 'below'
 
   const viewHref = (v: 'board' | 'tree' | 'map', query: string) => {
-    const q = [v === 'board' ? '' : `view=${v}`, query].filter(Boolean).join('&')
+    const q = [
+      v === 'board' ? '' : `view=${v}`,
+      query,
+      logParam === 'off' ? 'log=off' : '',
+    ]
+      .filter(Boolean)
+      .join('&')
+    return q ? `${base}?${q}` : base
+  }
+
+  /*
+   * The log folds away.
+   *
+   * It takes 400 pixels from the board at xl and 460 at 2xl, and the board is
+   * the one thing on this page that scrolls sideways when it runs out of
+   * room, so those pixels are the difference between three columns you can
+   * read and three you have to push around. Reading the log and working the
+   * board are two different sittings.
+   *
+   * In the address rather than in the client, like every other switch here:
+   * the state then survives a reload, a link sent to somebody else, and the
+   * navigation a drop performs.
+   */
+  const logOpen = logParam !== 'off'
+  const logHref = (open: boolean) => {
+    const q = [
+      viewParam ? `view=${viewParam}` : '',
+      focusId ? `focus=${focusId}` : '',
+      scParam ? `sc=${scParam}` : '',
+      partParam ? `part=${partParam}` : '',
+      open ? '' : 'log=off',
+    ]
+      .filter(Boolean)
+      .join('&')
     return q ? `${base}?${q}` : base
   }
 
@@ -829,7 +865,13 @@ export default async function TreePage({
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] 2xl:grid-cols-[minmax(0,1fr)_460px]">
+    <div
+      className={`grid grid-cols-1 ${
+        logOpen
+          ? 'xl:grid-cols-[minmax(0,1fr)_400px] 2xl:grid-cols-[minmax(0,1fr)_460px]'
+          : ''
+      }`}
+    >
     <div className="min-w-0 px-5 py-7 lg:px-8">
       {editId === project.id && editing && (
         <div className="mb-5">
@@ -956,6 +998,18 @@ export default async function TreePage({
               ))}
             </div>
           )}
+          {/*
+            Shown from xl, because below it the log is stacked under the work
+            rather than beside it and folding it away would hide a column
+            nothing was competing with.
+          */}
+          <Link
+            href={logHref(!logOpen)}
+            aria-pressed={logOpen}
+            className={`hidden xl:inline ${logOpen ? 'act' : 'lbl text-muted hover:text-ink'}`}
+          >
+            {logOpen ? 'Hide log' : 'Show log'}
+          </Link>
           <Link
             href={newParent === treeRoot.id ? keep('') : keep(`new=${treeRoot.id}`)}
             className={newParent === treeRoot.id ? 'act' : 'btn'}
@@ -1189,12 +1243,22 @@ export default async function TreePage({
         entry cannot express on its own: an order between two pieces of work
         needs a picker, because the other end is a node and not a sentence.
       */}
-      <div className="min-w-0 border-t border-rule px-5 py-7 lg:px-8 xl:border-l xl:border-t-0">
+      <div
+        className={`min-w-0 border-t border-rule px-5 py-7 lg:px-8 xl:border-l xl:border-t-0 ${
+          logOpen ? '' : 'xl:hidden'
+        }`}
+      >
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-[17px] font-semibold tracking-[-0.025em]">Log</h2>
-          <Link href="/friday" className="lbl-tight text-green hover:text-oxblood">
-            → Friday
-          </Link>
+          <span className="flex shrink-0 items-baseline gap-4">
+            <Link href="/friday" className="lbl-tight text-green hover:text-oxblood">
+              → Friday
+            </Link>
+            {/* Folding it from the thing being folded, which is where you are. */}
+            <Link href={logHref(false)} className="lbl-tight hidden text-muted hover:text-ink xl:inline">
+              Hide
+            </Link>
+          </span>
         </div>
         {focused && <div className="lbl-tight mt-1 text-rule-strong">this part and below</div>}
 
