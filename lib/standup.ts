@@ -96,7 +96,7 @@ export type AgendaInput = {
     due_date: string | null
     completed_at: string | null
     /** The account driving it. Null means nobody has said. */
-    owner_id: string | null
+    driver_id: string | null
   }[]
   blockers: {
     id: string
@@ -211,7 +211,7 @@ export function agenda(input: AgendaInput): AgendaItem[] {
           */
           why:
             `Its date was ${n.due_date}. Either it moves or it is finished.` +
-            (undriven(n.owner_id) ? ' Nobody is driving it either.' : ''),
+            (undriven(n.driver_id) ? ' Nobody is driving it either.' : ''),
         })
         continue
       }
@@ -225,7 +225,7 @@ export function agenda(input: AgendaInput): AgendaItem[] {
           on: n.due_date,
           why:
             `Due ${n.due_date}, before the next stand-up.` +
-            (undriven(n.owner_id) ? ' And nobody is driving it.' : ''),
+            (undriven(n.driver_id) ? ' And nobody is driving it.' : ''),
         })
         continue
       }
@@ -257,7 +257,7 @@ export function agenda(input: AgendaInput): AgendaItem[] {
      * It is the one item on the agenda with no number worth showing, so days
      * is zero and the row reads on its title alone.
      */
-    if (!hasChildren.has(n.id) && undriven(n.owner_id)) {
+    if (!hasChildren.has(n.id) && undriven(n.driver_id)) {
       items.push({
         kind: 'no_driver',
         nodeId: n.id,

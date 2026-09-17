@@ -75,7 +75,7 @@ function nodeFields(fd: FormData) {
     title: required(fd, 'title'),
     description: text(fd, 'description'),
     status: required(fd, 'status') as NodeStatus,
-    owner_id: text(fd, 'owner_id'),
+    driver_id: text(fd, 'driver_id'),
     start_date: text(fd, 'start_date'),
     due_date: text(fd, 'due_date'),
     // Whole days only, and never negative. Nothing reads these yet; they are
@@ -223,9 +223,25 @@ export async function setNodeStatus(fd: FormData) {
 
   const { data: existing } = await supabase
     .from('node')
-    .select('completed_at')
+    .select('completed_at, driver_id, title')
     .eq('id', id)
     .single()
+
+  /*
+   * Work in flight has somebody on it.
+   *
+   * Refused here rather than by the database, for now: there are active tasks
+   * with no driver today, which is what step three of the stand-up exists to
+   * find, and a check constraint would refuse to apply until that list is
+   * empty. It goes into the schema once the first real meeting has cleared it,
+   * which is the right order: find them, answer them, then make it impossible.
+   */
+  if (status === 'active' && !existing?.driver_id) {
+    throw new Error(
+      `«${existing?.title ?? 'That'}» cannot be in flight with nobody on it. ` +
+        'Name a driver first.',
+    )
+  }
 
   const { error } = await supabase
     .from('node')
@@ -329,7 +345,7 @@ export async function editTaskBasics(fd: FormData) {
     .update({
       title: required(fd, 'title'),
       due_date: text(fd, 'due_date'),
-      owner_id: text(fd, 'owner_id'),
+      driver_id: text(fd, 'driver_id'),
       description: text(fd, 'description'),
     })
     .eq('id', required(fd, 'id'))
@@ -361,7 +377,7 @@ export async function setDriver(fd: FormData) {
 
   const { error } = await supabase
     .from('node')
-    .update({ owner_id: text(fd, 'owner_id') })
+    .update({ driver_id: text(fd, 'driver_id') })
     .eq('id', required(fd, 'id'))
 
   if (error) throw new Error(`Could not set the driver: ${error.message}`)

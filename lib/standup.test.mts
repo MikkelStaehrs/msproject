@@ -28,7 +28,7 @@ const node = (over: Partial<AgendaInput['nodes'][number]> = {}) => ({
   status: 'active',
   due_date: null,
   completed_at: null,
-  owner_id: 'u-mikkel',
+  driver_id: 'u-mikkel',
   ...over,
 })
 
@@ -56,7 +56,7 @@ const oneOfEach = agenda({
     node({ id: 'n1', title: 'The blocked one' }),
     node({ id: 'late', title: 'Late one', due_date: '2026-09-01' }),
     node({ id: 'soon', title: 'Soon one', due_date: '2026-09-12' }),
-    node({ id: 'nobody', title: 'Nobody one', owner_id: null }),
+    node({ id: 'nobody', title: 'Nobody one', driver_id: null }),
   ],
   blockers: [
     blocker({ id: 'b-late', title: 'Overdue answer', expected_by: '2026-09-05' }),
@@ -279,19 +279,19 @@ check(
  */
 const undriven = agenda({
   ...blank,
-  nodes: [node({ id: 'free', title: 'Nobody on it', owner_id: null })],
+  nodes: [node({ id: 'free', title: 'Nobody on it', driver_id: null })],
 })
 check('a task with no driver is on the agenda', undriven.map((i) => i.kind), ['no_driver'])
 check('and it shows no number, because there is none', undriven[0].days, 0)
 
 check(
   'an empty owner is not a name',
-  agenda({ ...blank, nodes: [node({ owner_id: null })] }).map((i) => i.kind),
+  agenda({ ...blank, nodes: [node({ driver_id: null })] }).map((i) => i.kind),
   ['no_driver'],
 )
 check(
   'a task with a driver is not on it',
-  agenda({ ...blank, nodes: [node({ owner_id: 'u-mikkel' })] }).length,
+  agenda({ ...blank, nodes: [node({ driver_id: 'u-mikkel' })] }).length,
   0,
 )
 
@@ -299,7 +299,7 @@ check(
 for (const status of ['idea', 'planned', 'paused', 'done', 'cancelled']) {
   check(
     `${status} work with no driver is not on the agenda`,
-    agenda({ ...blank, nodes: [node({ status, owner_id: null })] }).length,
+    agenda({ ...blank, nodes: [node({ status, driver_id: null })] }).length,
     0,
   )
 }
@@ -313,15 +313,15 @@ check(
   agenda({
     ...blank,
     nodes: [
-      node({ id: 'sub', parent_id: 'p1', title: 'A subproject', owner_id: null }),
-      node({ id: 'kid', parent_id: 'sub', title: 'Its task', owner_id: 'u-mikkel' }),
+      node({ id: 'sub', parent_id: 'p1', title: 'A subproject', driver_id: null }),
+      node({ id: 'kid', parent_id: 'sub', title: 'Its task', driver_id: 'u-mikkel' }),
     ],
   }).map((i) => i.kind),
   [],
 )
 check(
   'and neither is a project',
-  agenda({ ...blank, nodes: [node({ id: 'root', parent_id: null, owner_id: null })] }).length,
+  agenda({ ...blank, nodes: [node({ id: 'root', parent_id: null, driver_id: null })] }).length,
   0,
 )
 
@@ -332,7 +332,7 @@ check(
  */
 const lateAndFree = agenda({
   ...blank,
-  nodes: [node({ id: 'both', due_date: '2026-09-01', owner_id: null })],
+  nodes: [node({ id: 'both', due_date: '2026-09-01', driver_id: null })],
 })
 check('a late task with no driver is one row', lateAndFree.map((i) => i.kind), ['overdue'])
 check(
@@ -343,7 +343,7 @@ check(
 
 const soonAndFree = agenda({
   ...blank,
-  nodes: [node({ id: 'both', due_date: '2026-09-12', owner_id: null })],
+  nodes: [node({ id: 'both', due_date: '2026-09-12', driver_id: null })],
 })
 check('one due soon with no driver is one row too', soonAndFree.map((i) => i.kind), ['due_soon'])
 check('and it says so', soonAndFree[0].why.includes('And nobody is driving it.'), true)

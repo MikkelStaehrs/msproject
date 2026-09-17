@@ -257,8 +257,8 @@ export default async function TreePage({
    */
   const leadOf = (n: Node) => {
     const roles = readIdentity(n.reporting).people
-    const id = roles.project_manager?.[0] ?? n.owner_id
-    return id ? nameOf(peopleById, id) : n.owner_name
+    const id = roles.project_manager?.[0] ?? n.driver_id
+    return id ? nameOf(peopleById, id) : n.driver_name
   }
 
   const peopleById = await readPeopleById(supabase)

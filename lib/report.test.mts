@@ -150,6 +150,8 @@ const blocker = (id: string, title: string, days: number, who = 'IT') => ({
   resolved_at: null,
   resolution: null,
   created_by: null,
+  driver_id: null,
+  next_step: null,
   created_at: '2026-08-01T00:00:00Z',
   days_blocked: days,
   overdue: false,

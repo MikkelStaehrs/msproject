@@ -435,11 +435,11 @@ export async function ReadEdit({
               hint="Who drives this forward. The same field as the driver on every node in the tree, so it is also used when a task is waiting on someone."
             >
               <PersonPicker
-                name="owner_id"
+                name="driver_id"
                 people={people}
-                value={project.owner_id ? [project.owner_id] : []}
+                value={project.driver_id ? [project.driver_id] : []}
               />
-              <WasNamed name={project.owner_name} />
+              <WasNamed name={project.driver_name} />
             </Field>
             <Field
               label="Location"

@@ -49,14 +49,20 @@ export interface Node {
    * open the task is not driving it. Null is nobody, which the stand-up asks
    * about every week.
    */
-  owner_id: string | null
+  driver_id: string | null
   /**
    * READ ONLY, and almost always null. What the driver field held before a
    * driver became an account, for the rows whose name matched nobody. Shown in
    * rust so it gets answered. Nothing in the application writes it, and the
-   * database refuses to hold it alongside an owner_id.
+   * database refuses to hold it alongside an driver_id.
    */
-  owner_name: string | null
+  driver_name: string | null
+  /**
+   * Deliberately not now, and a date it is asked about again. The third answer
+   * to «who is driving this», beside a name and silence, and the only one of
+   * the three that is a decision rather than a gap.
+   */
+  parked_until: string | null
   start_date: string | null
   due_date: string | null
   completed_at: string | null
@@ -104,6 +110,13 @@ export interface Blocker {
   expected_by: string | null
   resolved_at: string | null
   resolution: string | null
+  /**
+   * Who is chasing it. Not `waiting_on`, which is the party being waited FOR
+   * and is text because it is usually an organisation.
+   */
+  driver_id: string | null
+  /** What that person will do before the next stand-up. */
+  next_step: string | null
   /**
    * Who wrote it. Null for everything written before the column existed, and
    * for anything that arrived through /api/mcp, which carries a token and no
@@ -448,10 +461,82 @@ export interface NodeOrigin {
  * are all derived; this row exists solely so "since last time" has a last time
  * that survives a skipped week.
  */
+export const STANDUP_STATUSES = ['open', 'closed'] as const
+export type StandupStatus = (typeof STANDUP_STATUSES)[number]
+
+export const STANDUP_ITEM_KINDS = [
+  'blocker',
+  'unowned',
+  'commitment',
+  'decision',
+  'spark',
+] as const
+export type StandupItemKind = (typeof STANDUP_ITEM_KINDS)[number]
+
+export const STANDUP_ITEM_ACTIONS = [
+  'resolved',
+  'carried',
+  'assigned',
+  'parked',
+  'logged',
+  'missed',
+] as const
+export type StandupItemAction = (typeof STANDUP_ITEM_ACTIONS)[number]
+
+/**
+ * A meeting. Exactly one is open at a time: the one you are in.
+ *
+ * `held_on` used to be the whole table. It said the same thing `closed_at`
+ * says and could not describe a meeting that had not finished, which is now
+ * the interesting kind.
+ */
 export interface Standup {
   id: string
-  held_on: string
+  status: StandupStatus
   held_by: string | null
+  facilitator_id: string | null
+  /** When the previous one closed. Null on the first, which is not a quiet week. */
+  period_from: string | null
+  /** When this one closed. Equal to closed_at, and about the period rather than the act. */
+  period_to: string | null
+  scheduled_at: string | null
+  closed_at: string | null
+  /**
+   * What the meeting came to, frozen at the moment it closed. Never
+   * recomputed: a retrospective that changes when the work moves is a view of
+   * today wearing last week's date.
+   */
+  summary: Record<string, unknown> | null
+  note: string | null
+  created_at: string
+}
+
+export interface StandupAttendee {
+  standup_id: string
+  person_id: string
+  present: boolean
+}
+
+/**
+ * One thing the room touched, and what became of it.
+ *
+ * Not a second copy of the work: the blocker, the task and the decision stay
+ * where they are and stay the truth. This records what was SAID about them, in
+ * a meeting, on a date.
+ */
+export interface StandupItem {
+  id: string
+  standup_id: string
+  /** Null for a spark, which is about no node yet and may never be. */
+  node_id: string | null
+  /** The blocker it was about. A node can carry two, so node_id does not say. */
+  ref_id: string | null
+  kind: StandupItemKind
+  action: StandupItemAction
+  driver_id: string | null
+  next_step: string | null
+  due_date: string | null
+  parked_until: string | null
   note: string | null
   created_at: string
 }

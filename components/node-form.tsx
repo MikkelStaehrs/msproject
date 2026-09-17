@@ -133,11 +133,11 @@ export async function NodeForm({
 
         <Field label="Driver">
           <PersonPicker
-            name="owner_id"
+            name="driver_id"
             people={people}
-            value={node?.owner_id ? [node.owner_id] : []}
+            value={node?.driver_id ? [node.driver_id] : []}
           />
-          <WasNamed name={node?.owner_name} />
+          <WasNamed name={node?.driver_name} />
         </Field>
 
         <Field label="Start">

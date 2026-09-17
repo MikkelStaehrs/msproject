@@ -144,9 +144,9 @@ export default async function BriefPage({
   const identity = readIdentity(project.reporting)
   const peopleById = await readPeopleById(supabase)
   /* The driver: an account, or the name that used to be typed there. */
-  const driver = project.owner_id
-    ? nameOf(peopleById, project.owner_id)
-    : project.owner_name
+  const driver = project.driver_id
+    ? nameOf(peopleById, project.driver_id)
+    : project.driver_name
   const stage = readStage(project.reporting)
   const progress = progressRes.data as NodeProgress | null
   // Fetched whole, cut here. See lib/subtree.

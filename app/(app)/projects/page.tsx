@@ -131,7 +131,7 @@ export default async function ProjectsPage({
      * when the shape changed, because the blob was read through an `unknown`
      * cast: the column would simply have started showing a uuid.
      */
-    const driverId = roles.project_owner?.[0] ?? roles.creator?.[0] ?? r.owner_id
+    const driverId = roles.project_owner?.[0] ?? roles.creator?.[0] ?? r.driver_id
     return {
       id: r.id,
       code: typeof projectNo === 'string' ? projectNo : '',
@@ -148,7 +148,7 @@ export default async function ProjectsPage({
       serves: servesIds.length
         ? servesIds.map((id) => strategyById.get(id)?.name ?? '').join(', ')
         : null,
-      owner: driverId ? nameOf(peopleById, driverId) : (r.owner_name ?? ''),
+      owner: driverId ? nameOf(peopleById, driverId) : (r.driver_name ?? ''),
     }
   })
 

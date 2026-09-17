@@ -388,6 +388,9 @@ const PAIRS: [string, string, string][] = [
   // spark claimed, read back by the same functions.
   ['node_origin', 'saving_kind', 'SAVING_KINDS'],
   ['access_request', 'state', 'AccessRequestState'],
+  ['standup', 'status', 'STANDUP_STATUSES'],
+  ['standup_item', 'kind', 'STANDUP_ITEM_KINDS'],
+  ['standup_item', 'action', 'STANDUP_ITEM_ACTIONS'],
 ]
 const loose: string[] = []
 for (const [rel, col, name] of PAIRS) {

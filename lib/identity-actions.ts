@@ -140,7 +140,7 @@ export async function saveIdentity(fd: FormData) {
     .update({
       title: required(fd, 'title'),
       description: text(fd, 'description'),
-      owner_id: text(fd, 'owner_id'),
+      driver_id: text(fd, 'driver_id'),
       start_date: text(fd, 'start_date'),
       due_date: text(fd, 'due_date'),
       reporting,

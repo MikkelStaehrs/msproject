@@ -134,11 +134,11 @@ export async function TaskSheet({
                     <span className="lbl shrink-0 text-muted">Driver</span>
                     <span className="min-w-0 flex-1">
                       <PersonPicker
-                        name="owner_id"
+                        name="driver_id"
                         people={people}
-                        value={node.owner_id ? [node.owner_id] : []}
+                        value={node.driver_id ? [node.driver_id] : []}
                       />
-                      <WasNamed name={node.owner_name} />
+                      <WasNamed name={node.driver_name} />
                     </span>
                   </label>
                 </div>

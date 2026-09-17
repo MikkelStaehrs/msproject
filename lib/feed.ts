@@ -26,7 +26,7 @@
  *
  * A DRIVER IS MATCHED BY KEY. This used to fold names and compare spellings,
  * which made the bell a thing that silently stopped ringing the day somebody
- * typed «Mikkel S» on a task. `node.owner_id` is a reference now, so the
+ * typed «Mikkel S» on a task. `node.driver_id` is a reference now, so the
  * question «is this mine» is an equality and not a guess.
  *
  * `blocker.waiting_on` is still text and still matched by name, and that is
@@ -95,7 +95,7 @@ export type FeedInput = {
     parent_id: string | null
     title: string
     type: string
-    owner_id: string | null
+    driver_id: string | null
     status: string
     completed_at: string | null
     created_at: string
@@ -163,7 +163,7 @@ export function feedItems(input: FeedInput): FeedItem[] {
 
   /** Work I drive. An equality, because a driver is an account. */
   const iDrive = (nodeId: string) => {
-    const owner = byId.get(nodeId)?.owner_id ?? null
+    const owner = byId.get(nodeId)?.driver_id ?? null
     return owner !== null && owner === input.me.id
   }
 
