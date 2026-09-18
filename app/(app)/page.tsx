@@ -59,6 +59,74 @@ function word(n: number) {
 }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
+/**
+ * One of the three lists.
+ *
+ * A heading with a count, and either the rows or a sentence saying why there
+ * are none. An empty list is not the same as an absent one: «nothing is
+ * waiting on anybody» is the answer the middle list exists to give, and a
+ * heading followed by nothing does not give it.
+ */
+function TodayList({
+  title,
+  rows,
+  count,
+  empty,
+  rust = false,
+}: {
+  title: string
+  rows: TodayRow[]
+  /** What the count says, where a bare number would say too little. */
+  count: string | null
+  empty: string
+  /** The list whose emptiness is good news, so its count reads as a warning. */
+  rust?: boolean
+}) {
+  return (
+    <div className="grp-gap">
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <h3 className="m-0 text-[15px] font-semibold tracking-[-0.02em]">{title}</h3>
+        {count && (
+          <span className={`micro ${rust ? 'text-rust' : 'text-muted'}`}>{count}</span>
+        )}
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="mt-2 text-[13px] leading-relaxed text-muted">{empty}</p>
+      ) : (
+        <div className="panel mt-2.5">
+          {rows.map((r) => (
+            <div
+              key={r.key}
+              className="relative flex flex-wrap items-baseline gap-[14px] border-b border-line p-[14px] last:border-b-0 hover:bg-hover"
+            >
+              <span
+                className={`mono w-[1.1em] shrink-0 text-center ${
+                  r.rust ? 'text-rust' : 'text-muted'
+                }`}
+              >
+                {r.glyph}
+              </span>
+              <div className="min-w-0 flex-1 basis-[240px] leading-[1.5]">
+                {/* The row is the action: the link stretches over the whole row. */}
+                <Link href={r.href} className="after:absolute after:inset-0">
+                  {r.text}
+                </Link>
+                <div className="mt-[5px] text-[12px] leading-[1.45] text-muted">{r.ctx}</div>
+              </div>
+              <span className="inline-flex items-baseline gap-[13px] whitespace-nowrap">
+                {r.action}
+                <OverviewMore items={r.more} label={r.text} />
+              </span>
+              {r.right}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 type TodayRow = {
   key: string
   glyph: string
@@ -170,14 +238,86 @@ export default async function HomePage({
   })
 
   /* ------------------------------------------------------------------ */
-  /* Today. Waits first, longest first; then the loose ends; then the     */
-  /* inbox; then the log itself, which is always there.                   */
+  /* Today, in three lists rather than one.                               */
+  /*                                                                      */
+  /* It was one list, and it read as one kind of thing when it was four:  */
+  /* two chases, two writing prompts, a spark count and a statistic about */
+  /* the log. They need different reactions and they take different       */
+  /* amounts of time, and running them together meant the two waits, the  */
+  /* only rows where somebody else is holding you up, sat between a       */
+  /* reminder and a number.                                               */
+  /*                                                                      */
+  /* So: what is on you, what is on somebody else, and what has not been  */
+  /* looked at. Three questions, three lists, and the middle one is the   */
+  /* one that should be empty.                                            */
   /* ------------------------------------------------------------------ */
-  const rows: TodayRow[] = []
+  const yours: TodayRow[] = []
+  const waiting: TodayRow[] = []
+  const unsorted: TodayRow[] = []
+
+  /*
+   * YOUR WORK. This did not exist before and could not: a driver was free text
+   * until yesterday, so «the tasks that are mine» was a question the database
+   * could not answer without guessing at a spelling. It is a key now.
+   *
+   * Leaves only, in flight only, nearest date first. Parked work is out: a date
+   * to come back to is a decision that it is not today's problem, and showing it
+   * anyway would make the parking pointless.
+   */
+  const mine = me
+    ? nodes
+        .filter(
+          (n) =>
+            n.driver_id === me.id &&
+            n.status === 'active' &&
+            n.completed_at === null &&
+            (kids.get(n.id) ?? []).length === 0 &&
+            (n.parked_until === null || n.parked_until <= today),
+        )
+        .sort((a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999'))
+    : []
+
+  for (const n of mine) {
+    const late = n.due_date !== null && n.due_date < today
+    const project = projectOfNode.get(n.id) ?? n.id
+    const stuck = blockers.filter((b) => b.node_id === n.id).length
+    yours.push({
+      key: `t${n.id}`,
+      glyph: '·',
+      rust: late,
+      text: n.title,
+      ctx: (
+        <>
+          {projectTitleOf(n.id)}
+          {n.due_date ? (
+            <>
+              {' · '}
+              <span className={late ? 'text-rust' : ''}>
+                {late ? 'was due ' : 'due '}
+                {formatDate(n.due_date)}
+              </span>
+            </>
+          ) : (
+            ' · no date'
+          )}
+          {stuck > 0 && ' · something is in its way'}
+        </>
+      ),
+      href: nodeHref(n.id),
+      action: <OverviewAct nodeId={n.id} label="Write a line" />,
+      more: [
+        { label: 'Open', href: nodeHref(n.id) },
+        { label: 'Write a line', nodeId: n.id },
+        { label: 'Record a decision', href: `/p/${project}?dnew=${n.id}` },
+        { label: 'Say it is in the way', href: `/p/${project}?bnew=${n.id}` },
+      ],
+      right: late ? <span className="tag tag-rust">Late</span> : undefined,
+    })
+  }
 
   for (const b of [...blockers].sort((a, b) => b.days_blocked - a.days_blocked)) {
     const project = projectOfNode.get(b.node_id) ?? b.node_id
-    rows.push({
+    waiting.push({
       key: `b${b.id}`,
       glyph: '!',
       rust: true,
@@ -215,7 +355,7 @@ export default async function HomePage({
      * form, so that is where Record it goes rather than into the entry box.
      */
     const undecided = l.kind === 'undecided'
-    rows.push({
+    yours.push({
       key: `l${l.nodeId}-${l.kind}-${l.on}`,
       glyph: undecided ? '?' : '·',
       text: l.what,
@@ -249,7 +389,7 @@ export default async function HomePage({
             ? 'it carries a figure'
             : 'each of them carries a figure'
           : `${noFigure} of them carry no figure yet`
-    rows.push({
+    unsorted.push({
       key: 'sparks',
       glyph: '○',
       text:
@@ -271,34 +411,29 @@ export default async function HomePage({
     })
   }
 
+  /*
+   * The log is a statistic, not a thing to do, and it was a row in a list of
+   * things to do. It reads as a sentence under the three lists now: the same
+   * two facts, the same way in, and nothing pretending it is waiting for you.
+   */
   const last = [...entries].sort((a, b) => (a.entry_date < b.entry_date ? 1 : -1))[0]
-  rows.push({
-    key: 'log',
-    glyph: '·',
-    text:
-      entries.length === 0
-        ? 'The log holds nothing yet'
-        : `The log holds ${entries.length} line${entries.length === 1 ? '' : 's'} in total`,
-    ctx: last
-      ? `Last one ${formatDate(last.entry_date)}, ${daysBetween(last.entry_date, today)} days ago · Friday assembles the report from these`
-      : 'Ctrl K writes the first · Friday assembles the report from these',
-    href: '/standup',
-    action: (
-      <Link href="/standup" className="act relative z-10">
-        Open stand-up
-      </Link>
-    ),
-    more: [
-      { label: 'Open stand-up', href: '/standup' },
-      { label: 'Open Friday', href: '/friday' },
-    ],
-  })
+  const logLine =
+    entries.length === 0
+      ? 'The log holds nothing yet. Ctrl K writes the first.'
+      : `The log holds ${entries.length} line${entries.length === 1 ? '' : 's'} in total, the last ${
+          last
+            ? `on ${formatDate(last.entry_date)}, ${daysBetween(last.entry_date, today)} days ago`
+            : 'undated'
+        }.`
 
   /*
    * The line under the greeting. Derived from the same list, so it can only
    * ever say what the rows below it say: how much of today is waiting on
    * somebody else, and whether any of it has a date to argue with.
    */
+  /* Everything on the list, which is what the sentence under the clock counts. */
+  const rows = [...yours, ...waiting, ...unsorted]
+
   const waits = blockers.length
   const dated = blockers.filter((b) => b.expected_by).length
   const waitDays = blockers.reduce((s, b) => s + b.days_blocked, 0)
@@ -352,41 +487,62 @@ export default async function HomePage({
 
       <div className="px-[var(--gut)] py-[26px]">
         <div className="work mx-auto">
-          {/* Today */}
+          {/*
+            Three lists, not one: what is on you, what is on somebody else,
+            and what has not been looked at. They need different reactions and
+            they take different amounts of time, and run together the two
+            waits sat between a reminder and a number.
+          */}
           <div className="flex flex-wrap items-baseline justify-between gap-4">
             <h2 className="m-0 text-[17px] font-semibold tracking-[-0.025em]">Today</h2>
             <span className="micro text-muted">
               <OverviewDate wall={wall} />
             </span>
           </div>
-          <div className="panel grp-gap">
-            {rows.map((r) => (
-              <div
-                key={r.key}
-                className="relative flex flex-wrap items-baseline gap-[14px] border-b border-line p-[14px] last:border-b-0 hover:bg-hover"
-              >
-                <span
-                  className={`mono w-[1.1em] shrink-0 text-center ${
-                    r.rust ? 'text-rust' : 'text-muted'
-                  }`}
-                >
-                  {r.glyph}
-                </span>
-                <div className="min-w-0 flex-1 basis-[240px] leading-[1.5]">
-                  {/* The row is the action: the link stretches over the whole row. */}
-                  <Link href={r.href} className="after:absolute after:inset-0">
-                    {r.text}
-                  </Link>
-                  <div className="mt-[5px] text-[12px] leading-[1.45] text-muted">{r.ctx}</div>
-                </div>
-                <span className="inline-flex items-baseline gap-[13px] whitespace-nowrap">
-                  {r.action}
-                  <OverviewMore items={r.more} label={r.text} />
-                </span>
-                {r.right}
-              </div>
-            ))}
-          </div>
+
+          <TodayList
+            title="Yours"
+            rows={yours}
+            count={yours.length > 0 ? `${yours.length}` : null}
+            empty={
+              me
+                ? 'Nothing is on you and finished today. Work shows up here when you are its driver and it is under way.'
+                : 'Sign in to see the work that is yours.'
+            }
+          />
+
+          {/*
+            The one that should be empty. It is said out loud when it is,
+            because «nobody is holding you up» is the answer this list exists
+            to give and a heading with nothing under it does not give it.
+          */}
+          <TodayList
+            title="Waiting on somebody else"
+            rows={waiting}
+            count={
+              waiting.length > 0
+                ? `${waitDays} ${waitDays === 1 ? 'day' : 'days'} in total`
+                : null
+            }
+            empty="Nothing is waiting on anybody outside the room."
+            rust
+          />
+
+          {unsorted.length > 0 && (
+            <TodayList title="Not looked at yet" rows={unsorted} count={null} empty="" />
+          )}
+
+          <p className="grp-gap max-w-[64ch] text-[12px] leading-[1.5] text-muted">
+            {logLine}{' '}
+            <Link href="/standup" className="act">
+              Open the stand-up
+            </Link>{' '}
+            or{' '}
+            <Link href="/friday" className="act">
+              the Friday report
+            </Link>
+            .
+          </p>
 
           {/* Running now */}
           <div className="sec-gap">
