@@ -23,6 +23,7 @@ import { subtreeSet } from '@/lib/subtree'
 import {
   TYPE_LABEL,
   type BlockerDays,
+  type Document,
   type Decision,
   type Entry,
   type Node,
@@ -101,7 +102,7 @@ export default async function TreePage({
    */
   const [
     nodesRes, allNodesRes, entryRes, blockerRes, decisionRes, progressRes,
-    stateRes, readyRes, markRes, strategyRes, depRes,
+    stateRes, readyRes, markRes, strategyRes, depRes, docRes,
   ] = await Promise.all([
     supabase.from('node').select('*').order('sort_order'),
     supabase.from('node').select('id, parent_id, title, sort_order').order('sort_order'),
@@ -114,6 +115,7 @@ export default async function TreePage({
     supabase.from('v_strategy_node').select('node_id, strategy_id, is_top'),
     supabase.from('strategy').select('id, name'),
     supabase.from('node_dependency').select('*'),
+    supabase.from('document').select('*').order('created_at', { ascending: false }),
   ])
 
   const failure = firstError([
@@ -1232,6 +1234,21 @@ export default async function TreePage({
           entries={entries.filter((e) => e.node_id === openTask.id)}
           waitsOn={deps.filter((d) => d.node_id === openTask.id)}
           holdsUp={deps.filter((d) => d.depends_on_id === openTask.id)}
+          documents={((docRes.data ?? []) as Document[]).filter(
+            (d) => d.node_id === openTask.id,
+          )}
+          /*
+            The project's own folder skeleton, so a file put on a task lands
+            where the rest of that project's files live rather than starting a
+            folder of its own.
+          */
+          folders={
+            Array.isArray(project.reporting?.folders)
+              ? (project.reporting.folders as unknown[]).filter(
+                  (f): f is string => typeof f === 'string',
+                )
+              : []
+          }
           titleOf={(nodeId) => byId.get(nodeId)?.title ?? 'a part you cannot open'}
           today={today}
         />

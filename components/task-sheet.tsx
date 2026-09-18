@@ -3,11 +3,14 @@ import { daysBetween } from '@/lib/date'
 import { editTaskBasics, setStatusWithLine } from '@/lib/node-actions'
 import { QuickAddOn } from '@/components/quick-add-on'
 import { PersonPicker, WasNamed } from '@/components/person-picker'
+import { DocumentUpload } from '@/components/document-upload'
+import { deleteDocument } from '@/lib/document-actions'
 import { createClient } from '@/lib/supabase/server'
 import { readPeople } from '@/lib/person-data'
 import { formatDate, relativeDays } from '@/components/ui'
 import { STATUS_LABEL } from '@/lib/types'
 import type {
+  Document,
   BlockerDays,
   Decision,
   Entry,
@@ -45,6 +48,8 @@ export async function TaskSheet({
   entries,
   waitsOn,
   holdsUp,
+  documents,
+  folders,
   titleOf,
   today,
   preselect,
@@ -60,6 +65,10 @@ export async function TaskSheet({
   entries: Entry[]
   waitsOn: NodeDependency[]
   holdsUp: NodeDependency[]
+  /** What is already filed against this task. */
+  documents: Document[]
+  /** The project's folder skeleton, so a file can be put where the rest go. */
+  folders: string[]
   titleOf: (id: string) => string
   today: string
   /** The state a drop asked for. The move still has to be said out loud. */
@@ -157,6 +166,53 @@ export async function TaskSheet({
                 <button className="btn grp-gap">Save</button>
               </form>
 
+              {/*
+                Files, filed against the task and listed on the project.
+
+                `document.node_id` has always pointed at a node rather than at
+                a project, and the Files page has always gathered the whole
+                subtree, so a drawing put here shows up under the project with
+                the rest. What was missing was this: the only way to file
+                anything was the project's own page, which meant a file about
+                one task was filed against all of them and the connection was
+                whatever somebody typed in the name.
+              */}
+              <h3 className="sec-gap text-[15px] font-semibold">Files</h3>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
+                Filed against this task and listed with the project's, so it is in
+                one place and still says what it is about.
+              </p>
+
+              {documents.length > 0 && (
+                <div className="panel mt-3">
+                  {documents.map((d) => (
+                    <div
+                      key={d.id}
+                      className="flex items-baseline gap-3 border-b border-rule px-3.5 py-2.5 last:border-b-0"
+                    >
+                      <a
+                        href={`/api/document/${d.id}`}
+                        className="min-w-0 flex-1 truncate text-[13px] hover:text-green"
+                      >
+                        {d.name}
+                      </a>
+                      <span className="mono shrink-0 text-[11px] text-muted">
+                        {d.folder ?? 'unfiled'}
+                      </span>
+                      <form action={deleteDocument} className="shrink-0">
+                        <input type="hidden" name="id" value={d.id} />
+                        <input type="hidden" name="redirectTo" value={redirectTo} />
+                        <button className="act text-muted">Remove</button>
+                      </form>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-3">
+                <DocumentUpload nodeId={node.id} folders={folders} defaultFolder="" />
+              </div>
+
               {/* What has happened, in one stream */}
               <h3 className="sec-gap text-[15px] font-semibold">Its own log</h3>
               {entries.length + decisions.length + open.length === 0 ? (
@@ -239,13 +295,25 @@ export async function TaskSheet({
                 <input type="hidden" name="redirectTo" value={redirectTo} />
 
                 <span className="lbl text-muted">State</span>
+                {/*
+                  The chosen one is painted by the browser, not by the server.
+
+                  It used to carry a class worked out from the stored status,
+                  which meant the row showed what the task WAS and never what
+                  you had just clicked: you pressed a box, nothing moved, and
+                  the only way to find out whether it had registered was to
+                  press Move it and see. `:has(:checked)` follows the radio
+                  itself, so the mark lands on the press and still lands on the
+                  right box before anybody has pressed anything.
+
+                  Filled rather than outlined, because the outline it had was
+                  one hairline against another and was invisible at this size.
+                */}
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {COLUMNS.map((s) => (
                     <label
                       key={s}
-                      className={`tag cursor-pointer ${
-                        chosen === s ? 'border-green text-green' : ''
-                      }`}
+                      className="tag cursor-pointer select-none has-[:checked]:border-green has-[:checked]:bg-green has-[:checked]:text-inset hover:border-green-soft"
                     >
                       <input
                         type="radio"

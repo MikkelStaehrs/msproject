@@ -782,7 +782,7 @@ function StepDecisions({
             {places.map((p) => (
               <label
                 key={p.id}
-                className="flex cursor-pointer items-baseline gap-2.5 border-b border-line px-[14px] py-1.5 last:border-b-0 hover:bg-hover"
+                className="flex cursor-pointer items-baseline gap-2.5 border-b border-line px-[14px] py-1.5 last:border-b-0 hover:bg-hover has-[:checked]:bg-hover has-[:checked]:font-medium has-[:checked]:text-green"
               >
                 <input
                   type="radio"
