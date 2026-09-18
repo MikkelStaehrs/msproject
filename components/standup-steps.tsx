@@ -82,6 +82,49 @@ export function StandupSteps({
   const projectOf = (nodeId: string) =>
     byId.get(projectOfNode.get(nodeId) ?? nodeId)?.title ?? ''
 
+  /*
+   * Which part a piece of work sits in, and what that part is called.
+   *
+   * Two screens group by it, and both group by the SAME thing: the node's own
+   * parent, not its project. A project with five subprojects each carrying the
+   * same three task names draws fifteen identical rows if you group by project,
+   * which is the problem the board already had and solved the same way.
+   */
+  const partOf = (nodeId: string) => {
+    const parent = byId.get(nodeId)?.parent_id
+    const part = parent ? byId.get(parent) : undefined
+    return {
+      id: part?.id ?? '__none',
+      title: part?.title ?? 'Straight under the project',
+      project: projectOf(nodeId),
+    }
+  }
+
+  /*
+   * Everywhere a decision can be put, as a tree.
+   *
+   * Any node, not only a leaf: «we buy the switch rather than renting it»
+   * belongs to the subproject it changes, and forcing it onto a task would put
+   * it under one of the five things it affects. The depth is carried so the
+   * list can be read as the shape it is, which is the whole reason it is a list
+   * and not the select it was.
+   */
+  const places: { id: string; title: string; depth: number }[] = []
+  {
+    const kids = new Map<string, Node[]>()
+    for (const n of byId.values()) {
+      const key = n.parent_id ?? '__root__'
+      kids.set(key, [...(kids.get(key) ?? []), n])
+    }
+    const walk = (key: string, depth: number) => {
+      for (const n of kids.get(key) ?? []) {
+        places.push({ id: n.id, title: n.title, depth })
+        walk(n.id, depth + 1)
+      }
+    }
+    walk('__root__', 0)
+  }
+
   const index = STEPS.findIndex(([n]) => n === step)
   const previous = index > 0 ? STEPS[index - 1] : null
   const next = index < STEPS.length - 1 ? STEPS[index + 1] : null
@@ -146,7 +189,7 @@ export function StandupSteps({
               state={state}
               people={people}
               at={at}
-              projectOf={projectOf}
+              partOf={partOf}
               here={here(step)}
             />
           )}
@@ -158,13 +201,14 @@ export function StandupSteps({
               peopleById={peopleById}
               byId={byId}
               at={at}
+              partOf={partOf}
               here={here(step)}
             />
           )}
           {step === '5' && (
             <StepDecisions
               drafts={decisions}
-              live={live}
+              places={places}
               byId={byId}
               at={at}
               here={here(step)}
@@ -416,69 +460,120 @@ function StepNoDriver({
   state,
   people,
   at,
-  projectOf,
+  partOf,
   here,
 }: {
   state: CloseState
   people: Person[]
   at: (id: string) => string
-  projectOf: (id: string) => string
+  partOf: (id: string) => { id: string; title: string; project: string }
   here: string
 }) {
+  /*
+   * Grouped by the part the work sits in, in the order the list arrived, which
+   * is nearest date first. A project with five subprojects each carrying
+   * «Master data» draws five identical rows otherwise, and you cannot tell
+   * which one you just answered.
+   */
+  const groups: {
+    key: string
+    title: string
+    project: string
+    rows: CloseState['unowned']
+  }[] = []
+  for (const u of state.unowned) {
+    const part = partOf(u.nodeId)
+    const last = groups.find((g) => g.key === part.id)
+    if (last) last.rows.push(u)
+    else groups.push({ key: part.id, title: part.title, project: part.project, rows: [u] })
+  }
+
+  const inFlight = state.unowned.filter((u) => u.inFlight && u.parkedUntil === null).length
+
   return (
     <>
       <Head
         title="No driver"
-        note="Work in flight with nobody on it, nearest date first and, within a date, whatever holds most people up. Say a name, or say when it comes back. «Nobody» is not an answer and the close will say so."
+        note="Every piece of work with nobody on it, whatever state it is in, grouped by the part it sits in. Nearest date first, and within a date whatever holds most people up."
       />
 
+      {/*
+        The whole list is here, and only the part of it that is under way can
+        stop the close. Refusing over an idea nobody has begun is how a step
+        becomes one the room learns to click past, and then the two that matter
+        go past with it.
+      */}
+      <p className="prose-measure grp-gap text-[13px] text-muted">
+        {inFlight > 0 ? (
+          <>
+            <span className="text-rust">{inFlight} of these are under way</span>, and those
+            are the ones that hold the close: say a name, or say when it comes back.
+            The rest are here because «who has nothing on it» is a question about the
+            whole portfolio, and they stop nothing.
+          </>
+        ) : (
+          'Nothing under way is missing a driver. What is left has not been started, so it is here to be seen rather than answered.'
+        )}
+      </p>
+
       {state.unowned.length === 0 ? (
-        <p className="grp-gap text-[13px] text-muted">
-          Everything in flight has somebody on it.
-        </p>
+        <p className="grp-gap text-[13px] text-muted">Everything has somebody on it.</p>
       ) : (
-        <div className="grp-gap flex flex-col gap-3.5">
-          {state.unowned.map((u) => (
-            <div key={u.nodeId} className="panel px-[14px] py-3">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <Link href={at(u.nodeId)} className="text-[14px] font-medium hover:text-green">
-                  {u.title}
-                </Link>
-                {u.dueDate && (
-                  <span className="mono text-[12px] text-muted">{formatDate(u.dueDate)}</span>
-                )}
-                {u.blocks > 0 && (
-                  <span className="tag tag-rust">
-                    {u.blocks} waiting on it
-                  </span>
-                )}
-                <span className="ml-auto text-[12px] text-muted">{projectOf(u.nodeId)}</span>
+        <div className="grp-gap flex flex-col gap-[var(--sec)]">
+          {groups.map((g) => (
+            <div key={g.key}>
+              <div className="flex flex-wrap items-baseline gap-x-2.5 border-b border-line-strong pb-2">
+                <span className="text-[15px] font-semibold tracking-[-0.02em] text-green">
+                  {g.title}
+                </span>
+                <span className="text-[12px] text-muted">{g.project}</span>
+                <span className="mono ml-auto text-[12px] text-muted">{g.rows.length}</span>
               </div>
 
-              <form action={driveOrPark} className="mt-2.5 flex flex-wrap items-end gap-3">
-                <input type="hidden" name="id" value={u.nodeId} />
-                <input type="hidden" name="redirectTo" value={here} />
-                <label className="block min-w-[200px] flex-1">
-                  <span className="lbl text-muted">Driver</span>
-                  <PersonPicker name="driver_id" people={people} value={[]} />
-                </label>
-                <label className="block">
-                  <span className="lbl text-muted">Or park it until</span>
-                  <input
-                    type="date"
-                    name="parked_until"
-                    defaultValue={u.parkedUntil ?? ''}
-                    className="field tabular-nums"
-                  />
-                </label>
-                <button className="btn btn-ghost shrink-0">Save</button>
-              </form>
+              {g.rows.map((u) => (
+                <div key={u.nodeId} className="border-b border-line py-3 last:border-b-0">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <Link href={at(u.nodeId)} className="text-[14px] font-medium hover:text-green">
+                      {u.title}
+                    </Link>
+                    {u.inFlight ? (
+                      <span className="tag tag-rust">Under way</span>
+                    ) : (
+                      <span className="tag">Not started</span>
+                    )}
+                    {u.dueDate && (
+                      <span className="mono text-[12px] text-muted">{formatDate(u.dueDate)}</span>
+                    )}
+                    {u.blocks > 0 && (
+                      <span className="text-[12px] text-rust">{u.blocks} waiting on it</span>
+                    )}
+                    {u.parkedUntil && (
+                      <span className="ml-auto text-[12px] text-muted">
+                        parked until {formatDateLong(u.parkedUntil)}
+                      </span>
+                    )}
+                  </div>
 
-              {u.parkedUntil && (
-                <p className="mt-2 text-[12px] text-muted">
-                  Parked until {formatDateLong(u.parkedUntil)}.
-                </p>
-              )}
+                  <form action={driveOrPark} className="mt-2 flex flex-wrap items-end gap-3">
+                    <input type="hidden" name="id" value={u.nodeId} />
+                    <input type="hidden" name="redirectTo" value={here} />
+                    <label className="block min-w-[200px] flex-1">
+                      <span className="lbl text-muted">Driver</span>
+                      <PersonPicker name="driver_id" people={people} value={[]} />
+                    </label>
+                    <label className="block">
+                      <span className="lbl text-muted">Or park it until</span>
+                      <input
+                        type="date"
+                        name="parked_until"
+                        defaultValue={u.parkedUntil ?? ''}
+                        className="field tabular-nums"
+                      />
+                    </label>
+                    <button className="btn btn-ghost shrink-0">Save</button>
+                  </form>
+                </div>
+              ))}
             </div>
           ))}
         </div>
@@ -496,6 +591,7 @@ function StepAhead({
   peopleById,
   byId,
   at,
+  partOf,
   here,
 }: {
   live: Live[]
@@ -504,38 +600,40 @@ function StepAhead({
   peopleById: Map<string, string>
   byId: Map<string, Node>
   at: (id: string) => string
+  partOf: (id: string) => { id: string; title: string; project: string }
   here: string
 }) {
+  /*
+   * A list, not a picker.
+   *
+   * It was a select, and a select is exactly wrong here: every option read
+   * «2D mapping · Mapping of the Production Lines», nine times, because the
+   * same three tasks exist under five subprojects. You cannot choose from a
+   * list where the options are indistinguishable, and the thing that
+   * distinguishes them is the part they sit in, which a flat list of strings
+   * cannot show.
+   *
+   * So the work is laid out grouped, the way the board lays it out, and each
+   * row carries its own two fields. Committing is then one gesture on the
+   * thing itself rather than three on a form that describes it.
+   */
+  const promised = new Set(commitments.map((c) => c.node_id))
+
+  const groups: { key: string; title: string; project: string; rows: Live[] }[] = []
+  for (const l of live) {
+    if (promised.has(l.id)) continue
+    const part = partOf(l.id)
+    const found = groups.find((g) => g.key === part.id)
+    if (found) found.rows.push(l)
+    else groups.push({ key: part.id, title: part.title, project: part.project, rows: [l] })
+  }
+
   return (
     <>
       <Head
         title="Ahead"
         note="What the room promises before it meets again: the task, who takes it, and by when. It is written onto the work rather than into minutes, because minutes and a task disagree the first time somebody moves the date."
       />
-
-      <form action={commit} className="grp-gap flex flex-wrap items-end gap-3">
-        <input type="hidden" name="redirectTo" value={here} />
-        <label className="block min-w-[280px] flex-1">
-          <span className="lbl text-muted">Which task</span>
-          <select name="node_id" required className="field">
-            <option value="">Pick one</option>
-            {live.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.title} · {l.project}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block min-w-[180px]">
-          <span className="lbl text-muted">Who takes it</span>
-          <PersonPicker name="driver_id" people={people} value={[]} />
-        </label>
-        <label className="block">
-          <span className="lbl text-muted">By</span>
-          <input type="date" name="due_date" className="field tabular-nums" />
-        </label>
-        <button className="btn shrink-0">Agree it</button>
-      </form>
 
       <h3 className="sec-gap text-[15px] font-semibold">
         Agreed here · {commitments.length}
@@ -561,6 +659,66 @@ function StepAhead({
           ))}
         </div>
       )}
+
+      <h3 className="sec-gap text-[15px] font-semibold">Everything in flight</h3>
+      {groups.length === 0 ? (
+        <p className="grp-gap text-[13px] text-muted">
+          Every piece of live work has been promised for this week already.
+        </p>
+      ) : (
+        <div className="grp-gap flex flex-col gap-[var(--sec)]">
+          {groups.map((g) => (
+            <div key={g.key}>
+              <div className="flex flex-wrap items-baseline gap-x-2.5 border-b border-line-strong pb-2">
+                <span className="text-[15px] font-semibold tracking-[-0.02em] text-green">
+                  {g.title}
+                </span>
+                <span className="text-[12px] text-muted">{g.project}</span>
+                <span className="mono ml-auto text-[12px] text-muted">{g.rows.length}</span>
+              </div>
+
+              {g.rows.map((l) => (
+                <form
+                  key={l.id}
+                  action={commit}
+                  className="flex flex-wrap items-end gap-3 border-b border-line py-2.5 last:border-b-0"
+                >
+                  <input type="hidden" name="node_id" value={l.id} />
+                  <input type="hidden" name="redirectTo" value={here} />
+                  <span className="min-w-[200px] flex-1">
+                    <Link href={at(l.id)} className="text-[13px] font-medium hover:text-green">
+                      {l.title}
+                    </Link>
+                    <span className="mt-0.5 block text-[11.5px] text-muted">
+                      {l.driverId ? nameOf(peopleById, l.driverId) : 'nobody on it'}
+                      {l.dueDate && ` · ${formatDate(l.dueDate)}`}
+                    </span>
+                  </span>
+                  <label className="block min-w-[170px]">
+                    <span className="lbl text-muted">Who takes it</span>
+                    {/* Defaulted to whoever drives it, because most weeks it is them. */}
+                    <PersonPicker
+                      name="driver_id"
+                      people={people}
+                      value={l.driverId ? [l.driverId] : []}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="lbl text-muted">By</span>
+                    <input
+                      type="date"
+                      name="due_date"
+                      defaultValue={l.dueDate ?? ''}
+                      className="field tabular-nums"
+                    />
+                  </label>
+                  <button className="btn shrink-0">Agree it</button>
+                </form>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </>
   )
 }
@@ -569,13 +727,13 @@ function StepAhead({
 
 function StepDecisions({
   drafts,
-  live,
+  places,
   byId,
   at,
   here,
 }: {
   drafts: StandupItem[]
-  live: Live[]
+  places: { id: string; title: string; depth: number }[]
   byId: Map<string, Node>
   at: (id: string) => string
   here: string
@@ -584,38 +742,67 @@ function StepDecisions({
     <>
       <Head
         title="Decisions"
-        note="What the room settled, written on the work it is about. These are held until the meeting closes, because a decision is a row that comes into being and one recorded twice is worse than one recorded late."
+        note="What the room settled, and where it belongs. These are held until the meeting closes, because a decision is a row that comes into being and one recorded twice is worse than one recorded late."
       />
 
-      <form action={draftDecision} className="grp-gap flex flex-col gap-3">
+      {/*
+        One form, and the place is chosen inside it.
+        It was a select, and a select could not show the one thing that tells
+        the options apart: which part they sit in. A decision can also go on a
+        project or a subproject, which a list of leaf tasks could not offer at
+        all, and «we buy the switch» belongs to the subproject it changes
+        rather than to one of the five tasks it affects.
+      */}
+      <form action={draftDecision} className="grp-gap">
         <input type="hidden" name="redirectTo" value={here} />
+
         <label className="block">
           <span className="lbl text-muted">What was decided</span>
           <input
             name="decision"
             required
+            autoFocus
             placeholder="We buy the switch rather than renting it"
+            className="field text-[15px]"
+          />
+        </label>
+
+        <label className="grp-gap block">
+          <span className="lbl text-muted">Why, in one line</span>
+          <input
+            name="rationale"
+            placeholder="The rental is paid back in fourteen months"
             className="field"
           />
         </label>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="block min-w-[280px] flex-1">
-            <span className="lbl text-muted">About which work</span>
-            <select name="node_id" required className="field">
-              <option value="">Pick one</option>
-              {live.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.title} · {l.project}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block min-w-[240px] flex-1">
-            <span className="lbl text-muted">Why, in one line</span>
-            <input name="rationale" className="field" />
-          </label>
-          <button className="btn shrink-0">Record it</button>
+
+        <div className="grp-gap">
+          <span className="lbl text-muted">Where it belongs</span>
+          <div className="panel mt-1.5 max-h-[340px] max-w-[760px] overflow-y-auto">
+            {places.map((p) => (
+              <label
+                key={p.id}
+                className="flex cursor-pointer items-baseline gap-2.5 border-b border-line px-[14px] py-1.5 last:border-b-0 hover:bg-hover"
+              >
+                <input
+                  type="radio"
+                  name="node_id"
+                  value={p.id}
+                  required
+                  className="shrink-0 accent-green"
+                />
+                <span
+                  className="text-[13px] leading-snug"
+                  style={{ paddingLeft: `${p.depth * 16}px` }}
+                >
+                  {p.title}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
+
+        <button className="btn grp-gap">Record it</button>
       </form>
 
       <h3 className="sec-gap text-[15px] font-semibold">Decided here · {drafts.length}</h3>

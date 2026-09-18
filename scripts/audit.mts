@@ -346,7 +346,10 @@ for (const n of node) {
   cand.sort((a, b2) =>
     a.due_date !== b2.due_date ? (a.due_date < b2.due_date ? -1 : 1)
       : a.is_milestone !== b2.is_milestone ? (a.is_milestone ? -1 : 1)
-        : a.title < b2.title ? -1 : 1)
+        // The id last, because nothing above it is unique: five subprojects
+        // can each carry a «Master data» with the same date and no flag.
+        : a.title !== b2.title ? (a.title < b2.title ? -1 : 1)
+          : a.id < b2.id ? -1 : 1)
   nextComputed.set(n.id, [cand[0].id, cand[0].due_date])
 }
 const offNext = same(nextComputed, new Map(next.map((r) => [r.node_id, [r.next_node_id, r.due_date]])))

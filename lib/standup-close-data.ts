@@ -98,7 +98,7 @@ export async function readCloseState(
 
   const open = blockers.filter((b) => b.is_active)
 
-  /* A task in flight that nobody is driving and nobody has parked. */
+  /* Every task with nobody on it, whatever state it is in. */
   const hasChildren = new Set(
     nodes.map((n) => n.parent_id).filter((p): p is string => p !== null),
   )
@@ -110,14 +110,26 @@ export async function readCloseState(
     }
   }
 
+  /*
+   * «Who has nothing on it» is a question about the whole portfolio, so the
+   * list is every leaf with no driver, whatever state it is in. Finished and
+   * cancelled work is out, because a driver on something that is over answers
+   * nothing.
+   *
+   * Only the ones IN FLIGHT can stop the close. That distinction is the whole
+   * reason the list can be this wide: refusing to close a meeting over an idea
+   * nobody has begun would turn step three into a step people learn to click
+   * past, and then the two that matter go past with it.
+   */
   const unowned = nodes
     .filter(
       (n) =>
-        n.status === 'active' &&
-        n.completed_at === null &&
         n.parent_id !== null &&
         !hasChildren.has(n.id) &&
-        n.driver_id === null,
+        n.driver_id === null &&
+        n.completed_at === null &&
+        n.status !== 'done' &&
+        n.status !== 'cancelled',
     )
     .map((n) => ({
       nodeId: n.id,
@@ -126,6 +138,7 @@ export async function readCloseState(
       blocks: waiting.get(n.id) ?? 0,
       driverId: n.driver_id,
       parkedUntil: n.parked_until,
+      inFlight: n.status === 'active',
     }))
     /* Nearest date first, and within a date whatever holds most people up. */
     .sort(

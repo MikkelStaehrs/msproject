@@ -47,7 +47,7 @@ export type BlockerAnswer = {
   resolution: string | null
 }
 
-/** A task the meeting found with nobody on it. */
+/** A task with nobody on it. */
 export type UnownedAnswer = {
   nodeId: string
   title: string
@@ -56,6 +56,15 @@ export type UnownedAnswer = {
   blocks: number
   driverId: string | null
   parkedUntil: string | null
+  /**
+   * Whether it is under way, which is what decides whether it can stop the
+   * close. The list shows every task with nobody on it, because «who has
+   * nothing on it» is a question about the whole portfolio and an answer that
+   * only counted active work would be a list that looks complete and is not.
+   * Refusing the close over an idea nobody has begun would turn the step into
+   * something the room learns to click past, so only work in flight blocks it.
+   */
+  inFlight: boolean
 }
 
 /** Something the room committed to before the next meeting. */
@@ -108,9 +117,21 @@ export type CloseState = {
  * What is stopping the meeting from closing, in the words the room needs.
  *
  * Two rules, and both are about a thing having an answer rather than about a
- * thing being finished. A blocker nobody is taking forward is a blocker that
- * will be read out again next week in the same words; a task with no driver
- * and no parking date is the gap the whole of step three exists to close.
+ * thing being finished.
+ *
+ * A BLOCKER NEEDS A NEXT STEP. It used to need a driver as well, and that was
+ * one demand too many: the next step IS the position the room took, and the
+ * name is often obvious in a team of three. Insisting on both meant a meeting
+ * that had genuinely dealt with something still could not close, which teaches
+ * people to type a name they do not mean. What stops a blocker sitting for a
+ * month is not the field, it is the count of how many stand-ups it has been
+ * read out in, and that is on the row where the room can see it.
+ *
+ * A TASK IN FLIGHT needs a driver or a date to come back to. Work that has not
+ * started is exempt: it is on the list, because «who has nothing on it» is a
+ * question about the whole portfolio, and it does not block the close, because
+ * refusing over an idea nobody has begun is how a step becomes one people click
+ * past.
  *
  * Nothing about decisions, commitments or sparks: those are things the room
  * MAY produce, and a meeting where nobody decided anything is a normal meeting.
@@ -125,16 +146,15 @@ export function validate(state: CloseState): string[] {
 
   for (const b of state.blockers) {
     if (b.resolution !== null) continue
-    if (b.driverId === null) {
-      problems.push(`«${b.title}» has nobody taking it forward.`)
-    } else if (b.nextStep === null || b.nextStep.trim() === '') {
-      problems.push(`«${b.title}» has a driver but no next step.`)
+    if (b.nextStep === null || b.nextStep.trim() === '') {
+      problems.push(`«${b.title}» has no next step.`)
     }
   }
 
   for (const u of state.unowned) {
+    if (!u.inFlight) continue
     if (u.driverId === null && u.parkedUntil === null) {
-      problems.push(`«${u.title}» has no driver and no date to come back to.`)
+      problems.push(`«${u.title}» is under way with no driver and no date to come back to.`)
     }
   }
 

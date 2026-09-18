@@ -52,6 +52,7 @@ const unowned = (over: Partial<CloseState['unowned'][number]> = {}) => ({
   blocks: 0,
   driverId: null as string | null,
   parkedUntil: null as string | null,
+  inFlight: true,
   ...over,
 })
 
@@ -62,24 +63,31 @@ const unowned = (over: Partial<CloseState['unowned'][number]> = {}) => ({
  * the same words.
  */
 check(
-  'a blocker with nobody on it stops the close',
+  'a blocker with no next step stops the close',
   validate({ ...blank, blockers: [blocker()] }),
-  ['«Firewall rule» has nobody taking it forward.'],
-)
-check(
-  'and so does one with a driver and no next step',
-  validate({ ...blank, blockers: [blocker({ driverId: 'u-1' })] }),
-  ['«Firewall rule» has a driver but no next step.'],
+  ['«Firewall rule» has no next step.'],
 )
 check(
   'a next step of spaces is not a next step',
-  validate({ ...blank, blockers: [blocker({ driverId: 'u-1', nextStep: '   ' })] }),
-  ['«Firewall rule» has a driver but no next step.'],
+  validate({ ...blank, blockers: [blocker({ nextStep: '   ' })] }),
+  ['«Firewall rule» has no next step.'],
+)
+/*
+ * The next step IS the position the room took. Demanding a name as well was
+ * one demand too many: it meant a meeting that had genuinely dealt with
+ * something still could not close, which teaches people to type a name they do
+ * not mean. What stops a blocker sitting for a month is the count of stand-ups
+ * on the row, not a second required field.
+ */
+check(
+  'a next step alone is enough',
+  validate({ ...blank, blockers: [blocker({ nextStep: 'Chase Lars' })] }),
+  [],
 )
 check(
-  'answered, it says nothing',
-  validate({ ...blank, blockers: [blocker({ driverId: 'u-1', nextStep: 'Chase Lars' })] }),
-  [],
+  'and a name does not substitute for one',
+  validate({ ...blank, blockers: [blocker({ driverId: 'u-1' })] }),
+  ['«Firewall rule» has no next step.'],
 )
 /* A resolved blocker needs neither: it is over. */
 check(
@@ -89,9 +97,20 @@ check(
 )
 
 check(
-  'a task with no driver and no date stops the close',
+  'a task under way with no driver and no date stops the close',
   validate({ ...blank, unowned: [unowned()] }),
-  ['«Master data» has no driver and no date to come back to.'],
+  ['«Master data» is under way with no driver and no date to come back to.'],
+)
+/*
+ * Work that has not started is on the list and does not block. The list
+ * answers «who has nothing on it» about the whole portfolio; refusing the
+ * close over an idea nobody has begun is how a step becomes one people learn
+ * to click past.
+ */
+check(
+  'work that has not started is on the list and stops nothing',
+  validate({ ...blank, unowned: [unowned({ inFlight: false })] }),
+  [],
 )
 check(
   'a driver answers it',
