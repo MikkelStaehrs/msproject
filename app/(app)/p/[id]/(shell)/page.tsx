@@ -18,6 +18,8 @@ import { QuickAddOn } from '@/components/quick-add-on'
 import { ReorderButtons } from '@/components/reorder-buttons'
 import { canMove } from '@/lib/reorder'
 import { ProgressScale, formatDate } from '@/components/ui'
+import { OverviewMore, type MoreItem } from '@/components/overview-more'
+import { deleteNode, moveNodeInOrder } from '@/lib/node-actions'
 import { pathTo, wbsCodes } from '@/lib/wbs'
 import { subtreeSet } from '@/lib/subtree'
 import {
@@ -266,6 +268,22 @@ export default async function TreePage({
   const peopleById = await readPeopleById(supabase)
 
   const today = todayIso()
+
+  /*
+   * Where you land after removing the thing you are looking at.
+   *
+   * A delete that leaves you on the page of what you just deleted is a 404
+   * with your own name on it. A part goes back to its parent's board, and a
+   * project goes back to the list of them: in both cases the place the thing
+   * used to be.
+   */
+  const upFrom = (n: Node) =>
+    n.parent_id === null
+      ? '/projects'
+      : n.parent_id === id
+        ? base
+        : `${base}?focus=${n.parent_id}`
+
 
   /**
    * What is going on inside one branch. A part has to answer this without
@@ -583,6 +601,44 @@ export default async function TreePage({
    * the state then survives a reload, a link sent to somebody else, and the
    * navigation a drop performs.
    */
+  /*
+   * What can be done to the part you are standing in. The same eight the rows
+   * on Projects carry, because it is the same question asked in a different
+   * place, and an action that exists in one list and not another is an action
+   * people stop believing in.
+   */
+  const treeDescendants = (descendantsOf.get(treeRootId) ?? []).length
+
+  const scopeMenu: MoreItem[] = [
+    { label: 'Edit', href: keep(`edit=${treeRootId}`) },
+    { label: 'Write a line', nodeId: treeRootId },
+    { label: 'Add a part', href: keep(`new=${treeRootId}`) },
+    { label: 'Record a decision', href: keep(`dnew=${treeRootId}`) },
+    { label: 'Say it is in the way', href: keep(`bnew=${treeRootId}`) },
+    {
+      label: 'Move up',
+      action: moveNodeInOrder,
+      fields: { id: treeRootId, direction: 'up', redirectTo: keep('') },
+    },
+    {
+      label: 'Move down',
+      action: moveNodeInOrder,
+      fields: { id: treeRootId, direction: 'down', redirectTo: keep('') },
+    },
+    {
+      label: 'Delete',
+      danger: true,
+      action: deleteNode,
+      fields: { id: treeRootId, redirectTo: upFrom(treeRoot) },
+      confirm:
+        `Delete ${treeRoot.title}` +
+        (treeDescendants > 0
+          ? ` and the ${treeDescendants} ${treeDescendants === 1 ? 'part' : 'parts'} under it`
+          : '') +
+        '? Every line, blocker, decision and file that hangs off it goes with it. This cannot be undone.',
+    },
+  ]
+
   const logOpen = logParam !== 'off'
   const logHref = (open: boolean) => {
     const q = [
@@ -1018,6 +1074,15 @@ export default async function TreePage({
           >
             {newParent === treeRoot.id ? 'Close' : 'New part'}
           </Link>
+          {/*
+            What can be done to the thing you are standing IN.
+            Every other surface in the application carries this and this one
+            did not, which meant a subproject you had opened could be added to
+            and never edited or removed: to delete one you had to leave it,
+            find it in a list somewhere above, and act on it there. The same
+            menu the rows on Projects carry, on the node itself.
+          */}
+          <OverviewMore label={treeRoot.title} items={scopeMenu} />
         </div>
       </div>
 
@@ -1148,9 +1213,29 @@ export default async function TreePage({
                           className="border-b-2 border-line-strong last:border-b-0"
                         >
                           <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 border-b border-line-strong bg-paper px-3.5 py-2">
-                            <span className="min-w-0 text-[13px] font-semibold leading-snug tracking-[-0.01em] text-green">
-                              {g.parent?.title ?? treeRoot.title}
-                            </span>
+                            {/*
+                              The part's name goes into the part. It was a
+                              label, which made the board the one place a
+                              container could be seen and not opened: to do
+                              anything TO a part you had to find it in the
+                              rail instead of pressing the name in front of
+                              you.
+                            */}
+                            {g.parent ? (
+                              <Link
+                                href={viewHref(
+                                  'board',
+                                  `focus=${g.parent.id}&sc=${boardScope}`,
+                                )}
+                                className="min-w-0 text-[13px] font-semibold leading-snug tracking-[-0.01em] text-green hover:underline"
+                              >
+                                {g.parent.title}
+                              </Link>
+                            ) : (
+                              <span className="min-w-0 text-[13px] font-semibold leading-snug tracking-[-0.01em] text-green">
+                                {treeRoot.title}
+                              </span>
+                            )}
                             <span className="mono ml-auto shrink-0 text-[11px] text-muted">
                               {g.items.length}
                             </span>
