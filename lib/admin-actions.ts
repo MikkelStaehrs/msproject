@@ -212,6 +212,49 @@ export async function forgetRequest(fd: FormData) {
 /* ------------------------------------------------------------------------ */
 
 /**
+ * Sending the link again.
+ *
+ * The module could create an account and never help the person into it. When
+ * the first email does not arrive — and Supabase's built-in mail server is
+ * rate limited and not meant for production, so it often does not — there was
+ * nothing here to do about it, and the account sat with no password while
+ * somebody tried their old one at a screen that told them to check it.
+ *
+ * A RECOVERY LINK, NOT A SECOND INVITATION. `inviteUserByEmail` refuses an
+ * address that already has an account, which is every case this is for.
+ * Recovery works on both kinds: it confirms an address that was never
+ * confirmed, and it replaces a password that was forgotten, and both end at
+ * /auth/password where the person chooses one themselves.
+ *
+ * No password is ever set here, and none is ever shown. An account whose
+ * password was typed by somebody else is an account two people can sign in as,
+ * and `password_set_at` exists to make that visible rather than to make it
+ * convenient.
+ */
+export async function sendNewLink(fd: FormData) {
+  await requireAdmin()
+
+  const email = required(fd, 'email')
+  const origin = (await headers()).get('origin') ?? ''
+  const admin = createAdminClient()
+
+  const { error } = await admin.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback`,
+  })
+
+  if (error) {
+    throw new Error(
+      `No link was sent to ${email}: ${error.message}. If this says anything ` +
+        `about a rate limit, the project is using Supabase's built-in mail ` +
+        `server, which sends only a handful an hour and is not meant for ` +
+        `production. Configuring SMTP is the fix.`,
+    )
+  }
+
+  revalidatePath('/admin')
+}
+
+/**
  * Making somebody else an administrator, or taking it back.
  *
  * Written with the service role because no session may write this column: the

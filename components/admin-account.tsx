@@ -1,5 +1,5 @@
 import { OverviewMore, type MoreItem } from '@/components/overview-more'
-import { closeAccount, deleteAccount, setAdmin } from '@/lib/admin-actions'
+import { closeAccount, deleteAccount, sendNewLink, setAdmin } from '@/lib/admin-actions'
 import type { Profile } from '@/lib/types'
 
 /**
@@ -45,6 +45,16 @@ export function AccountRow({
    * or delete themselves either.
    */
   const items: MoreItem[] = [
+    /*
+      First, because it is the answer to the only question anybody opens this
+      page with in a hurry: somebody cannot get in. It sets no password and
+      shows none; it sends the link that lets them set their own.
+    */
+    {
+      label: unclaimed ? 'Send the invitation again' : 'Send a sign-in link',
+      action: sendNewLink,
+      fields: { email: profile.email },
+    },
     /*
       The last administrator is offered nothing here rather than an item that
       always fails. The action refuses it too, because a menu is not a gate,
@@ -96,7 +106,11 @@ export function AccountRow({
         <div className="mt-[5px] text-[12px] leading-[1.45] text-muted">
           <span className="mono">{profile.email}</span>
           {unclaimed && (
-            <span className="text-rust"> · has not chosen a password yet</span>
+            <span className="text-rust">
+              {' '}
+              · has not chosen a password yet, so there is no password for them to
+              get right
+            </span>
           )}
         </div>
       </div>
