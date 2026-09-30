@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { required, text } from '@/lib/form'
@@ -232,26 +233,48 @@ export async function forgetRequest(fd: FormData) {
  * convenient.
  */
 export async function sendNewLink(fd: FormData) {
-  await requireAdmin()
+  /*
+   * THIS ONE REPORTS RATHER THAN THROWS, and the reason is worth reading
+   * before writing another action in this file.
+   *
+   * `throw new Error('a careful sentence')` in a server action is invisible in
+   * production. Next strips the message, deliberately, because an exception
+   * can carry a query or a value a page has no business printing, and what the
+   * person gets instead is «a server-side exception has occurred» and a digest.
+   * So the sentence explaining rate limits and SMTP, written to save somebody
+   * twenty minutes, could only ever be read in the server log by whoever
+   * already knew where to look.
+   *
+   * The outcome travels in the address instead. That is this application's own
+   * idiom for state anyway, it survives the plain form the overflow menu posts,
+   * and it needs no client state to hold it.
+   */
+  let said: string
 
-  const email = required(fd, 'email')
-  const origin = (await headers()).get('origin') ?? ''
-  const admin = createAdminClient()
+  try {
+    await requireAdmin()
 
-  const { error } = await admin.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback`,
-  })
+    const email = required(fd, 'email')
+    const origin = (await headers()).get('origin') ?? ''
+    const admin = createAdminClient()
 
-  if (error) {
-    throw new Error(
-      `No link was sent to ${email}: ${error.message}. If this says anything ` +
-        `about a rate limit, the project is using Supabase's built-in mail ` +
-        `server, which sends only a handful an hour and is not meant for ` +
-        `production. Configuring SMTP is the fix.`,
-    )
+    const { error } = await admin.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/auth/callback`,
+    })
+
+    said = error
+      ? `No link was sent to ${email}. ${error.message}` +
+        (/rate|limit|429/i.test(error.message)
+          ? ' That is the mail server, not the application: a Supabase project on the built-in one sends a handful an hour and is not meant for production. Setting up SMTP is the fix.'
+          : '')
+      : `A link is on its way to ${email}. It sets their password and works once.`
+  } catch (error) {
+    /* Whatever went wrong, said in the words it went wrong in. */
+    said = error instanceof Error ? error.message : String(error)
   }
 
   revalidatePath('/admin')
+  redirect(`/admin?said=${encodeURIComponent(said)}`)
 }
 
 /**

@@ -25,7 +25,7 @@ export const metadata = { title: 'Admin' }
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ show?: string }>
+  searchParams: Promise<{ show?: string; said?: string }>
 }) {
   const params = await searchParams
   const supabase = await createClient()
@@ -98,6 +98,27 @@ export default async function AdminPage({
           <h1 className="text-[34px] font-semibold leading-[1.08] tracking-[-0.03em] text-green [text-wrap:balance]">
             Who gets in
           </h1>
+
+          {/*
+            What the last action came to, in its own words.
+
+            A server action that throws is invisible in production: Next strips
+            the message and hands over «a server-side exception has occurred»
+            and a digest. So the outcome travels in the address, which is this
+            application's idiom for state anyway and survives the plain forms
+            the overflow menu posts.
+          */}
+          {params.said && (
+            <p
+              className={`prose-measure grp-gap border-l-2 pl-3.5 text-[13px] leading-relaxed ${
+                /on its way/.test(params.said)
+                  ? 'border-green text-green'
+                  : 'border-rust text-rust'
+              }`}
+            >
+              {params.said}
+            </p>
+          )}
           <p className="prose-measure grp-gap text-green-soft">
             Inviting somebody creates their account and nothing more. They sign
             in to an empty application until they are put on a project, which
